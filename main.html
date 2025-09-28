@@ -9,10 +9,12 @@
       input, select, button { padding:.5rem; }
       .row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
       pre { background:#f6f6f6; padding:1rem; border-radius:8px; }
+      #error { color: red; font-weight: bold; margin-top: 1rem; }
+      #success { color: green; font-weight: bold; margin-top: 1rem; }
     </style>
   </head>
   <body>
-    <h1>Poker Room (Go API)</h1>
+    <h1>Poker Room Demo</h1>
 
     <div class="row">
       <label>Room</label>
@@ -43,12 +45,25 @@
       <button id="refreshBtn">Refresh Players</button>
     </div>
 
+    <div id="error"></div>
+    <div id="success"></div>
+
     <h3>Players</h3>
     <pre id="out">(none)</pre>
 
     <script>
       const API = "http://localhost:8080";
       const el = (id) => document.getElementById(id);
+
+      function showError(msg) {
+        el("error").textContent = msg;
+        el("success").textContent = "";
+      }
+
+      function showSuccess(msg) {
+        el("success").textContent = msg;
+        el("error").textContent = "";
+      }
 
       async function join() {
         const room = el("room").value;
@@ -58,37 +73,63 @@
           stack: Number(el("pstack").value)
         };
         if (!body.id || !body.name || !body.stack) {
-          alert("Please fill id, name, stack (>0).");
+          showError("Please fill id, name, stack (>0).");
           return;
         }
+
         const res = await fetch(`${API}/join?room=${room}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
-        el("out").textContent = await res.text();
-        await refresh();
+
+        const text = await res.text();
+        if (!res.ok) {
+          showError(`Error ${res.status}: ${text}`);
+          el("out").textContent = "(none)";
+        } else {
+          showSuccess(text.trim());
+          await refresh();
+        }
       }
 
       async function leave() {
         const room = el("room").value;
-        const body = { id: el("pid").value.trim() }; // only id required to leave
-        if (!body.id) { alert("Enter the player id to leave."); return; }
+        const body = { id: el("pid").value.trim() };
+        if (!body.id) { showError("Enter the player id to leave."); return; }
 
         const res = await fetch(`${API}/leave?room=${room}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
-        el("out").textContent = await res.text();
-        await refresh();
+
+        const text = await res.text();
+        if (!res.ok) {
+          showError(`Error ${res.status}: ${text}`);
+          el("out").textContent = "(none)";
+        } else {
+          showSuccess(text.trim());
+          await refresh();
+        }
       }
 
       async function refresh() {
         const room = el("room").value;
-        const res = await fetch(`${API}/players?room=${room}`);
-        const data = await res.json();
-        el("out").textContent = JSON.stringify(data, null, 2);
+        try {
+          const res = await fetch(`${API}/players?room=${room}`);
+          if (!res.ok) {
+            const text = await res.text();
+            showError(`Error ${res.status}: ${text}`);
+            el("out").textContent = "(none)";
+            return;
+          }
+          const data = await res.json();
+          el("out").textContent = JSON.stringify(data, null, 2);
+          el("error").textContent = "";
+        } catch (err) {
+          showError(`Network error: ${err}`);
+        }
       }
 
       el("joinBtn").onclick = join;

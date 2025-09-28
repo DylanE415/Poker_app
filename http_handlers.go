@@ -59,8 +59,15 @@ func (s *Server) joinHandler(w http.ResponseWriter, req *http.Request) {
 
 	// check if player already exists in that room
 	if rm.has(p.ID) {
-		http.Error(w, "player already in room", http.StatusBadRequest)
+		http.Error(w, "player id already in room", http.StatusBadRequest)
 		return
+	}
+	// check if name is already in that room
+	for _, pl := range rm.players {
+		if pl.Name == p.Name {
+			http.Error(w, "name already in room", http.StatusBadRequest)
+			return
+		}
 	}
 
 	//stack must be positive and at least minStack and not greater than maxStack
