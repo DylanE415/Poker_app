@@ -83,7 +83,7 @@ func (s *Server) joinHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// add player
-	rm.cmdChan <- Command{Kind: "join", Player: p}
+	rm.joinAndLeaveChan <- Command{Kind: "join", Player: p}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("joined\n"))
 }
@@ -99,7 +99,7 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	rm := s.getRoom(req.URL.Query().Get("room"))
-	rm.cmdChan <- Command{Kind: "leave", Player: p}
+	rm.joinAndLeaveChan <- Command{Kind: "leave", Player: p}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("left\n"))
 }
@@ -156,40 +156,52 @@ func withCORS(h http.Handler) http.Handler {
 // for return state of room to client
 // GET /state?room=1  -> { room, actionPlayerIndex, players }
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodGet {
-        http.Error(w, "use GET", http.StatusMethodNotAllowed); return
-    }
-    roomID, err := room_request_to_int(r.URL.Query().Get("room"))
-    if err != nil { http.Error(w, err.Error(), http.StatusBadRequest); return }
-    rm := s.getRoom(fmt.Sprint(roomID))
+	if r.Method != http.MethodGet {
+		http.Error(w, "use GET", http.StatusMethodNotAllowed)
+		return
+	}
+	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	rm := s.getRoom(fmt.Sprint(roomID))
 
-    w.Header().Set("Content-Type", "application/json")
-    _ = json.NewEncoder(w).Encode(struct {
-        Room           int       `json:"room"`
-        ActionPlayerIndex int    `json:"actionPlayerIndex"`
-        Players        []Player  `json:"players"`
-    }{
-        Room: rm.id, ActionPlayerIndex: rm.ActionPlayerIndex, Players: rm.players,
-    })
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(struct {
+		Room              int      `json:"room"`
+		ActionPlayerIndex int      `json:"actionPlayerIndex"`
+		Players           []Player `json:"players"`
+	}{
+		Room: rm.id, ActionPlayerIndex: rm.ActionPlayerIndex, Players: rm.players,
+	})
 }
 
 // for player to set their action
 // POST /action?room=1   body: {"id":"alice"}
 func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        http.Error(w, "use POST", http.StatusMethodNotAllowed); return
-    }
-    roomID, err := room_request_to_int(r.URL.Query().Get("room"))
-    if err != nil { http.Error(w, err.Error(), http.StatusBadRequest); return }
-    rm := s.getRoom(fmt.Sprint(roomID))
+	if r.Method != http.MethodPost {
+		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+		return
+	}
+	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	rm := s.getRoom(fmt.Sprint(roomID))
 
-    var req struct{ ID string `json:"id"` }
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
-        http.Error(w, "bad json (need id)", http.StatusBadRequest); return
-    }
-    if !rm.has(req.ID) {
-        http.Error(w, "player not in room", http.StatusNotFound); return
-    }
-    rm.cmdChan <- Command{Kind: "set_action", Player: Player{ID: req.ID}}
-    w.Write([]byte("action set\n"))
+	var req struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+		http.Error(w, "bad json (need id)", http.StatusBadRequest)
+		return
+	}
+	if !rm.has(req.ID) {
+		http.Error(w, "player not in room", http.StatusNotFound)
+		return
+	}
+	rm.joinAndLeaveChan <- Command{Kind: "set_action", Player: Player{ID: req.ID}}
+	w.Write([]byte("action set\n"))
 }
