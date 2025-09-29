@@ -5,7 +5,7 @@ import (
 )
 
 type Command struct {
-	Kind   string // "join" or "leave"
+	Kind   string // "join, leave, bet, call, raise, fold, sitout"
 	Player Player
 }
 
@@ -15,6 +15,8 @@ type Room struct {
 	players  []Player
 	minStack float64
 	maxStack float64
+	smallBlindPosition int
+	ActionPlayerIndex int
 }
 
 // has a command buffer of 16 commands
@@ -25,6 +27,8 @@ func newRoom(id int, minStack float64, maxStack float64) *Room {
 		players:  make([]Player, 0),
 		minStack: minStack,
 		maxStack: maxStack,
+		smallBlindPosition: 0,
+		ActionPlayerIndex: 1,
 	}
 }
 
@@ -37,6 +41,8 @@ func (r *Room) has(id string) bool {
 	return false
 }
 
+
+// function operates on a pointer receiver to actually change the room in memory, r Room would make a copy
 func (r *Room) run() {
 	for {
 		// take a command from the channel
@@ -49,6 +55,7 @@ func (r *Room) run() {
 				fmt.Printf("Player %s already in room %d\n", cmd.Player.ID, r.id)
 			}
 		case "leave":
+			//making new array without the player
 			id := cmd.Player.ID
 			dst := r.players[:0]
 			for _, p := range r.players {

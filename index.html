@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- =========================================================
+         HEAD: meta, title, styles
+         ========================================================= -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Poker Room Demo</title>
+
+    <style>
+      /* =========================================================
+         GLOBAL STYLES
+         ========================================================= */
+      :root { --table-size: 700px; --inner-pad: 20px; --seat-size: 96px; }
+      body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; }
+      label { display:block; margin:.5rem 0 .25rem; }
+      input, select, button { padding:.5rem; }
+      .row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+      pre { background:#f6f6f6; padding:1rem; border-radius:8px; }
+
+      /* Action feedback areas (user-triggered) */
+      #error { color: #b00020; font-weight: 600; margin-top: .75rem; }
+      #success { color: #1b5e20; font-weight: 600; margin-top: .75rem; }
+
+      /* Polling status (background refresh info) */
+      #status { color: #666; margin-top: .5rem; font-size: 0.95rem; }
+
+      /* Layout: controls (top) and table (bottom) */
+      .layout { display: grid; grid-template-rows: auto auto; gap: 24px; }
+
+      /* =========================================================
+         TABLE / SEATS STYLING
+         ========================================================= */
+      .table-wrap { display: grid; place-items: center; }
+      .table {
+        position: relative; width: var(--table-size); height: var(--table-size);
+        border-radius: 50%;
+        background: radial-gradient(ellipse at center, #2e7d32 0%, #1b5e20 70%, #0e3b14 100%);
+        box-shadow: 0 20px 40px rgba(0,0,0,.25) inset, 0 10px 30px rgba(0,0,0,.2);
+        border: 6px solid #5c3317;
+      }
+      .seat {
+        position: absolute; width: var(--seat-size); height: var(--seat-size);
+        transform: translate(-50%, -50%); display: grid; grid-template-rows: auto auto;
+        align-items: center; justify-items: center; padding: 8px; border-radius: 14px;
+        background: #111; color: #eee; box-shadow: 0 6px 16px rgba(0,0,0,.35);
+        border: 1px solid rgba(255,255,255,.06); text-align: center;
+      }
+      .seat.empty { opacity: .5; background: #222; color: #bbb; border-style: dashed; }
+      .seat.acting { outline: 3px solid #f4c542; box-shadow: 0 0 16px #f4c542, 0 6px 16px rgba(0,0,0,.35); }
+      .seat .chip {
+        width: 28px; height: 28px; border-radius: 50%;
+        background:
+          radial-gradient(circle at 50% 50%, #fff 0 6px, transparent 7px),
+          conic-gradient(#c00 0 25%, #eee 0 50%, #c00 0 75%, #eee 0 100%);
+        border: 2px solid #111; margin-bottom: 4px;
+      }
+      .seat .name {
+        font-weight: 600; font-size: 13px; line-height: 1.1;
+        max-width: calc(var(--seat-size) - 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .seat .stack { font-size: 12px; opacity: .9; }
+      .legend { font-size: 12px; color: #555; margin-top: .5rem; }
+    </style>
+  </head>
+
+  <body>
+    <!-- =========================================================
+         PAGE TITLE
+         ========================================================= -->
+    <h1>Poker Room Demo</h1>
+
+    <div class="layout">
+      <!-- =======================================================
+           CONTROLS PANEL
+           ======================================================= -->
+      <div>
+        <!-- Room selector -->
+        <div class="row">
+          <div>
+            <label for="room">Room</label>
+            <select id="room">
+              <option value="1">Room 1</option>
+              <option value="2">Room 2</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Player fields -->
+        <div class="row">
+          <div>
+            <label for="pid">Player ID</label>
+            <input id="pid" placeholder="alice" />
+          </div>
+          <div>
+            <label for="pname">Name</label>
+            <input id="pname" placeholder="Alice" />
+          </div>
+          <div>
+            <label for="pstack">Stack</label>
+            <input id="pstack" type="number" value="1000" />
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="row" style="margin-top:.5rem">
+          <button id="joinBtn"  title="Join the selected room">Join</button>
+          <button id="leaveBtn" title="Leave the selected room">Leave</button>
+          <button id="refreshBtn" title="Manually refresh room state">Refresh Players</button>
+          <!-- Optional: set action for demo; tie to an input or call programmatically -->
+          <button id="setActionBtn" title="Set acting player by index (0..8)">Set Action (idx 0)</button>
+        </div>
+
+        <!-- Feedback areas -->
+        <!-- NOTE: 'error' and 'success' are for USER ACTION feedback only.
+             Background polling uses the 'status' element below. -->
+        <div id="error" role="alert" aria-live="polite"></div>
+        <div id="success" aria-live="polite"></div>
+
+        <!-- Background polling status (non-intrusive) -->
+        <div id="status" aria-live="polite"></div>
+
+        <!-- Raw JSON output from /state (handy for debugging) -->
+        <h3>Raw State JSON</h3>
+        <pre id="out" aria-label="State JSON">(none)</pre>
+      </div>
+
+      <!-- =======================================================
+           VISUAL POKER TABLE
+           ======================================================= -->
+      <div class="table-wrap">
+        <div id="table" class="table" aria-label="Poker Table"></div>
+        <div class="legend">Seats shown clockwise; max 9 displayed. Acting seat glows.</div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         SCRIPT: utilities, rendering, API calls, event wiring
+         ========================================================= -->
+    <script>
+      /* ---------------------------------------------------------
+         CONFIG & ELEMENT HELPERS
+         --------------------------------------------------------- */
+      const API = "http://localhost:8080"; // Change if your Go server listens elsewhere
+      const el = (id) => document.getElementById(id);
+
+      // Timers / polling handle
+      let pollTimer = null;
+
+      // User action feedback helpers (do NOT use for background polling)
+      function showError(msg)   { el("error").textContent = msg; el("success").textContent = ""; }
+      function showSuccess(msg) { el("success").textContent = msg; el("error").textContent = ""; }
+
+      /* ---------------------------------------------------------
+         TABLE SEAT SETUP & RENDERING
+         --------------------------------------------------------- */
+
+      // Create N seats around the circular table exactly once
+      function ensureSeats() {
+        const table = el("table");
+        if (table.dataset.ready) return;
+
+        const N = 9;
+        const size = parseInt(getComputedStyle(table).width, 10);
+        const seatSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--seat-size'));
+        const pad = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--inner-pad'));
+        const radius = (size / 2) - pad - (seatSize / 2);
+
+        for (let i = 0; i < N; i++) {
+          const seat = document.createElement('div');
+          seat.className = 'seat empty';
+
+          // Place seats evenly around the circle, starting at top (-90°)
+          const angle = (i / N) * 2 * Math.PI - Math.PI / 2;
+          const cx = size / 2 + radius * Math.cos(angle);
+          const cy = size / 2 + radius * Math.sin(angle);
+          seat.style.left = `${cx}px`;
+          seat.style.top  = `${cy}px`;
+
+          const chip = document.createElement('div'); chip.className = 'chip';
+          const name = document.createElement('div'); name.className = 'name'; name.textContent = 'Empty';
+          const stack = document.createElement('div'); stack.className = 'stack'; stack.textContent = '';
+
+          seat.append(chip, name, stack);
+          table.appendChild(seat);
+        }
+
+        table.dataset.ready = '1';
+      }
+
+      // Render players + acting index onto the 9 seats
+      // - players: array of Player objects from server
+      // - actionPlayerIndex: integer index (0..8), or -1/undefined for none
+      function renderTable(players, actionPlayerIndex) {
+        ensureSeats();
+        const seats = [...el("table").querySelectorAll('.seat')];
+
+        // Reset all seats to empty
+        seats.forEach(s => {
+          s.classList.add('empty');
+          s.classList.remove('acting');
+          s.querySelector('.name').textContent = 'Empty';
+          s.querySelector('.stack').textContent = '';
+        });
+
+        // Fill seats in response order (first 9)
+        players.slice(0, 9).forEach((p, i) => {
+          const seat = seats[i];
+          seat.classList.remove('empty');
+
+          // Defensive property lookups to support different casings (Go json tags vs raw struct names)
+          const nm = p.name ?? p.Name ?? (p.id ?? p.ID);
+          const st = p.stack ?? p.Stack;
+          seat.querySelector('.name').textContent = nm ?? 'Unknown';
+          seat.querySelector('.stack').textContent = (st != null) ? `Stack: ${st}` : '';
+
+          // Highlight current actor (only if actionPlayerIndex is a valid number and matches this seat)
+          if (typeof actionPlayerIndex === 'number' && actionPlayerIndex >= 0 && i === actionPlayerIndex) {
+            seat.classList.add('acting');
+          }
+        });
+      }
+
+      /* ---------------------------------------------------------
+         API CALLS
+         --------------------------------------------------------- */
+
+      // Fetch current room state (polled every ~1.5s)
+      // IMPORTANT: we DO NOT clear #error/#success here, to avoid wiping user action messages.
+      // Polling info is shown in #status instead.
+      async function state() {
+        const room = el("room").value;
+
+        let res, text;
+        try {
+          res = await fetch(`${API}/state?room=${room}`);
+          text = await res.text();
+        } catch (networkErr) {
+          // Network-level error (server down, CORS, etc.)
+          el("status").textContent = `State fetch failed: ${networkErr}`;
+          el("out").textContent = "(none)";
+          renderTable([], -1);
+          return;
+        }
+
+        if (!res.ok) {
+          // HTTP error from server; show in status, not in #error
+          el("status").textContent = `State error ${res.status}: ${text}`;
+          el("out").textContent = "(none)";
+          renderTable([], -1);
+          return;
+        }
+
+        try {
+          const data = JSON.parse(text);
+          el("out").textContent = JSON.stringify(data, null, 2);
+
+          // Clear only the polling status (not the user action areas)
+          el("status").textContent = "";
+
+          const players = data.players ?? data.Players ?? [];
+          // Use nullish coalescing to preserve 0
+          const actionIdx = (data.actionPlayerIndex ?? data.ActionPlayerIndex ?? -1);
+          renderTable(players, actionIdx);
+        } catch (e) {
+          // Malformed JSON from server
+          el("status").textContent = `Bad JSON from /state: ${e}`;
+        }
+      }
+
+      // Join: POST /join?room=#
+      async function join() {
+        const room = el("room").value;
+        const body = {
+          id: el("pid").value.trim(),
+          name: el("pname").value.trim(),
+          stack: Number(el("pstack").value)
+        };
+
+        if (!body.id || !body.name || !body.stack) {
+          showError("Please fill id, name, and stack (>0).");
+          return;
+        }
+
+        let res, text;
+        try {
+          res = await fetch(`${API}/join?room=${room}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          text = await res.text();
+        } catch (e) {
+          showError(`Join failed (network): ${e}`);
+          return;
+        }
+
+        if (!res.ok) {
+          showError(`Join failed ${res.status}: ${text}`);
+        } else {
+          showSuccess(text.trim() || "Joined successfully.");
+        }
+
+        // Refresh visible state after action
+        await state();
+      }
+
+      // Leave: POST /leave?room=#
+      async function leave() {
+        const room = el("room").value;
+        const body = { id: el("pid").value.trim() };
+
+        if (!body.id) {
+          showError("Enter the player id to leave.");
+          return;
+        }
+
+        let res, text;
+        try {
+          res = await fetch(`${API}/leave?room=${room}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          text = await res.text();
+        } catch (e) {
+          showError(`Leave failed (network): ${e}`);
+          return;
+        }
+
+        if (!res.ok) {
+          showError(`Leave failed ${res.status}: ${text}`);
+        } else {
+          showSuccess(text.trim() || "Left successfully.");
+        }
+
+        // Refresh visible state after action
+        await state();
+      }
+
+      // OPTIONAL: Set acting player by index for testing
+      // Endpoint: POST /action?room=# with body { index }
+      async function setActionByIndex(index) {
+        const room = el("room").value;
+
+        if (!Number.isInteger(index) || index < 0 || index > 8) {
+          showError("Index must be an integer 0..8.");
+          return;
+        }
+
+        let res, text;
+        try {
+          res = await fetch(`${API}/action?room=${room}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ index })
+          });
+          text = await res.text();
+        } catch (e) {
+          showError(`Set action failed (network): ${e}`);
+          return;
+        }
+
+        if (!res.ok) {
+          showError(`Set action failed ${res.status}: ${text}`);
+        } else {
+          showSuccess(text.trim() || `Set acting player to seat ${index}.`);
+        }
+
+        await state();
+      }
+
+      /* ---------------------------------------------------------
+         POLLING CONTROL
+         --------------------------------------------------------- */
+
+      // Start periodic polling of /state
+      function startPolling(intervalMs = 1500) {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(state, intervalMs);
+      }
+
+      // Optional nicety: pause polling when the tab is hidden, resume when visible
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          if (pollTimer) clearInterval(pollTimer);
+        } else {
+          startPolling();
+          state(); // immediate refresh on return
+        }
+      });
+
+      /* ---------------------------------------------------------
+         EVENT WIRING
+         --------------------------------------------------------- */
+      el("joinBtn").addEventListener("click", join);
+      el("leaveBtn").addEventListener("click", leave);
+      el("refreshBtn").addEventListener("click", state);
+
+      // Demo: set acting player index 0 when clicking the Set Action button
+      el("setActionBtn").addEventListener("click", () => setActionByIndex(0));
+
+      // Initialize seats, do an immediate state fetch, then start polling
+      ensureSeats();
+      state();
+      startPolling();
+    </script>
+  </body>
+</html>
