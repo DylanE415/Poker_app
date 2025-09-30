@@ -19,3 +19,13 @@ func room_request_to_int(s string) (int, error) {
 	}
 	return n, nil
 }
+
+// check if a string is in a slice
+func contains(slice []string, value string) bool {
+	for _, v := range slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
