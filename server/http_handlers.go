@@ -38,11 +38,12 @@ func (s *Server) joinHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// parse request body
-	var p Player
-	if err := json.NewDecoder(req.Body).Decode(&p); err != nil || p.ID == "" || p.Name == "" || p.Stack <= 0 {
+	var tmp Player
+	if err := json.NewDecoder(req.Body).Decode(&tmp); err != nil || tmp.ID == "" || tmp.Name == "" || tmp.Stack <= 0 {
 		http.Error(w, "bad json (need id, name, stack)", http.StatusBadRequest)
 		return
 	}
+	p := newPlayer(tmp.ID, tmp.Name, tmp.Stack)
 	// has to be a valid room id
 	roomID, err := room_request_to_int(req.URL.Query().Get("room"))
 	if err != nil {
@@ -83,6 +84,7 @@ func (s *Server) joinHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// add player
+	p.canAct = true
 	rm.joinAndLeaveChan <- Command{Kind: "join", Player: p}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("joined\n"))
@@ -138,24 +140,10 @@ func (s *Server) playersHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
-/* wrapper for CORS */
-
-func withCORS(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
 // for return state of room to client
 // GET /state?room=1  -> { room, actionPlayerIndex, players }
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
+	//TODO var hand = s.getRoom(r.URL.Query().Get("room")).currentHand
 	if r.Method != http.MethodGet {
 		http.Error(w, "use GET", http.StatusMethodNotAllowed)
 		return
@@ -173,7 +161,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		ActionPlayerIndex int      `json:"actionPlayerIndex"`
 		Players           []Player `json:"players"`
 	}{
-		Room: rm.id, ActionPlayerIndex: rm.ActionPlayerIndex, Players: rm.players,
+		Room: rm.id, ActionPlayerIndex: rm.smallBlindPosition + 1, Players: rm.players,
 	})
 }
 

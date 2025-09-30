@@ -5,22 +5,19 @@ import (
 )
 
 type Command struct {
-	Kind   string // "join, leave, bet, call, raise, fold, sitout"
+	Kind   string // "join, leave, sit_out"
 	Player Player
 }
 
 type Room struct {
 	id                 int
 	joinAndLeaveChan   chan Command
-	actionChan         chan Command
 	players            []Player
 	minStack           float64
 	maxStack           float64
 	smallBlindPosition int
-	ActionPlayerIndex  int
 	currentHand        Hand
 	previousHand       Hand
-	playersSittingOut  []Player
 }
 
 // has a command buffer of 16 commands
@@ -32,7 +29,6 @@ func newRoom(id int, minStack float64, maxStack float64) *Room {
 		minStack:           minStack,
 		maxStack:           maxStack,
 		smallBlindPosition: 0,
-		ActionPlayerIndex:  1,
 	}
 }
 
@@ -53,7 +49,6 @@ func (r *Room) run() {
 		switch cmd.Kind {
 		case "join":
 			if !r.has(cmd.Player.ID) {
-				r.playersSittingOut = append(r.playersSittingOut, cmd.Player)
 				r.players = append(r.players, cmd.Player)
 			} else {
 				fmt.Printf("Player %s already in room %d\n", cmd.Player.ID, r.id)
