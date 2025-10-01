@@ -38,6 +38,7 @@ func main() {
 	mux.HandleFunc("/players", s.playersHandler)
 	mux.HandleFunc("/state", s.stateHandler)
 	mux.HandleFunc("/action", s.setActionHandler)
+	mux.HandleFunc("/sitInOrOut", s.sitInOrOutHandler)
 
 	log.Println("Server on :8080 | POST /join  POST /leave  GET /players  (use ?room=2 for room 2)")
 	log.Fatal(http.ListenAndServe(":8080", withCORS(mux)))

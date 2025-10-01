@@ -12,11 +12,12 @@ type Player struct {
 
 func newPlayer(id string, name string, stack float64) Player {
 	return Player{
-		ID:         id,
-		Name:       name,
-		Stack:      stack,
-		sittingOut: true,
-		canAct:     true,
-		timebank:   60,
+		ID:            id,
+		Name:          name,
+		Stack:         stack,
+		sittingOut:    true,
+		canAct:        true,
+		timebank:      60,
+		pendingAction: make(chan Action, 1),
 	}
 }

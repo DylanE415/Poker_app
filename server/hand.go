@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
 type Action struct {
-	PlayerID string  `json:"id"`
+	PlayerID string  `json:"playerId"`
 	Action   string  `json:"action"` // "raise", "call", "fold", "check"
 	Amount   float64 `json:"amount"`
 }
@@ -15,10 +17,10 @@ type Hand struct {
 	Players           []Player
 	actionPlayerIndex int
 	deck              []Card
-	currentState      string // "pre-flop", "flop", "turn", "river"
+	currentState      string // "pre-flop", "flop", "turn", "river", "showdown", "over"
 	board             []Card
 	pot               float64
-	avaliableActions  []string // "raise", "call", "fold", "check"( will change based on player actions)
+	avaliableActions  []string // "raise", "call", "fold", "check" (changes based on state)
 }
 
 func shuffleDeck(deck []Card) {
@@ -30,10 +32,16 @@ func shuffleDeck(deck []Card) {
 }
 
 func checkPlayerCanAct(H *Hand, p Player) bool {
-	if p.Stack > 0 && p.canAct {
-		return true
+	return p.Stack > 0 && p.canAct
+}
+
+func FindPlayerIndexInHand(H *Hand, id string) int {
+	for i, p := range H.Players {
+		if p.ID == id {
+			return i
+		}
 	}
-	return false
+	return -1
 }
 
 func nextEligible(H *Hand, start int) int {
@@ -47,146 +55,146 @@ func nextEligible(H *Hand, start int) int {
 	return -1
 }
 
-// take action from channel and do it
+// take action from channel and do it (mutates H via pointer)
 func handleAction(H *Hand, action Action) {
 	// if action cannot be done, return
 	if !contains(H.avaliableActions, action.Action) {
 		return
 	}
 
-	//RAISE
-	if action.Action == "raise" {
+	switch action.Action {
+	case "raise":
 		H.Players[H.actionPlayerIndex].Stack -= action.Amount
-		H.avaliableActions = []string{"call", "fold", "raise"}
 		H.pot += action.Amount
+		H.avaliableActions = []string{"call", "fold", "raise"}
 		H.Players[H.actionPlayerIndex].canAct = false
-		// since there is a raise every player still in hand can now act again
-		for _, p := range H.Players {
-			p.canAct = true
+
+		// everyone still in hand can act again
+		for i := range H.Players {
+			H.Players[i].canAct = true
 		}
 
-		//CALL
-	} else if action.Action == "call" {
+	case "call":
 		H.Players[H.actionPlayerIndex].Stack -= action.Amount
 		H.pot += action.Amount
 		H.Players[H.actionPlayerIndex].canAct = false
 
-		//FOLD
-	} else if action.Action == "fold" {
+	case "fold":
 		for i, p := range H.Players {
-			//remove player from hand
 			if p.ID == action.PlayerID {
-				// remove element i(:i is everything before i, :i+1 is everything after i)
 				H.Players = append(H.Players[:i], H.Players[i+1:]...)
 				break
 			}
 		}
 	}
-
 }
 
-func newHand(players []Player, smallBlindPosition int) Hand {
-
+func newHand(players []Player, smallBlindPosition int) *Hand {
 	suits := []string{"Spades", "Hearts", "Diamonds", "Clubs"}
 	ranks := []string{"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"}
-	deck := make([]Card, 0)
+	deck := make([]Card, 0, 52)
 
 	for _, suit := range suits {
 		for _, rank := range ranks {
 			deck = append(deck, Card{Suit: suit, Rank: rank})
 		}
 	}
-
 	shuffleDeck(deck)
 
-	return Hand{
+	return &Hand{
 		Players:           players,
 		actionPlayerIndex: smallBlindPosition,
 		deck:              deck,
 		currentState:      "pre-flop",
-		board:             make([]Card, 0),
 		pot:               0,
 		avaliableActions:  []string{"raise", "fold", "check"},
 	}
 }
 
 func (h *Hand) run() {
-
-	//pre flop
-	//action loop
-
+	// ===== PRE-FLOP =====
+	print("pre-flop\n")
 	if h.currentState == "pre-flop" {
 		for {
-			//preflop first player is the person after blinds
 			actingPlayerIndex := nextEligible(h, h.actionPlayerIndex)
 			if actingPlayerIndex == -1 {
 				break
 			}
-			// it's this player's turn
+			println("player:", h.Players[actingPlayerIndex].ID, "is acting")
+			fmt.Printf("can do: %s\n", strings.Join(h.avaliableActions, ", "))
+
 			h.actionPlayerIndex = actingPlayerIndex
 			cur := &h.Players[actingPlayerIndex]
 
-			var currentPlayerAction Action
-			for {
-				select {
-				case action := <-cur.pendingAction:
-					// Handle the action
-					// first check if action is valid
-					currentPlayerAction = action
-					if contains(h.avaliableActions, action.Action) {
-						handleAction(h, action)
-						break
-					} else {
-						// invaid action await new response in channel
-					}
-				default:
-					// wait for action to come in channel
-					time.Sleep(1 * time.Second)
-					if currentPlayerAction != (Action{}) {
-						// Do something with the action
-						// For example, you could call a method on the current player
-						currentPlayerAction.Player.CanAct = true
-					}
+			// wait until player's action or timeout (no polling)
+			var act Action
+			got := false
+			timer := time.NewTimer(30 * time.Second)
+			select {
+			case act = <-cur.pendingAction:
+				got = true
+			case <-timer.C:
+				if contains(h.avaliableActions, "check") {
+					act = Action{PlayerID: cur.ID, Action: "check"}
+					got = true
+				} else {
+					act = Action{PlayerID: cur.ID, Action: "fold"}
+					got = true
 				}
 			}
+			timer.Stop()
 
-			// TODO: wait/apply real action (fold/call/raise/all-in) here.
+			// if got no action check/fold
+			print("player ", cur.ID, " got action: ", act.Action, "\n")
+			if got && contains(h.avaliableActions, act.Action) && act.PlayerID == cur.ID {
+				handleAction(h, act)
+			} else if contains(h.avaliableActions, "check") {
+				handleAction(h, Action{PlayerID: cur.ID, Action: "check"})
+			} else {
+				handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
+			}
+			print("pot: ", h.pot, "\n")
 
-			// For now, just mark them as having acted this round:
 			cur.canAct = false
-
-			// Advance pointer so the next search starts from the next seat
 			h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 		}
-
 	}
 
+	print("Pre-flop done, moving to flop\n")
+	// ===== FLOP =====
 	if h.currentState == "flop" {
 		h.deck = h.deck[1:]                      // burn
 		h.board = append(h.board, h.deck[:3]...) // flop
 		h.deck = h.deck[3:]
 
-		// ---- FLOP BETTING LOOP ----
-
 		for {
-
 			actingPlayerIndex := nextEligible(h, h.actionPlayerIndex)
 			if actingPlayerIndex == -1 {
-				// no one left to act on the flop
 				break
 			}
-			// it's this player's turn
 			h.actionPlayerIndex = actingPlayerIndex
 			cur := &h.Players[actingPlayerIndex]
 
-			// TODO: wait/apply real action (fold/call/raise/all-in) here.
+			// same wait/timeout pattern as above
+			var act Action
+			got := false
+			timer := time.NewTimer(30 * time.Second)
+			select {
+			case act = <-cur.pendingAction:
+				got = true
+			case <-timer.C:
+				act = Action{PlayerID: cur.ID, Action: "fold"}
+			}
+			timer.Stop()
 
-			// For now, just mark them as having acted this round:
+			if got && contains(h.avaliableActions, act.Action) && act.PlayerID == cur.ID {
+				handleAction(h, act)
+			} else {
+				handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
+			}
+
 			cur.canAct = false
-
-			// Advance pointer so the next search starts from the next seat
 			h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 		}
-
 	}
 }

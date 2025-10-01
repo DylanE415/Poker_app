@@ -22,6 +22,8 @@ func (s *Server) getRoom(q string) *Room {
 	return s.room1
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /*
 for users to join a room, if valid sends a command to the command channel of that room
 
@@ -90,6 +92,8 @@ func (s *Server) joinHandler(w http.ResponseWriter, req *http.Request) {
 	_, _ = w.Write([]byte("joined\n"))
 }
 
+// for users to leave a room, if valid sends a command to the command channel of that room, same format as join
+
 func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
@@ -107,7 +111,8 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // simple get request to return players in room for display purposes
-
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 type PlayersResponse struct {
 	Count   int      `json:"count"`
 	Players []Player `json:"players"`
@@ -140,6 +145,9 @@ func (s *Server) playersHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // for return state of room to client
 // GET /state?room=1  -> { room, actionPlayerIndex, players }
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
@@ -165,31 +173,120 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// for player to set their action
-// POST /action?room=1   body: {"id":"alice"}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// exaample request
+/*POST http://localhost:8080/action?room=1
+Content-Type: application/json
+{
+  "playerId": "123",
+  "action": "fold"
+}
+*/
+
+// for rmaking the latest action the current action in the channel
+func enqueueLatest(ch chan Action, a Action) {
+	for {
+		select {
+		case ch <- a:
+			// sent successfully; done
+			return
+		case <-ch:
+			// channel was full; drop the value; and repeat statement to do first case
+		}
+	}
+}
 func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
 		return
 	}
+	// check valid room
 	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	rm := s.getRoom(fmt.Sprint(roomID))
+	if rm == nil || rm.currentHand == nil {
+		http.Error(w, "no active hand", http.StatusConflict)
+		return
+	}
+	h := rm.currentHand
 
-	var req struct {
-		ID string `json:"id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
-		http.Error(w, "bad json (need id)", http.StatusBadRequest)
+	// decode body
+	var a Action
+	if err := json.NewDecoder(r.Body).Decode(&a); err != nil || a.PlayerID == "" || a.Action == "" {
+		http.Error(w, "bad json (need playerId, action)", http.StatusBadRequest)
 		return
 	}
-	if !rm.has(req.ID) {
-		http.Error(w, "player not in room", http.StatusNotFound)
+	// find player
+	idx := FindPlayerIndexInHand(h, a.PlayerID)
+	if idx < 0 {
+		http.Error(w, "unknown player", http.StatusBadRequest)
 		return
 	}
-	rm.joinAndLeaveChan <- Command{Kind: "set_action", Player: Player{ID: req.ID}}
-	w.Write([]byte("action set\n"))
+
+	// enqueue latest action into channel
+	p := &h.Players[idx]
+	enqueueLatest(p.pendingAction, a)
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("action queued\n"))
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// need id of player
+// format is :8080/sitInOrOut?room=1&playerId=2&sitIn=true
+func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// check valid room
+	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// check if player is in room
+	rm := s.getRoom(fmt.Sprint(roomID))
+	if !rm.has(r.URL.Query().Get("playerId")) {
+		http.Error(w, "player not in room", http.StatusConflict)
+		return
+	}
+	// check if player is in a hand, if they are they can not sit in or out
+	h := rm.currentHand
+	p := &rm.players[FindPlayerIndexInRoom(rm, r.URL.Query().Get("playerId"))]
+
+	if h == nil {
+		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
+			p.sittingOut = false
+		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
+			p.sittingOut = true
+		} else {
+			http.Error(w, "already in that state", http.StatusBadRequest)
+			return
+		}
+	} else if FindPlayerIndexInHand(h, r.URL.Query().Get("playerId")) >= 0 {
+		http.Error(w, "player already in hand", http.StatusConflict)
+		return
+	} else {
+
+		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
+			p.sittingOut = false
+		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
+			p.sittingOut = true
+		} else {
+			http.Error(w, "already in that state", http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("OK!\n"))
+
 }

@@ -29,3 +29,5 @@ func contains(slice []string, value string) bool {
 	}
 	return false
 }
+
+//check if player id is in
