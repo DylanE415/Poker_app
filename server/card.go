@@ -27,3 +27,22 @@ type Card struct {
 	Suit string
 	Rank string
 }
+
+// all hand combos (pairs, sets, etc)
+type HandType string
+
+const (
+	HighCard      HandType = "high card"
+	Pair          HandType = "pair"
+	TwoPair       HandType = "two pair"
+	ThreeOfAKind  HandType = "three of a kind"
+	Straight      HandType = "straight"
+	Flush         HandType = "flush"
+	FullHouse     HandType = "full house"
+	FourOfAKind   HandType = "four of a kind"
+	StraightFlush HandType = "straight flush"
+)
+
+func getPlayerBestHand(h Hand, p Player) HandType {
+
+}

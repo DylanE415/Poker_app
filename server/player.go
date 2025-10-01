@@ -7,6 +7,7 @@ type Player struct {
 	canAct        bool
 	timebank      float64
 	sittingOut    bool
+	hand          []Card
 	pendingAction chan Action
 }
 
