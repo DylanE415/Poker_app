@@ -90,8 +90,8 @@ func handleAction(H *Hand, action Action) {
 }
 
 func newHand(players []Player, smallBlindPosition int) *Hand {
-	suits := []string{"Spades", "Hearts", "Diamonds", "Clubs"}
-	ranks := []string{"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"}
+	suits := []string{"S", "H", "D", "C"}
+	ranks := []string{"14", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}
 	deck := make([]Card, 0, 52)
 
 	for _, suit := range suits {

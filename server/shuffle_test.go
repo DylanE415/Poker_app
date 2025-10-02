@@ -30,7 +30,7 @@ func TestShuffleDistribution(t *testing.T) {
 		var chi float64
 		// loop all 52 categories
 		suits := []string{"Spades", "Hearts", "Diamonds", "Clubs"}
-		ranks := []string{"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"}
+		ranks := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}
 		for _, s := range suits {
 			for _, r := range ranks {
 				obs := float64(counts[s+r])
