@@ -99,7 +99,7 @@
           </div>
           <div>
             <label for="pstack">Stack</label>
-            <input id="pstack" type="number" value="1000" />
+            <input id="pstack" type="number" value="100" />
           </div>
         </div>
 
@@ -110,6 +110,33 @@
           <button id="refreshBtn" title="Manually refresh room state">Refresh Players</button>
           <!-- Optional: set action for demo; tie to an input or call programmatically -->
           <button id="setActionBtn" title="Set acting player by index (0..8)">Set Action (idx 0)</button>
+        </div>
+
+        <!-- NEW: Sit In / Sit Out controls (use /sitInOrOut?room=&playerId=&sitIn=bool) -->
+        <div class="row" style="margin-top:.5rem">
+          <div>
+            <label for="sitId">Player ID (sit in/out)</label>
+            <input id="sitId" placeholder="same as Player ID" />
+          </div>
+          <button id="sitInBtn"  title="Mark player as sitting in (active)">Sit In</button>
+          <button id="sitOutBtn" title="Mark player as sitting out (inactive)">Sit Out</button>
+        </div>
+
+        <!-- Test Action input (send to /action) -->
+        <div class="row" style="margin-top:.5rem">
+          <div>
+            <label for="playerInput">Player ID (for action)</label>
+            <input id="playerInput" placeholder="same as Player ID" />
+          </div>
+          <div>
+            <label for="actionInput">Test Action</label>
+            <input id="actionInput" placeholder="fold / call / raise" />
+          </div>
+          <div>
+            <label for="amountInput">Amount (for raise/call)</label>
+            <input id="amountInput" type="number" placeholder="e.g. 50" />
+          </div>
+          <button id="sendActionBtn" title="Send test action for this player">Send Action</button>
         </div>
 
         <!-- Feedback areas -->
@@ -155,8 +182,6 @@
       /* ---------------------------------------------------------
          TABLE SEAT SETUP & RENDERING
          --------------------------------------------------------- */
-
-      // Create N seats around the circular table exactly once
       function ensureSeats() {
         const table = el("table");
         if (table.dataset.ready) return;
@@ -171,7 +196,6 @@
           const seat = document.createElement('div');
           seat.className = 'seat empty';
 
-          // Place seats evenly around the circle, starting at top (-90°)
           const angle = (i / N) * 2 * Math.PI - Math.PI / 2;
           const cx = size / 2 + radius * Math.cos(angle);
           const cy = size / 2 + radius * Math.sin(angle);
@@ -189,14 +213,10 @@
         table.dataset.ready = '1';
       }
 
-      // Render players + acting index onto the 9 seats
-      // - players: array of Player objects from server
-      // - actionPlayerIndex: integer index (0..8), or -1/undefined for none
       function renderTable(players, actionPlayerIndex) {
         ensureSeats();
         const seats = [...el("table").querySelectorAll('.seat')];
 
-        // Reset all seats to empty
         seats.forEach(s => {
           s.classList.add('empty');
           s.classList.remove('acting');
@@ -204,18 +224,15 @@
           s.querySelector('.stack').textContent = '';
         });
 
-        // Fill seats in response order (first 9)
         players.slice(0, 9).forEach((p, i) => {
           const seat = seats[i];
           seat.classList.remove('empty');
 
-          // Defensive property lookups to support different casings (Go json tags vs raw struct names)
           const nm = p.name ?? p.Name ?? (p.id ?? p.ID);
           const st = p.stack ?? p.Stack;
           seat.querySelector('.name').textContent = nm ?? 'Unknown';
           seat.querySelector('.stack').textContent = (st != null) ? `Stack: ${st}` : '';
 
-          // Highlight current actor (only if actionPlayerIndex is a valid number and matches this seat)
           if (typeof actionPlayerIndex === 'number' && actionPlayerIndex >= 0 && i === actionPlayerIndex) {
             seat.classList.add('acting');
           }
@@ -225,10 +242,6 @@
       /* ---------------------------------------------------------
          API CALLS
          --------------------------------------------------------- */
-
-      // Fetch current room state (polled every ~1.5s)
-      // IMPORTANT: we DO NOT clear #error/#success here, to avoid wiping user action messages.
-      // Polling info is shown in #status instead.
       async function state() {
         const room = el("room").value;
 
@@ -237,7 +250,6 @@
           res = await fetch(`${API}/state?room=${room}`);
           text = await res.text();
         } catch (networkErr) {
-          // Network-level error (server down, CORS, etc.)
           el("status").textContent = `State fetch failed: ${networkErr}`;
           el("out").textContent = "(none)";
           renderTable([], -1);
@@ -245,7 +257,6 @@
         }
 
         if (!res.ok) {
-          // HTTP error from server; show in status, not in #error
           el("status").textContent = `State error ${res.status}: ${text}`;
           el("out").textContent = "(none)";
           renderTable([], -1);
@@ -255,16 +266,12 @@
         try {
           const data = JSON.parse(text);
           el("out").textContent = JSON.stringify(data, null, 2);
-
-          // Clear only the polling status (not the user action areas)
           el("status").textContent = "";
 
           const players = data.players ?? data.Players ?? [];
-          // Use nullish coalescing to preserve 0
           const actionIdx = (data.actionPlayerIndex ?? data.ActionPlayerIndex ?? -1);
           renderTable(players, actionIdx);
         } catch (e) {
-          // Malformed JSON from server
           el("status").textContent = `Bad JSON from /state: ${e}`;
         }
       }
@@ -302,7 +309,6 @@
           showSuccess(text.trim() || "Joined successfully.");
         }
 
-        // Refresh visible state after action
         await state();
       }
 
@@ -335,12 +341,10 @@
           showSuccess(text.trim() || "Left successfully.");
         }
 
-        // Refresh visible state after action
         await state();
       }
 
       // OPTIONAL: Set acting player by index for testing
-      // Endpoint: POST /action?room=# with body { index }
       async function setActionByIndex(index) {
         const room = el("room").value;
 
@@ -371,23 +375,88 @@
         await state();
       }
 
+      // NEW: Sit In / Sit Out via /sitInOrOut?room=&playerId=&sitIn=true|false
+      async function sitInOrOut(sitIn) {
+        const room = el("room").value;
+        // if user didn't type separate ID for sit, fall back to main pid input
+        const pid = (el("sitId").value.trim() || el("pid").value.trim());
+
+        if (!pid) {
+          showError("Enter a player id to sit in/out.");
+          return;
+        }
+
+        const url = `${API}/sitInOrOut?room=${encodeURIComponent(room)}&playerId=${encodeURIComponent(pid)}&sitIn=${sitIn ? "true" : "false"}`;
+
+        let res, text;
+        try {
+          res = await fetch(url, { method: "POST" });
+          text = await res.text();
+        } catch (e) {
+          showError(`Sit ${sitIn ? "In" : "Out"} failed (network): ${e}`);
+          return;
+        }
+
+        if (!res.ok) {
+          showError(`Sit ${sitIn ? "In" : "Out"} failed ${res.status}: ${text}`);
+        } else {
+          showSuccess(text.trim() || `Player ${pid} set to ${sitIn ? "sit in" : "sit out"}.`);
+        }
+
+        await state();
+      }
+
+      // Send test action for current player (/action)
+      async function sendAction() {
+        const room = el("room").value;
+        const pid = el("pid").value.trim();
+        const action = el("actionInput").value.trim();
+        const amt = Number(el("amountInput").value);
+
+        if (!pid || !action) {
+          showError("Need Player ID and Action.");
+          return;
+        }
+
+        const body = { playerId: pid, action: action };
+        if (!isNaN(amt) && amt > 0) body.amount = amt;
+
+        let res, text;
+        try {
+          res = await fetch(`${API}/action?room=${room}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          text = await res.text();
+        } catch (e) {
+          showError(`Action failed (network): ${e}`);
+          return;
+        }
+
+        if (!res.ok) {
+          showError(`Action failed ${res.status}: ${text}`);
+        } else {
+          showSuccess(text.trim() || `Action ${action} sent.`);
+        }
+
+        await state();
+      }
+
       /* ---------------------------------------------------------
          POLLING CONTROL
          --------------------------------------------------------- */
-
-      // Start periodic polling of /state
       function startPolling(intervalMs = 1500) {
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(state, intervalMs);
       }
 
-      // Optional nicety: pause polling when the tab is hidden, resume when visible
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
           if (pollTimer) clearInterval(pollTimer);
         } else {
           startPolling();
-          state(); // immediate refresh on return
+          state();
         }
       });
 
@@ -397,11 +466,16 @@
       el("joinBtn").addEventListener("click", join);
       el("leaveBtn").addEventListener("click", leave);
       el("refreshBtn").addEventListener("click", state);
-
-      // Demo: set acting player index 0 when clicking the Set Action button
       el("setActionBtn").addEventListener("click", () => setActionByIndex(0));
 
-      // Initialize seats, do an immediate state fetch, then start polling
+      // NEW: sit in / out buttons
+      el("sitInBtn").addEventListener("click", () => sitInOrOut(true));
+      el("sitOutBtn").addEventListener("click", () => sitInOrOut(false));
+
+      // Test action button
+      el("sendActionBtn").addEventListener("click", sendAction);
+
+      // Initialize
       ensureSeats();
       state();
       startPolling();
