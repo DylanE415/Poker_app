@@ -37,8 +37,9 @@ type CardFrequency struct {
 }
 
 type SuitFrequency struct {
-	Suit  string
-	Count int
+	Suit        string
+	highestRank string
+	Count       int
 }
 
 func rankToInt(rank string) int {
@@ -76,10 +77,11 @@ func getCardFrequencies(h Hand, p Player) []CardFrequency {
 
 func getSuitFrequencies(h Hand, p Player) []SuitFrequency {
 	freqs := make(map[string]int)
-
+	highestRanks := [0,0,0,0]
 	// count board cards
 	for _, c := range h.board {
 		freqs[c.Suit]++
+		if c.Rank 
 	}
 	// count player cards
 	for _, c := range p.hand {
@@ -94,13 +96,14 @@ func getSuitFrequencies(h Hand, p Player) []SuitFrequency {
 	return result
 }
 
+// isStraight returns true if the hand is a straight and returns the rank of the highest card in the straight
 func isStraight(freqs []CardFrequency) (bool, int) {
 	biggestLength := 0
 	length := 0
 	highestCardInStraight := rankToInt(freqs[0].Rank)
 	for i := 0; i < len(freqs)-1; i++ {
-		// special case: A,2,3,4,5
-		if rankToInt(freqs[i].Rank)+1 != rankToInt(freqs[i+1].Rank) || (freqs[i].Rank == "14" && freqs[i+1].Rank != "2") {
+		// descending rank
+		if rankToInt(freqs[i].Rank) != rankToInt(freqs[i+1].Rank)+1 {
 			if length > biggestLength {
 				biggestLength = length
 			}
@@ -108,7 +111,30 @@ func isStraight(freqs []CardFrequency) (bool, int) {
 		}
 		length++
 	}
-	return (biggestLength >= 4), (highestCardInStraight)
+
+	if biggestLength > 4 {
+		return true, highestCardInStraight
+	} else {
+		//re run with ace as 1
+		if freqs[0].Rank == "14" {
+			//remove ace from front and add 1 to the end
+			freqs = append(freqs[1:], CardFrequency{Rank: "1", Count: freqs[0].Count})
+			return isStraight(freqs)
+		}
+
+	}
+
+	return false, 0
+}
+
+// isFlush returns true if the hand is a flush and returns the rank of the highest card
+func isFlush(freqs []SuitFrequency) (bool, int) {
+	for _, f := range freqs {
+		if f.Count == 5 {
+			return true, rankToInt(f.Rank)
+		}
+	}
+	return false, 0
 }
 
 func getPlayerBestHand(h Hand, p Player) BestHand {
@@ -147,6 +173,14 @@ func getPlayerBestHand(h Hand, p Player) BestHand {
 		}
 	}
 
-	// check flush(any card has 5 frequencies)
+	// check flush(any suit has 5 frequencies)
+
+	//check straight
+	straight, highestCardInStraight := isStraight(freqs)
+	if straight {
+		BestHand.Type = Straight
+		BestHand.rank = highestCardInStraight
+		return BestHand
+	}
 	return BestHand
 }
