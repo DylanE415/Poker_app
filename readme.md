@@ -7,3 +7,6 @@ run:
 - npx serve 
 and open the html file
 
+
+to run test fucntions run 
+go test -v -run 'function name'
