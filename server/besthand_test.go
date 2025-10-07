@@ -49,6 +49,12 @@ func TestGetPlayerBestHand_AllTypes(t *testing.T) {
 			want:  want{typ: Straight, rank: 12},
 		},
 		{
+			name:  "Straight 4-5-6-7-8, with a duplicate 7 (8 high)",
+			board: []Card{C("D", 7), C("C", 7), C("H", 4), C("D", 5), C("H", 6)},
+			hand:  []Card{C("S", 13), C("C", 8)},
+			want:  want{typ: Straight, rank: 8},
+		},
+		{
 			name:  "Wheel straight A-2-3-4-5 (5 high under low-ace rule)",
 			board: []Card{C("D", 2), C("C", 3), C("H", 4), C("D", 9), C("D", 11)},
 			hand:  []Card{C("S", 14), C("C", 5)},

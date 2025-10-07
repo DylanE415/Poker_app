@@ -125,28 +125,50 @@ func isFlush(freqs []SuitFrequency, highestRanks map[string]int) (bool, int) {
 
 // isStraight returns true if the hand is a straight and returns the rank of the highest card in the straight
 func isStraight(freqs []CardFrequency) (bool, int) {
-	biggestLength := 0
 	length := 0
 	highestCardInStraight := rankToInt(freqs[0].Rank)
 	for i := 0; i < len(freqs)-1; i++ {
-		// descending rank
-		if rankToInt(freqs[i].Rank) != rankToInt(freqs[i+1].Rank)+1 {
-			if length > biggestLength {
-				biggestLength = length
-			}
+		//check duplicate ad check if next card is 1 higher
+		if rankToInt(freqs[i].Rank) == rankToInt(freqs[i+1].Rank) {
+			continue
+		} else if rankToInt(freqs[i].Rank) != rankToInt(freqs[i+1].Rank)+1 {
 			length = 0
 		}
-		length++
+		// if length is 0 and next card is 1 higher then we set that as the highest card of new possible straight
+		if rankToInt(freqs[i].Rank) == rankToInt(freqs[i+1].Rank)+1 {
+			if length == 0 {
+				highestCardInStraight = rankToInt(freqs[i].Rank)
+			}
+			length++
+		}
+		if length == 4 {
+			return true, highestCardInStraight
+		}
 	}
+	length = 0
+	highestCardInStraight = rankToInt(freqs[0].Rank)
+	// re do the check but with ace set as 1
+	if freqs[0].Rank == "14" {
+		freqs = append(freqs[1:], CardFrequency{Rank: "1", Count: freqs[0].Count})
+		sort.Slice(freqs, func(i, j int) bool {
+			return rankToInt(freqs[i].Rank) > rankToInt(freqs[j].Rank)
+		})
+		for i := 0; i < len(freqs)-1; i++ {
+			if rankToInt(freqs[i].Rank) == rankToInt(freqs[i+1].Rank) {
+				continue
+			} else if rankToInt(freqs[i].Rank) != rankToInt(freqs[i+1].Rank)+1 {
+				length = 0
+			}
 
-	if biggestLength > 4 {
-		return true, highestCardInStraight
-	} else {
-		//re run with ace as 1
-		if freqs[0].Rank == "14" {
-			//remove ace from front and add 1 to the end
-			freqs = append(freqs[1:], CardFrequency{Rank: "1", Count: freqs[0].Count})
-			return isStraight(freqs)
+			if rankToInt(freqs[i].Rank) == rankToInt(freqs[i+1].Rank)+1 {
+				if length == 0 {
+					highestCardInStraight = rankToInt(freqs[i].Rank)
+				}
+				length++
+			}
+			if length == 4 {
+				return true, highestCardInStraight
+			}
 		}
 
 	}
