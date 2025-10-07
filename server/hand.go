@@ -213,6 +213,15 @@ func (h *Hand) run() {
 		h.deck = h.deck[1:]
 
 		streetLoop(h)
+
+		playerHands := make([]BestHand, len(h.Players))
+		playerIds := make([]string, len(h.Players))
+		for i := range h.Players {
+			//the players best hands
+			playerHands[i] = getPlayerBestHand(h, h.Players[i])
+			// and their ids
+			playerIds[i] = h.Players[i].ID
+		}
 	}
 
 	//showdown

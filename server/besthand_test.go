@@ -89,7 +89,7 @@ func TestGetPlayerBestHand_AllTypes(t *testing.T) {
 			h.board = append([]Card{}, tt.board...)
 			p.hand = append([]Card{}, tt.hand...)
 
-			got := getPlayerBestHand(h, p)
+			got := getPlayerBestHand(&h, p) // ✅ pass pointer to h now
 
 			if got.Type != tt.want.typ {
 				t.Fatalf("Type = %v, want %v", got.Type, tt.want.typ)
@@ -97,14 +97,13 @@ func TestGetPlayerBestHand_AllTypes(t *testing.T) {
 			if got.rank != tt.want.rank {
 				t.Fatalf("rank = %d, want %d", got.rank, tt.want.rank)
 			}
-			// Only assert kicker when meaningful for the hand type in your implementation.
+
 			switch tt.want.typ {
 			case Quads, ThreeOfAKind, TwoPair, Pair:
 				if got.kicker != tt.want.kicker {
 					t.Fatalf("kicker = %d, want %d", got.kicker, tt.want.kicker)
 				}
 			}
-			// Two-pair specific secondary rank check.
 			if tt.want.typ == TwoPair {
 				if got.twoPairSecondaryRank != tt.want.twoPairSecondaryRank {
 					t.Fatalf("twoPairSecondaryRank = %d, want %d",
@@ -113,4 +112,5 @@ func TestGetPlayerBestHand_AllTypes(t *testing.T) {
 			}
 		})
 	}
+
 }

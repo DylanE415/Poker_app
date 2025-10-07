@@ -51,7 +51,7 @@ func rankToInt(rank string) int {
 	return v
 }
 
-func getCardFrequencies(h Hand, p Player) []CardFrequency {
+func getCardFrequencies(h *Hand, p Player) []CardFrequency {
 	freqs := make(map[string]int)
 
 	// count board cards
@@ -76,7 +76,7 @@ func getCardFrequencies(h Hand, p Player) []CardFrequency {
 	return result
 }
 
-func getSuitFrequencies(h Hand, p Player) ([]SuitFrequency, map[string]int) {
+func getSuitFrequencies(h *Hand, p Player) ([]SuitFrequency, map[string]int) {
 	freqs := make(map[string]int)
 	highestRanks := map[string]int{
 		"S": 0,
@@ -176,8 +176,7 @@ func isStraight(freqs []CardFrequency) (bool, int) {
 	return false, 0
 }
 
-func getPlayerBestHand(h Hand, p Player) BestHand {
-
+func getPlayerBestHand(h *Hand, p Player) BestHand {
 	BestHand := BestHand{}
 	freqs := getCardFrequencies(h, p) // sorted high → low
 
@@ -281,4 +280,34 @@ func getPlayerBestHand(h Hand, p Player) BestHand {
 	}
 
 	return BestHand
+}
+
+func handRank(ht HandType) int {
+	switch ht {
+	case HighCard:
+		return 1
+	case Pair:
+		return 2
+	case TwoPair:
+		return 3
+	case ThreeOfAKind:
+		return 4
+	case Straight:
+		return 5
+	case Flush:
+		return 6
+	case FullHouse:
+		return 7
+	case Quads:
+		return 8
+	case StraightFlush:
+		return 9
+	default:
+		return 0
+	}
+}
+
+// pass in array of best hands and players corresponding ids to get showdown best hand, returns id and best hand
+func getShowdownBestHand([]BestHand, []string) BestHand {
+
 }
