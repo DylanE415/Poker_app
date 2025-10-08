@@ -9,6 +9,7 @@ and open the html file
 
 
 to run test fucntions run 
+cd server
 go test -v -run 'function name'
 
 test besthand logic: go test -v -run TestGetPlayerBestHand_AllTypes

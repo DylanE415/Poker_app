@@ -214,15 +214,26 @@ func (h *Hand) run() {
 
 		streetLoop(h)
 
-		playerHands := make([]BestHand, len(h.Players))
-		playerIds := make([]string, len(h.Players))
-		for i := range h.Players {
-			//the players best hands
-			playerHands[i] = getPlayerBestHand(h, h.Players[i])
-			// and their ids
-			playerIds[i] = h.Players[i].ID
-		}
 	}
 
-	//showdown
+	print("River done, moving to showdown\n")
+
+	playerHands := make([]BestHand, len(h.Players))
+	playerIds := make([]string, len(h.Players))
+	for i := range h.Players {
+		//the players best hands
+		playerHands[i] = getPlayerBestHand(h, h.Players[i])
+		// and their ids
+		playerIds[i] = h.Players[i].ID
+	}
+	// showdown
+	WinningHand, WinningID := getShowdownBestHand(playerHands, playerIds)
+
+	println("Winning hand: ", WinningHand.Type, " by ", WinningID, "wins : $", h.pot)
+
+	for i := range h.Players {
+		if h.Players[i].ID == WinningID {
+			h.Players[i].Stack += h.pot
+		}
+	}
 }

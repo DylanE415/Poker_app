@@ -108,8 +108,8 @@ func (r *Room) startNextHandIfReady() {
 
 // function operates on a pointer receiver to actually change the room in memory, r Room would make a copy
 func (r *Room) run() {
-	ticker := time.NewTicker(400 * time.Millisecond) // light heartbeat
-	defer ticker.Stop()
+	ticker := time.NewTicker(400 * time.Millisecond) // every 400ms the room checks for new joins/leaves also checks if a hand is over
+	defer ticker.Stop()                              // stop the ticker when the function returns
 
 	for {
 		select {

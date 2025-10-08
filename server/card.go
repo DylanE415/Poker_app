@@ -308,6 +308,21 @@ func handRank(ht HandType) int {
 }
 
 // pass in array of best hands and players corresponding ids to get showdown best hand, returns id and best hand
-func getShowdownBestHand([]BestHand, []string) BestHand {
+func getShowdownBestHand(bestHands []BestHand, playerIds []string) (BestHand, string) {
+
+	handranks := make([]int, len(bestHands))
+	for i := range bestHands {
+		handranks[i] = handRank(bestHands[i].Type)
+	}
+	bestHandIndex := 0
+	for i := 1; i < len(handranks); i++ {
+		if handranks[i] > handranks[bestHandIndex] {
+			bestHandIndex = i
+		}
+	}
+
+	// need to look at kicker for ties
+
+	return bestHands[bestHandIndex], playerIds[bestHandIndex]
 
 }
