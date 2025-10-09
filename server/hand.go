@@ -21,6 +21,7 @@ type Hand struct {
 	board             []Card
 	pot               float64
 	avaliableActions  []string // "raise", "call", "fold", "check" (changes based on state)
+	raiseAmount       float64
 }
 
 func shuffleDeck(deck []Card) {
@@ -64,10 +65,16 @@ func handleAction(H *Hand, action Action) {
 
 	switch action.Action {
 	case "raise":
+		//must raise by at least the current raise amount
+		if action.Amount < H.raiseAmount {
+			print("cannot raise by less than current raise amount\n")
+			return
+		}
 		H.Players[H.actionPlayerIndex].Stack -= action.Amount
 		H.pot += action.Amount
 		H.avaliableActions = []string{"call", "fold", "raise"}
 		H.Players[H.actionPlayerIndex].canAct = false
+		H.raiseAmount = action.Amount
 
 		// everyone still in hand can act again
 		for i := range H.Players {
@@ -113,6 +120,11 @@ func newHand(players []Player, smallBlindPosition int) *Hand {
 
 func streetLoop(h *Hand) {
 	for {
+		// if everyone but 1 player folded, go to showdown
+		if len(h.Players) == 1 {
+			break
+		}
+
 		actingPlayerIndex := nextEligible(h, h.actionPlayerIndex)
 		if actingPlayerIndex == -1 {
 			break
@@ -155,12 +167,13 @@ func streetLoop(h *Hand) {
 		cur.canAct = false
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
-}
 
-func showdown(H *Hand) {
-	for _, p := range H.Players {
-		p.Stack += H.pot / float64(len(H.Players))
+	//reset everyone can act
+	for i := range h.Players {
+		h.Players[i].canAct = true
 	}
+	//reset previous raise to 0
+	h.raiseAmount = 0
 }
 
 func (h *Hand) run() {
@@ -179,10 +192,21 @@ func (h *Hand) run() {
 		}
 	}
 
+	println("players have cards:")
+	for _, p := range h.Players {
+		print(p.Name, ": ")
+		for _, c := range p.hand {
+			print(c.Rank, c.Suit)
+			print(", ")
+		}
+		println()
+	}
+
 	// ===== PRE-FLOP =====
 	print("pre-flop\n")
 	if h.currentState == "pre-flop" {
 		streetLoop(h)
+		h.currentState = "flop"
 	}
 
 	print("Pre-flop done, moving to flop\n")
@@ -192,7 +216,14 @@ func (h *Hand) run() {
 		h.board = append(h.board, h.deck[:3]...) // flop
 		h.deck = h.deck[3:]
 
+		print("Flop: ")
+		for _, c := range h.board {
+			print(c.Rank, c.Suit)
+			print(", ")
+		}
+
 		streetLoop(h)
+		h.currentState = "turn"
 	}
 
 	print("Flop done, moving to turn\n")
@@ -202,7 +233,14 @@ func (h *Hand) run() {
 		h.board = append(h.board, h.deck[0]) // turn
 		h.deck = h.deck[1:]
 
+		print("Turn: ")
+		for _, c := range h.board {
+			print(c.Rank, c.Suit)
+			print(", ")
+		}
+
 		streetLoop(h)
+		h.currentState = "river"
 	}
 
 	print("Turn done, moving to river\n")
@@ -211,6 +249,12 @@ func (h *Hand) run() {
 		h.deck = h.deck[1:]                  // burn
 		h.board = append(h.board, h.deck[0]) // river
 		h.deck = h.deck[1:]
+
+		print("River: ")
+		for _, c := range h.board {
+			print(c.Rank, c.Suit)
+			print(", ")
+		}
 
 		streetLoop(h)
 
