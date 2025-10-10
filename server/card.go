@@ -344,16 +344,18 @@ func getShowdownBestHand(playerHands []playerHand) []playerHand {
 	if len(playerHands) == 0 {
 		return []playerHand{}
 	}
-	winners := []playerHand{}
+
+	//get best hand
 	best := playerHands[0]
 	for i := 1; i < len(playerHands); i++ {
 		if isHandBetter(playerHands[i].hand, best.hand) {
 			best = playerHands[i]
 		}
 	}
-	winners = append(winners, best)
-	//check if chopping
-	for i := 1; i < len(playerHands); i++ {
+
+	//append everything equal to the best hand to account for chops(appends just the winner if no chop)
+	winners := make([]playerHand, 0, len(playerHands))
+	for i := 0; i < len(playerHands); i++ {
 		if handsEqual(playerHands[i].hand, best.hand) {
 			winners = append(winners, playerHands[i])
 		}

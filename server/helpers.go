@@ -30,4 +30,12 @@ func contains(slice []string, value string) bool {
 	return false
 }
 
-//check if player id is in
+// get player by id from hand
+func FindPlayerIndex(H *Hand, id string) int {
+	for i, p := range H.Players {
+		if p.ID == id {
+			return i
+		}
+	}
+	return -1
+}

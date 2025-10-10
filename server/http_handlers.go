@@ -227,8 +227,15 @@ func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//check if valid action
+	if !contains(h.avaliableActions, a.Action) {
+		http.Error(w, "invalid action", http.StatusBadRequest)
+		return
+	}
+
 	// enqueue latest action into channel
 	p := &h.Players[idx]
+
 	enqueueLatest(p.pendingAction, a)
 
 	w.WriteHeader(http.StatusOK)

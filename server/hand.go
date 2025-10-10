@@ -169,8 +169,10 @@ func streetLoop(h *Hand) {
 	}
 
 	//reset everyone can act
+	//on new street avaliable actions are raise, check, fold
 	for i := range h.Players {
 		h.Players[i].canAct = true
+		h.avaliableActions = []string{"raise", "check", "fold"}
 	}
 	//reset previous raise to 0
 	h.raiseAmount = 0
@@ -269,22 +271,19 @@ func (h *Hand) run() {
 	// showdown
 
 	winningHands := getShowdownBestHand(playerHands)
+	print(len(winningHands), " winners\n")
 
 	if len(winningHands) > 1 {
 		println("chopping")
 		for i := range winningHands {
 			println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
+			tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
+			h.Players[tmpIndex].Stack += h.pot / float64(len(winningHands))
 		}
 
 	} else {
 		println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
-	}
-
-	WinningID := winningHands[0].playerId
-
-	for i := range h.Players {
-		if h.Players[i].ID == WinningID {
-			h.Players[i].Stack += h.pot
-		}
+		tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
+		h.Players[tmpIndex].Stack += h.pot
 	}
 }
