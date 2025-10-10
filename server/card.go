@@ -307,22 +307,56 @@ func handRank(ht HandType) int {
 	}
 }
 
-// pass in array of best hands and players corresponding ids to get showdown best hand, returns id and best hand
-func getShowdownBestHand(bestHands []BestHand, playerIds []string) (BestHand, string) {
-
-	handranks := make([]int, len(bestHands))
-	for i := range bestHands {
-		handranks[i] = handRank(bestHands[i].Type)
+// returns true if h1 is better than h2, false if h2 is better
+// used in a sort.slicetable function to say yes this hand is higher order
+func isHandBetter(h1, h2 BestHand) bool {
+	//if hand type is different
+	r1, r2 := handRank(h1.Type), handRank(h2.Type)
+	if r1 != r2 {
+		return r1 > r2
 	}
-	bestHandIndex := 0
-	for i := 1; i < len(handranks); i++ {
-		if handranks[i] > handranks[bestHandIndex] {
-			bestHandIndex = i
+	// same hand type -> compare rank of hands
+	if h1.rank != h2.rank {
+		return h1.rank > h2.rank
+	}
+	// special case: Two Pair needs the second pair comparison before kicker
+	if h1.Type == TwoPair {
+		if h1.twoPairSecondaryRank != h2.twoPairSecondaryRank {
+			return h1.twoPairSecondaryRank > h2.twoPairSecondaryRank
 		}
 	}
+	// final tiebreaker
+	return h1.kicker > h2.kicker
+}
 
-	// need to look at kicker for ties
+// for determining if there is a chop
+func handsEqual(a, b BestHand) bool {
+	return !isHandBetter(a, b) && !isHandBetter(b, a)
+}
 
-	return bestHands[bestHandIndex], playerIds[bestHandIndex]
+type playerHand struct {
+	playerId string
+	hand     BestHand
+}
 
+// pass in array of best hands and players corresponding ids to get showdown best hand, returns id and best hand
+func getShowdownBestHand(playerHands []playerHand) []playerHand {
+	if len(playerHands) == 0 {
+		return []playerHand{}
+	}
+	winners := []playerHand{}
+	best := playerHands[0]
+	for i := 1; i < len(playerHands); i++ {
+		if isHandBetter(playerHands[i].hand, best.hand) {
+			best = playerHands[i]
+		}
+	}
+	winners = append(winners, best)
+	//check if chopping
+	for i := 1; i < len(playerHands); i++ {
+		if handsEqual(playerHands[i].hand, best.hand) {
+			winners = append(winners, playerHands[i])
+		}
+	}
+	return winners
 }

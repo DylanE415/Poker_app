@@ -261,19 +261,26 @@ func (h *Hand) run() {
 	}
 
 	print("River done, moving to showdown\n")
-
-	playerHands := make([]BestHand, len(h.Players))
-	playerIds := make([]string, len(h.Players))
+	//playerhand is struct with player id and best hand
+	playerHands := make([]playerHand, len(h.Players))
 	for i := range h.Players {
-		//the players best hands
-		playerHands[i] = getPlayerBestHand(h, h.Players[i])
-		// and their ids
-		playerIds[i] = h.Players[i].ID
+		playerHands[i] = playerHand{playerId: h.Players[i].ID, hand: getPlayerBestHand(h, h.Players[i])}
 	}
 	// showdown
-	WinningHand, WinningID := getShowdownBestHand(playerHands, playerIds)
 
-	println("Winning hand: ", WinningHand.Type, " by ", WinningID, "wins : $", h.pot)
+	winningHands := getShowdownBestHand(playerHands)
+
+	if len(winningHands) > 1 {
+		println("chopping")
+		for i := range winningHands {
+			println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
+		}
+
+	} else {
+		println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
+	}
+
+	WinningID := winningHands[0].playerId
 
 	for i := range h.Players {
 		if h.Players[i].ID == WinningID {
