@@ -18,7 +18,7 @@ func TestShuffleDistribution(t *testing.T) {
 	sum, sumsq := 0.0, 0.0
 
 	for trial := 0; trial < trials; trial++ {
-		players := []Player{{Name: "P1"}, {Name: "P2"}}
+		players := []*Player{{Name: "P1"}, {Name: "P2"}}
 		counts := make(map[string]int, positions)
 
 		for i := 0; i < runs; i++ {

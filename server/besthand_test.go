@@ -89,7 +89,7 @@ func TestGetPlayerBestHand_AllTypes(t *testing.T) {
 			h.board = append([]Card{}, tt.board...)
 			p.hand = append([]Card{}, tt.hand...)
 
-			got := getPlayerBestHand(&h, p) // ✅ pass pointer to h now
+			got := getPlayerBestHand(&h, &p) // ✅ pass pointer to h now
 
 			if got.Type != tt.want.typ {
 				t.Fatalf("Type = %v, want %v", got.Type, tt.want.typ)

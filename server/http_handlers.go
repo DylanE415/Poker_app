@@ -87,7 +87,7 @@ func (s *Server) joinHandler(w http.ResponseWriter, req *http.Request) {
 
 	// add player
 	p.canAct = true
-	rm.joinAndLeaveChan <- Command{Kind: "join", Player: p}
+	rm.joinAndLeaveChan <- Command{Kind: "join", Player: &p}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("joined\n"))
 }
@@ -105,7 +105,7 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	rm := s.getRoom(req.URL.Query().Get("room"))
-	rm.joinAndLeaveChan <- Command{Kind: "leave", Player: p}
+	rm.joinAndLeaveChan <- Command{Kind: "leave", Player: &p}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("left\n"))
 }
@@ -114,9 +114,9 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 type PlayersResponse struct {
-	Count   int      `json:"count"`
-	Players []Player `json:"players"`
-	Room    int      `json:"room"`
+	Count   int       `json:"count"`
+	Players []*Player `json:"players"`
+	Room    int       `json:"room"`
 }
 
 // a request would have the form http://localhost:8080/players?room=1
@@ -165,9 +165,9 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(struct {
-		Room              int      `json:"room"`
-		ActionPlayerIndex int      `json:"actionPlayerIndex"`
-		Players           []Player `json:"players"`
+		Room              int       `json:"room"`
+		ActionPlayerIndex int       `json:"actionPlayerIndex"`
+		Players           []*Player `json:"players"`
 	}{
 		Room: rm.id, ActionPlayerIndex: rm.smallBlindPosition + 1, Players: rm.players,
 	})
@@ -234,7 +234,7 @@ func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// enqueue latest action into channel
-	p := &h.Players[idx]
+	p := h.Players[idx]
 
 	enqueueLatest(p.pendingAction, a)
 
@@ -267,7 +267,7 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// check if player is in a hand, if they are they can not sit in or out
 	h := rm.currentHand
-	p := &rm.players[FindPlayerIndexInRoom(rm, r.URL.Query().Get("playerId"))]
+	p := rm.players[FindPlayerIndexInRoom(rm, r.URL.Query().Get("playerId"))]
 
 	if h == nil {
 		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {

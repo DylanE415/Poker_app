@@ -1,4 +1,3 @@
 - check if higher flush by looking at all cards in flush
 - compare 2nd pair with 2 pair at showdown
 - min raise rules/ calling rules
-- change players in hand to be references

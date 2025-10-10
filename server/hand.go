@@ -14,7 +14,8 @@ type Action struct {
 }
 
 type Hand struct {
-	Players           []Player
+	//need to be a reference to rooms players
+	Players           []*Player
 	actionPlayerIndex int
 	deck              []Card
 	currentState      string // "pre-flop", "flop", "turn", "river", "showdown", "over"
@@ -32,7 +33,7 @@ func shuffleDeck(deck []Card) {
 	}
 }
 
-func checkPlayerCanAct(H *Hand, p Player) bool {
+func checkPlayerCanAct(H *Hand, p *Player) bool {
 	return p.Stack > 0 && p.canAct
 }
 
@@ -96,7 +97,7 @@ func handleAction(H *Hand, action Action) {
 	}
 }
 
-func newHand(players []Player, smallBlindPosition int) *Hand {
+func newHand(players []*Player, smallBlindPosition int) *Hand {
 	suits := []string{"S", "H", "D", "C"}
 	ranks := []string{"14", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}
 	deck := make([]Card, 0, 52)
@@ -133,7 +134,7 @@ func streetLoop(h *Hand) {
 		fmt.Printf("can do: %s\n", strings.Join(h.avaliableActions, ", "))
 
 		h.actionPlayerIndex = actingPlayerIndex
-		cur := &h.Players[actingPlayerIndex]
+		cur := h.Players[actingPlayerIndex]
 
 		// wait until player's action or timeout (no polling)
 		var act Action

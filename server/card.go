@@ -30,6 +30,8 @@ type BestHand struct {
 	rank                 int
 	kicker               int
 	twoPairSecondaryRank int
+	flushRanks           []int
+	flushSuit            string
 }
 
 type CardFrequency struct {
@@ -51,7 +53,7 @@ func rankToInt(rank string) int {
 	return v
 }
 
-func getCardFrequencies(h *Hand, p Player) []CardFrequency {
+func getCardFrequencies(h *Hand, p *Player) []CardFrequency {
 	freqs := make(map[string]int)
 
 	// count board cards
@@ -76,7 +78,7 @@ func getCardFrequencies(h *Hand, p Player) []CardFrequency {
 	return result
 }
 
-func getSuitFrequencies(h *Hand, p Player) ([]SuitFrequency, map[string]int) {
+func getSuitFrequencies(h *Hand, p *Player) ([]SuitFrequency, map[string]int) {
 	freqs := make(map[string]int)
 	highestRanks := map[string]int{
 		"S": 0,
@@ -114,13 +116,13 @@ func getSuitFrequencies(h *Hand, p Player) ([]SuitFrequency, map[string]int) {
 }
 
 // isFlush returns true if the hand is a flush and returns the rank of the highest card
-func isFlush(freqs []SuitFrequency, highestRanks map[string]int) (bool, int) {
+func isFlush(freqs []SuitFrequency, highestRanks map[string]int) (bool, int, string) {
 	for _, s := range freqs {
 		if s.Count == 5 {
-			return true, highestRanks[s.Suit]
+			return true, highestRanks[s.Suit], s.Suit
 		}
 	}
-	return false, 0
+	return false, 0, ""
 }
 
 // isStraight returns true if the hand is a straight and returns the rank of the highest card in the straight
@@ -176,7 +178,7 @@ func isStraight(freqs []CardFrequency) (bool, int) {
 	return false, 0
 }
 
-func getPlayerBestHand(h *Hand, p Player) BestHand {
+func getPlayerBestHand(h *Hand, p *Player) BestHand {
 	BestHand := BestHand{}
 	freqs := getCardFrequencies(h, p) // sorted high → low
 
@@ -212,10 +214,11 @@ func getPlayerBestHand(h *Hand, p Player) BestHand {
 	}
 
 	// check flush(any suit has 5 frequencies)
-	flush, highestCardInFlush := isFlush(getSuitFrequencies(h, p))
+	flush, highestCardInFlush, flushSuit := isFlush(getSuitFrequencies(h, p))
 	if flush {
 		BestHand.Type = Flush
 		BestHand.rank = highestCardInFlush
+		BestHand.flushSuit = flushSuit
 		return BestHand
 	}
 
@@ -324,6 +327,14 @@ func isHandBetter(h1, h2 BestHand) bool {
 		if h1.twoPairSecondaryRank != h2.twoPairSecondaryRank {
 			return h1.twoPairSecondaryRank > h2.twoPairSecondaryRank
 		}
+	}
+	//another case need to check until different card in the flush
+	if h1.Type == Flush {
+		if h1.rank != h2.rank {
+			return h1.rank > h2.rank
+		}
+		//need to go throguh each card in the flush to find where one has a higher card
+
 	}
 	// final tiebreaker
 	return h1.kicker > h2.kicker

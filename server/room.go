@@ -7,13 +7,13 @@ import (
 
 type Command struct {
 	Kind   string // "join, leave, sit_out"
-	Player Player
+	Player *Player
 }
 
 type Room struct {
 	id                 int
 	joinAndLeaveChan   chan Command
-	players            []Player
+	players            []*Player
 	minStack           float64
 	maxStack           float64
 	smallBlindPosition int
@@ -27,7 +27,7 @@ func newRoom(id int, minStack float64, maxStack float64) *Room {
 	return &Room{
 		id:                 id,
 		joinAndLeaveChan:   make(chan Command, 16),
-		players:            make([]Player, 0),
+		players:            make([]*Player, 0),
 		minStack:           minStack,
 		maxStack:           maxStack,
 		smallBlindPosition: 0,
@@ -66,7 +66,7 @@ func (r *Room) startNextHandIfReady() {
 		return
 	}
 	// collect players who are NOT sitting out
-	eligible := make([]Player, 0, len(r.players))
+	eligible := make([]*Player, 0, len(r.players))
 	for i := range r.players {
 		if !r.players[i].sittingOut {
 			// reset per-hand flags
