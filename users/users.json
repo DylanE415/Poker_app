@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "id": "01",
+      "username": "Nick",
+      "password_hash": "$2a$10$pnxKDgvDBm6iGb7lM9KDfukMiEA8vHPXq0ig6on9cRNWMIBWrpWei",
+      "display_name": "Nick"
+    },
+    {
+      "id": "02",
+      "username": "Dylan",
+      "password_hash": "$2a$10$Vv72cEkciRVe.Jg58LgxRenC0HFascdN0XOYq49kFh063uMnFI4oi",
+      "display_name": "Dylan"
+    }
+  ]
+}
