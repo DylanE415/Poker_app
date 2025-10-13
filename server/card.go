@@ -32,6 +32,8 @@ type BestHand struct {
 	twoPairSecondaryRank int
 	flushRanks           []int
 	flushSuit            string
+	//only for comparing high card and pair
+	extraHighCards []int
 }
 
 type CardFrequency struct {
@@ -196,6 +198,7 @@ func getPlayerBestHand(h *Hand, p *Player) BestHand {
 					break
 				}
 			}
+
 			return BestHand
 		}
 	}
@@ -252,11 +255,13 @@ func getPlayerBestHand(h *Hand, p *Player) BestHand {
 		if rc.Count == 3 {
 			BestHand.Type = ThreeOfAKind
 			BestHand.rank = rankToInt(rc.Rank)
-			// kicker = highest card other than trips
+			// kicker = 2 highest cards other than trips
 			for _, kicker := range freqs {
 				if kicker.Rank != rc.Rank {
-					BestHand.kicker = rankToInt(kicker.Rank)
-					break
+					BestHand.extraHighCards = append(BestHand.extraHighCards, rankToInt(kicker.Rank))
+					if len(BestHand.extraHighCards) == 2 {
+						break
+					}
 				}
 			}
 			return BestHand
@@ -288,11 +293,13 @@ func getPlayerBestHand(h *Hand, p *Player) BestHand {
 		if rc.Count == 2 {
 			BestHand.Type = Pair
 			BestHand.rank = rankToInt(rc.Rank)
-			// kicker = highest card other than pair
+			// get 3 highest cards other than pair(freqs is sorted high to low)
 			for _, kicker := range freqs {
 				if kicker.Rank != rc.Rank {
-					BestHand.kicker = rankToInt(kicker.Rank)
-					break
+					BestHand.extraHighCards = append(BestHand.extraHighCards, rankToInt(kicker.Rank))
+					if len(BestHand.extraHighCards) == 3 {
+						break
+					}
 				}
 			}
 			return BestHand
@@ -301,7 +308,15 @@ func getPlayerBestHand(h *Hand, p *Player) BestHand {
 	//high card
 	BestHand.Type = HighCard
 	BestHand.rank = rankToInt(freqs[0].Rank)
-	//high card kicker
+	//high card kickers(get 4 highest cards other than high card)
+	for _, kicker := range freqs {
+		if kicker.Rank != freqs[0].Rank {
+			BestHand.extraHighCards = append(BestHand.extraHighCards, rankToInt(kicker.Rank))
+			if len(BestHand.extraHighCards) == 4 {
+				break
+			}
+		}
+	}
 
 	return BestHand
 }
@@ -359,8 +374,30 @@ func isHandBetter(h1, h2 BestHand) bool {
 		}
 
 	}
-	// final tiebreaker
-	return h1.kicker > h2.kicker
+	// for trips compare the 2 cards in extra high cards
+	if h1.Type == ThreeOfAKind {
+		for i := 0; i < len(h1.extraHighCards); i++ {
+			if h1.extraHighCards[i] != h2.extraHighCards[i] {
+				return h1.extraHighCards[i] > h2.extraHighCards[i]
+			}
+		}
+	}
+	//for pair compare the 3 cards in extra high cards
+	if h1.Type == Pair {
+		for i := 0; i < len(h1.extraHighCards); i++ {
+			if h1.extraHighCards[i] != h2.extraHighCards[i] {
+				return h1.extraHighCards[i] > h2.extraHighCards[i]
+			}
+		}
+	}
+	// final tiebreaker for high cards
+	for i := 0; i < len(h1.extraHighCards); i++ {
+		if h1.extraHighCards[i] != h2.extraHighCards[i] {
+			return h1.extraHighCards[i] > h2.extraHighCards[i]
+		}
+	}
+	return false
+
 }
 
 // for determining if there is a chop
