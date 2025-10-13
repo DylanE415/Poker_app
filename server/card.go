@@ -298,6 +298,10 @@ func getPlayerBestHand(h *Hand, p *Player) BestHand {
 			return BestHand
 		}
 	}
+	//high card
+	BestHand.Type = HighCard
+	BestHand.rank = rankToInt(freqs[0].Rank)
+	//high card kicker
 
 	return BestHand
 }
