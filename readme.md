@@ -13,3 +13,7 @@ cd server
 go test -v -run 'function name'
 
 test besthand logic: go test -v -run TestGetPlayerBestHand_AllTypes
+
+*important notes*
+- card ranks are 2-14
+- suits are "H", "C", "S", "D"

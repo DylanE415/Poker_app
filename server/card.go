@@ -40,9 +40,8 @@ type CardFrequency struct {
 }
 
 type SuitFrequency struct {
-	Suit        string
-	highestRank string
-	Count       int
+	Suit  string
+	Count int
 }
 
 func rankToInt(rank string) int {
@@ -150,21 +149,23 @@ func isStraight(freqs []CardFrequency) (bool, int) {
 	length = 0
 	highestCardInStraight = rankToInt(freqs[0].Rank)
 	// re do the check but with ace set as 1
+	//make a copy of freqs
+	tmp := append([]CardFrequency(nil), freqs...)
 	if freqs[0].Rank == "14" {
-		freqs = append(freqs[1:], CardFrequency{Rank: "1", Count: freqs[0].Count})
-		sort.Slice(freqs, func(i, j int) bool {
-			return rankToInt(freqs[i].Rank) > rankToInt(freqs[j].Rank)
+		tmp = append(tmp[1:], CardFrequency{Rank: "1", Count: tmp[0].Count})
+		sort.Slice(tmp, func(i, j int) bool {
+			return rankToInt(tmp[i].Rank) > rankToInt(tmp[j].Rank)
 		})
-		for i := 0; i < len(freqs)-1; i++ {
-			if rankToInt(freqs[i].Rank) == rankToInt(freqs[i+1].Rank) {
+		for i := 0; i < len(tmp)-1; i++ {
+			if rankToInt(tmp[i].Rank) == rankToInt(tmp[i+1].Rank) {
 				continue
-			} else if rankToInt(freqs[i].Rank) != rankToInt(freqs[i+1].Rank)+1 {
+			} else if rankToInt(tmp[i].Rank) != rankToInt(tmp[i+1].Rank)+1 {
 				length = 0
 			}
 
-			if rankToInt(freqs[i].Rank) == rankToInt(freqs[i+1].Rank)+1 {
+			if rankToInt(tmp[i].Rank) == rankToInt(tmp[i+1].Rank)+1 {
 				if length == 0 {
-					highestCardInStraight = rankToInt(freqs[i].Rank)
+					highestCardInStraight = rankToInt(tmp[i].Rank)
 				}
 				length++
 			}
@@ -219,6 +220,22 @@ func getPlayerBestHand(h *Hand, p *Player) BestHand {
 		BestHand.Type = Flush
 		BestHand.rank = highestCardInFlush
 		BestHand.flushSuit = flushSuit
+		// get ranks of all of the flush cards
+		for _, card := range h.board {
+			if card.Suit == flushSuit {
+				BestHand.flushRanks = append(BestHand.flushRanks, rankToInt(card.Rank))
+			}
+		}
+		for _, card := range p.hand {
+			if card.Suit == flushSuit {
+				BestHand.flushRanks = append(BestHand.flushRanks, rankToInt(card.Rank))
+			}
+		}
+		//sort and keep only 5 highest ranks
+		sort.Ints(BestHand.flushRanks)
+		if len(BestHand.flushRanks) > 5 {
+			BestHand.flushRanks = BestHand.flushRanks[len(BestHand.flushRanks)-5:]
+		}
 		return BestHand
 	}
 
@@ -313,27 +330,29 @@ func handRank(ht HandType) int {
 // returns true if h1 is better than h2, false if h2 is better
 // used in a sort.slicetable function to say yes this hand is higher order
 func isHandBetter(h1, h2 BestHand) bool {
-	//if hand type is different
+	//if hand type is different then easy comparison
 	r1, r2 := handRank(h1.Type), handRank(h2.Type)
 	if r1 != r2 {
 		return r1 > r2
 	}
-	// same hand type -> compare rank of hands
+	// if hand type is same compare the rank of the type
 	if h1.rank != h2.rank {
 		return h1.rank > h2.rank
 	}
-	// special case: Two Pair needs the second pair comparison before kicker
+	// special case: Two Pair needs the second pair comparison if the ranks are the same
 	if h1.Type == TwoPair {
 		if h1.twoPairSecondaryRank != h2.twoPairSecondaryRank {
 			return h1.twoPairSecondaryRank > h2.twoPairSecondaryRank
 		}
 	}
-	//another case need to check until different card in the flush
+	//same with flush if the rank was the same(highest card in flush) then we need to compare the flush
 	if h1.Type == Flush {
-		if h1.rank != h2.rank {
-			return h1.rank > h2.rank
-		}
 		//need to go throguh each card in the flush to find where one has a higher card
+		for i := 0; i < len(h1.flushRanks); i++ {
+			if h1.flushRanks[i] != h2.flushRanks[i] {
+				return h1.flushRanks[i] > h2.flushRanks[i]
+			}
+		}
 
 	}
 	// final tiebreaker

@@ -57,44 +57,58 @@ func nextEligible(H *Hand, start int) int {
 	return -1
 }
 
-// take action from channel and do it (mutates H via pointer)
-func handleAction(H *Hand, action Action) {
+// take action from channel and do it (mutates H via pointer), returns if action was valid
+func handleAction(H *Hand, action Action) bool {
 	// if action cannot be done, return
 	if !contains(H.avaliableActions, action.Action) {
-		return
+		print("invalid action\n")
+		return false
 	}
 
 	switch action.Action {
+	case "check":
+		H.Players[H.actionPlayerIndex].canAct = false
+		return true
 	case "raise":
-		//must raise by at least the current raise amount
-		if action.Amount < H.raiseAmount {
+		//must raise by double the previous raise
+		if action.Amount > H.Players[H.actionPlayerIndex].Stack {
+			action.Amount = H.Players[H.actionPlayerIndex].Stack
+		} else if action.Amount < (H.raiseAmount * 2) {
 			print("cannot raise by less than current raise amount\n")
-			return
+			return false
 		}
 		H.Players[H.actionPlayerIndex].Stack -= action.Amount
 		H.pot += action.Amount
 		H.avaliableActions = []string{"call", "fold", "raise"}
 		H.Players[H.actionPlayerIndex].canAct = false
-		H.raiseAmount = action.Amount
+		H.raiseAmount = action.Amount - H.raiseAmount
 
 		// everyone still in hand can act again
 		for i := range H.Players {
 			H.Players[i].canAct = true
 		}
+		return true
 
 	case "call":
+		if action.Amount > H.Players[H.actionPlayerIndex].Stack {
+			action.Amount = H.Players[H.actionPlayerIndex].Stack
+
+		}
 		H.Players[H.actionPlayerIndex].Stack -= action.Amount
 		H.pot += action.Amount
 		H.Players[H.actionPlayerIndex].canAct = false
+		return true
 
 	case "fold":
 		for i, p := range H.Players {
 			if p.ID == action.PlayerID {
 				H.Players = append(H.Players[:i], H.Players[i+1:]...)
-				break
+				return true
 			}
 		}
 	}
+
+	return false
 }
 
 func newHand(players []*Player, smallBlindPosition int) *Hand {
@@ -121,61 +135,67 @@ func newHand(players []*Player, smallBlindPosition int) *Hand {
 
 func streetLoop(h *Hand) {
 	for {
-		// if everyone but 1 player folded, go to showdown
+		// if only one player left, street over
 		if len(h.Players) == 1 {
 			break
 		}
 
-		actingPlayerIndex := nextEligible(h, h.actionPlayerIndex)
-		if actingPlayerIndex == -1 {
-			break
+		acting := nextEligible(h, h.actionPlayerIndex)
+		if acting == -1 {
+			break // no one else can act -> street over
 		}
-		println("player:", h.Players[actingPlayerIndex].ID, "is acting")
+
+		h.actionPlayerIndex = acting
+		cur := h.Players[acting]
+		println("player:", cur.ID, "is acting")
 		fmt.Printf("can do: %s\n", strings.Join(h.avaliableActions, ", "))
 
-		h.actionPlayerIndex = actingPlayerIndex
-		cur := h.Players[actingPlayerIndex]
-
-		// wait until player's action or timeout (no polling)
-		var act Action
-		got := false
+		// Wait on THIS player until valid action or timeout
 		timer := time.NewTimer(30 * time.Second)
-		select {
-		case act = <-cur.pendingAction:
-			got = true
-		case <-timer.C:
-			if contains(h.avaliableActions, "check") {
-				act = Action{PlayerID: cur.ID, Action: "check"}
-				got = true
-			} else {
-				act = Action{PlayerID: cur.ID, Action: "fold"}
-				got = true
+		for {
+			var act Action
+
+			select {
+			case act = <-cur.pendingAction:
+				// Ignore messages not from this player or not currently allowed
+				if act.PlayerID != cur.ID || !contains(h.avaliableActions, act.Action) {
+					continue
+				}
+				//  if valid -> stop waiting
+				if handleAction(h, act) {
+					if !timer.Stop() {
+						<-timer.C
+					}
+					goto nextActor
+				}
+				// invalid -> keep waiting; timer continues
+
+			case <-timer.C:
+				// Timeout -> default move for THIS player
+				if contains(h.avaliableActions, "check") {
+					handleAction(h, Action{PlayerID: cur.ID, Action: "check"})
+				} else {
+					handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
+				}
+				goto nextActor
 			}
 		}
-		timer.Stop()
 
-		// if got no action check/fold
-		print("player ", cur.ID, " got action: ", act.Action, "\n")
-		if got && contains(h.avaliableActions, act.Action) && act.PlayerID == cur.ID {
-			handleAction(h, act)
-		} else if contains(h.avaliableActions, "check") {
-			handleAction(h, Action{PlayerID: cur.ID, Action: "check"})
-		} else {
-			handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
+	nextActor:
+		fmt.Printf("pot: %.2f\n", h.pot)
+		// Advance seat (slice may have shrunk on fold; modulo keeps us in range)
+		if len(h.Players) == 0 {
+			break
 		}
-		print("pot: ", h.pot, "\n")
-
-		cur.canAct = false
+		h.actionPlayerIndex %= len(h.Players)
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
 
-	//reset everyone can act
-	//on new street avaliable actions are raise, check, fold
+	// New street reset
 	for i := range h.Players {
 		h.Players[i].canAct = true
-		h.avaliableActions = []string{"raise", "check", "fold"}
 	}
-	//reset previous raise to 0
+	h.avaliableActions = []string{"raise", "check", "fold"}
 	h.raiseAmount = 0
 }
 
@@ -287,4 +307,16 @@ func (h *Hand) run() {
 		tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
 		h.Players[tmpIndex].Stack += h.pot
 	}
+
+	// take players with 0 stack out of hand
+	tmp := h.Players[:0] // reuse capacity
+	for _, p := range h.Players {
+		if p.Stack > 0 { // consider <= 0 if using floats
+			tmp = append(tmp, p)
+		}
+		if p.Stack <= 0 {
+			p.sittingOut = true
+		}
+	}
+	h.Players = tmp
 }
