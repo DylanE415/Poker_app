@@ -391,12 +391,15 @@ func isHandBetter(h1, h2 BestHand) bool {
 		}
 	}
 	// final tiebreaker for high cards
-	for i := 0; i < len(h1.extraHighCards); i++ {
-		if h1.extraHighCards[i] != h2.extraHighCards[i] {
-			return h1.extraHighCards[i] > h2.extraHighCards[i]
+	if h1.Type == HighCard {
+		for i := 0; i < len(h1.extraHighCards); i++ {
+			if h1.extraHighCards[i] != h2.extraHighCards[i] {
+				return h1.extraHighCards[i] > h2.extraHighCards[i]
+			}
 		}
 	}
-	return false
+	//for full house, quads
+	return h1.kicker > h2.kicker
 
 }
 
