@@ -23,6 +23,7 @@ type Hand struct {
 	pot               float64
 	avaliableActions  []string // "raise", "call", "fold", "check" (changes based on state)
 	raiseAmount       float64
+	currentBet        float64
 }
 
 func shuffleDeck(deck []Card) {
@@ -71,22 +72,31 @@ func handleAction(H *Hand, action Action) bool {
 		return true
 	case "raise":
 		//must raise by double the previous raise
+
 		if action.Amount > H.Players[H.actionPlayerIndex].Stack {
 			action.Amount = H.Players[H.actionPlayerIndex].Stack
-		} else if action.Amount < (H.raiseAmount * 2) {
+		} else if action.Amount < (H.raiseAmount) {
 			print("cannot raise by less than current raise amount\n")
 			return false
 		}
-		H.Players[H.actionPlayerIndex].Stack -= action.Amount
-		H.pot += action.Amount
+		//current bet
+		newBet := action.Amount + H.currentBet
+		H.Players[H.actionPlayerIndex].Stack -= newBet
+		H.pot += newBet
 		H.avaliableActions = []string{"call", "fold", "raise"}
-		H.Players[H.actionPlayerIndex].canAct = false
-		H.raiseAmount = action.Amount - H.raiseAmount
 
-		// everyone still in hand can act again
+		H.raiseAmount = action.Amount
+		//new current bet everyone has to match
+		H.currentBet = newBet
+		//chips in front of player
+		H.Players[H.actionPlayerIndex].currentBet = newBet
+
+		// everyone still in hand can act again execpt raiser
 		for i := range H.Players {
 			H.Players[i].canAct = true
 		}
+		H.Players[H.actionPlayerIndex].canAct = false
+
 		return true
 
 	case "call":
@@ -94,8 +104,13 @@ func handleAction(H *Hand, action Action) bool {
 			action.Amount = H.Players[H.actionPlayerIndex].Stack
 
 		}
-		H.Players[H.actionPlayerIndex].Stack -= action.Amount
-		H.pot += action.Amount
+		// amount needed to call is what the most recent raiser bet(current bet in hand) - what the player has in front of them
+		amountToCall := H.currentBet - H.Players[H.actionPlayerIndex].currentBet
+
+		H.Players[H.actionPlayerIndex].Stack -= amountToCall
+		H.pot += amountToCall
+		H.currentBet += amountToCall + H.Players[H.actionPlayerIndex].currentBet
+		H.Players[H.actionPlayerIndex].currentBet = amountToCall + H.Players[H.actionPlayerIndex].currentBet
 		H.Players[H.actionPlayerIndex].canAct = false
 		return true
 

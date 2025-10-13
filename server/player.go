@@ -9,6 +9,7 @@ type Player struct {
 	sittingOut    bool
 	hand          []Card
 	pendingAction chan Action
+	currentBet    float64
 }
 
 func newPlayer(id string, name string, stack float64) Player {
