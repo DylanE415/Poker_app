@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -62,85 +61,88 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 /*
 for users to join a room, if valid sends a command to the command channel of that room
 
-	request would have the form
+	request would have the form, and cookie with id and session token
 
 	curl -X POST "http://localhost:8080/join?room=1" \
 	  -H "Content-Type: application/json" \
-	  -d '{"id":"1234","name":"Alice","stack":100}'
+	  -d '{"stack":100}'
 */
-func (s *Server) joinHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
+type joinBody struct {
+	Stack float64 `json:"stack"`
+}
+
+func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
 		return
 	}
-
-	// parse request body
-	var tmp Player
-	if err := json.NewDecoder(req.Body).Decode(&tmp); err != nil || tmp.ID == "" || tmp.Name == "" || tmp.Stack <= 0 {
-		http.Error(w, "bad json (need id, name, stack)", http.StatusBadRequest)
-		return
-	}
-	p := newPlayer(tmp.ID, tmp.Name, tmp.Stack)
-	// has to be a valid room id
-	roomID, err := room_request_to_int(req.URL.Query().Get("room"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	rm := s.getRoom(fmt.Sprint(roomID))
-
-	//check if id is an int
-	if _, err := strconv.Atoi(p.ID); err != nil {
-		http.Error(w, "id must be an int", http.StatusBadRequest)
+	// auth
+	uid, ok := s.userIDFromRequest(r)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
 		return
 	}
 
-	// check if player already exists in that room
-	if rm.has(p.ID) {
-		http.Error(w, "player id already in room", http.StatusBadRequest)
+	// room (query only; don’t mix body + query)
+	roomID := r.URL.Query().Get("room")
+	if roomID == "" {
+		http.Error(w, "missing room", http.StatusBadRequest)
 		return
 	}
-	// check if name is already in that room
-	for _, pl := range rm.players {
-		if pl.Name == p.Name {
-			http.Error(w, "name already in room", http.StatusBadRequest)
-			return
-		}
-	}
-	//check if room has less than 9 players
-	if len(rm.players) >= 9 {
-		http.Error(w, "room is full", http.StatusBadRequest)
+	room := s.getRoom(roomID)
+	if room == nil {
+		http.Error(w, "no such room", http.StatusBadRequest)
 		return
 	}
 
-	//stack must be positive and at least minStack and not greater than maxStack
-	print("stack: ", p.Stack, "minStack: ", p.Stack, rm.minStack)
-	if p.Stack < rm.minStack || p.Stack > rm.maxStack {
-		http.Error(w, fmt.Sprintf("stack must be within %f and %f", rm.minStack, rm.maxStack), http.StatusBadRequest)
+	// decode body safely
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
+	var b joinBody
+	if err := json.NewDecoder(r.Body).Decode(&b); err != nil || b.Stack < 0 {
+		http.Error(w, "bad json (need stack>=0)", http.StatusBadRequest)
 		return
 	}
 
-	// add player
-	p.canAct = true
-	rm.joinAndLeaveChan <- Command{Kind: "join", Player: &p}
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("joined\n"))
+	// user lookup
+	u, ok := s.usersByID[uid]
+	if !ok {
+		http.Error(w, "no such user", http.StatusBadRequest)
+		return
+	}
+
+	p := newPlayer(u.ID, u.Username, b.Stack)
+
+	room.joinAndLeaveChan <- Command{Kind: "join", Player: p}
+	w.WriteHeader(http.StatusNoContent)
+
 }
 
 // for users to leave a room, if valid sends a command to the command channel of that room, same format as join
+// body has room id: http://localhost:8080/leave?room=1
 
 func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
 		return
 	}
-	var p Player
-	if err := json.NewDecoder(req.Body).Decode(&p); err != nil || p.ID == "" {
-		http.Error(w, "bad json (need id)", http.StatusBadRequest)
+	uid, ok := s.userIDFromRequest(req)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
 		return
 	}
+	//parse which room from body
+	var rmNumber int
+	if err := json.NewDecoder(req.Body).Decode(&rmNumber); err != nil || rmNumber < 0 {
+		http.Error(w, "bad json (need room)", http.StatusBadRequest)
+		return
+	}
+
 	rm := s.getRoom(req.URL.Query().Get("room"))
-	rm.joinAndLeaveChan <- Command{Kind: "leave", Player: &p}
+
+	//get player pointer
+	p := getPlayerFromID(uid, rm.players)
+
+	rm.joinAndLeaveChan <- Command{Kind: "leave", Player: p}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("left\n"))
 }
@@ -158,6 +160,13 @@ type PlayersResponse struct {
 func (s *Server) playersHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "use GET", http.StatusMethodNotAllowed)
+		return
+	}
+
+	//make sure valid cookie
+	_, ok := s.userIDFromRequest(r)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
 		return
 	}
 
@@ -191,6 +200,14 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "use GET", http.StatusMethodNotAllowed)
 		return
 	}
+
+	//make sure valid cookie
+	_, ok := s.userIDFromRequest(r)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
+		return
+	}
+
 	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -231,9 +248,16 @@ func enqueueLatest(ch chan Action, a Action) {
 		}
 	}
 }
+
 func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+		return
+	}
+	//make sure valid cookie
+	uid, ok := s.userIDFromRequest(r)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
 		return
 	}
 	// check valid room
@@ -255,7 +279,13 @@ func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad json (need playerId, action)", http.StatusBadRequest)
 		return
 	}
-	// find player
+	// make sure cookie matches
+	if a.PlayerID != uid {
+		http.Error(w, "auth required", http.StatusUnauthorized)
+		return
+	}
+
+	// find player in hand
 	idx := FindPlayerIndexInHand(h, a.PlayerID)
 	if idx < 0 {
 		http.Error(w, "unknown player", http.StatusBadRequest)
@@ -287,6 +317,13 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//make sure valid cookie
+	_, ok := s.userIDFromRequest(r)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
+		return
+	}
+
 	// check valid room
 	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
 	if err != nil {
@@ -296,8 +333,8 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 
 	// check if player is in room
 	rm := s.getRoom(fmt.Sprint(roomID))
-	if !rm.has(r.URL.Query().Get("playerId")) {
-		http.Error(w, "player not in room", http.StatusConflict)
+	if getPlayerFromID(r.URL.Query().Get("playerId"), rm.players) == nil {
+		http.Error(w, "unknown player", http.StatusBadRequest)
 		return
 	}
 	// check if player is in a hand, if they are they can not sit in or out

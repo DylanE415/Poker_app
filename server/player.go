@@ -12,8 +12,8 @@ type Player struct {
 	currentBet    float64
 }
 
-func newPlayer(id string, name string, stack float64) Player {
-	return Player{
+func newPlayer(id string, name string, stack float64) *Player {
+	return &Player{
 		ID:            id,
 		Name:          name,
 		Stack:         stack,
@@ -22,4 +22,13 @@ func newPlayer(id string, name string, stack float64) Player {
 		timebank:      60,
 		pendingAction: make(chan Action, 1),
 	}
+}
+
+func getPlayerFromID(id string, players []*Player) *Player {
+	for _, p := range players {
+		if p.ID == id {
+			return p
+		}
+	}
+	return nil
 }
