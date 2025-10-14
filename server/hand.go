@@ -24,6 +24,7 @@ type Hand struct {
 	avaliableActions  []string // "raise", "call", "fold", "check" (changes based on state)
 	raiseAmount       float64
 	currentBet        float64
+	smallBlindIndex   int
 }
 
 func shuffleDeck(deck []Card) {
@@ -106,10 +107,9 @@ func handleAction(H *Hand, action Action) bool {
 		}
 		// amount needed to call is what the most recent raiser bet(current bet in hand) - what the player has in front of them
 		amountToCall := H.currentBet - H.Players[H.actionPlayerIndex].currentBet
-
+		//update player stack/pot and what the current player has in front of them
 		H.Players[H.actionPlayerIndex].Stack -= amountToCall
 		H.pot += amountToCall
-		H.currentBet += amountToCall + H.Players[H.actionPlayerIndex].currentBet
 		H.Players[H.actionPlayerIndex].currentBet = amountToCall + H.Players[H.actionPlayerIndex].currentBet
 		H.Players[H.actionPlayerIndex].canAct = false
 		return true
@@ -141,6 +141,7 @@ func newHand(players []*Player, smallBlindPosition int) *Hand {
 	return &Hand{
 		Players:           players,
 		actionPlayerIndex: smallBlindPosition,
+		smallBlindIndex:   smallBlindPosition,
 		deck:              deck,
 		currentState:      "pre-flop",
 		pot:               0,
@@ -149,6 +150,19 @@ func newHand(players []*Player, smallBlindPosition int) *Hand {
 }
 
 func streetLoop(h *Hand) {
+	h.actionPlayerIndex = h.smallBlindIndex
+	//if pre flop small blind raises
+	if h.currentState == "pre-flop" {
+		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
+		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: 1})
+		print("debug check for current bet: ", h.Players[h.actionPlayerIndex].currentBet, "\n")
+		//blind cant still act after raising
+		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
+	}
+	//at start everyone can act
+	for i := range h.Players {
+		h.Players[i].canAct = true
+	}
 	for {
 		// if only one player left, street over
 		if len(h.Players) == 1 {
@@ -206,10 +220,6 @@ func streetLoop(h *Hand) {
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
 
-	// New street reset
-	for i := range h.Players {
-		h.Players[i].canAct = true
-	}
 	h.avaliableActions = []string{"raise", "check", "fold"}
 	h.raiseAmount = 0
 }
