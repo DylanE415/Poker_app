@@ -5,25 +5,60 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 /* === HTTP server handlers === */
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// the server containing all rooms
-type Server struct {
-	room1 *Room
-	room2 *Room
+// login handler
+/*
+a POST request with the follwing body:
+
+{
+	"username": "username",
+	"password": "password"
 }
 
-func (s *Server) getRoom(q string) *Room {
-	if q == "2" {
-		return s.room2
+*/
+type loginReq struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+		return
 	}
-	return s.room1
+	defer r.Body.Close()
+
+	var req loginReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+
+	uname := strings.ToLower(strings.TrimSpace(req.Username))
+	u, ok := s.usersByUsername[uname]
+	if !ok || bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)) != nil {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	// create session + set cookie
+	if err := s.createSessionFor(w, u.ID); err != nil {
+		http.Error(w, "could not create session", http.StatusInternalServerError)
+		return
+	}
+
+	// success (no body needed)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /*
 for users to join a room, if valid sends a command to the command channel of that room
 

@@ -23,23 +23,34 @@ func withCORS(h http.Handler) http.Handler {
 /* === main === */
 
 func main() {
-	// room takes in id, minStack
-	s := &Server{
-		room1: newRoom(1, 30.0, 100.0),
-		room2: newRoom(2, 30.0, 100.0),
+	// 1) load users.json
+	uByName, _, err := loadUsersJSON("../users/users.json")
+	if err != nil {
+		log.Fatal(err)
 	}
-	// launch goroutines
+
+	// 2) make server with rooms + users, and init sessions
+	s := &Server{
+		room1:           newRoom(1, 30.0, 100.0),
+		room2:           newRoom(2, 30.0, 100.0),
+		usersByUsername: uByName,
+	}
+	s.initSessions()
+
+	// launch room loops
 	go s.room1.run()
-	go s.room2.run()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/join", s.joinHandler)
-	mux.HandleFunc("/leave", s.leaveHandler)
-	mux.HandleFunc("/players", s.playersHandler)
-	mux.HandleFunc("/state", s.stateHandler)
-	mux.HandleFunc("/action", s.setActionHandler)
-	mux.HandleFunc("/sitInOrOut", s.sitInOrOutHandler)
+	mux.HandleFunc("/login", s.loginHandler)
 
-	log.Println("Server on :8080 | POST /join  POST /leave  GET /players  (use ?room=2 for room 2)")
+	// wrapped in require auth to make sure the user is logged in(has a session cookie)
+	mux.Handle("/join", s.requireAuth(http.HandlerFunc(s.joinHandler)))
+	mux.Handle("/leave", s.requireAuth(http.HandlerFunc(s.leaveHandler)))
+	mux.Handle("/players", s.requireAuth(http.HandlerFunc(s.playersHandler)))
+	mux.Handle("/state", s.requireAuth(http.HandlerFunc(s.stateHandler)))
+	mux.Handle("/action", s.requireAuth(http.HandlerFunc(s.setActionHandler)))
+	mux.Handle("/sitInOrOut", s.requireAuth(http.HandlerFunc(s.sitInOrOutHandler)))
+
+	log.Println("Server on :8080")
 	log.Fatal(http.ListenAndServe(":8080", withCORS(mux)))
 }
