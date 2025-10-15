@@ -6,8 +6,11 @@ import (
 )
 
 type Command struct {
-	Kind   string // "join, leave, sit_out"
-	Player *Player
+	Kind       string // "join, leave, sit_out"
+	PlayerID   string
+	PlayerName string
+	stack      float64
+	reply      chan error //for sending a reply to client
 }
 
 type Room struct {
@@ -35,7 +38,8 @@ func newRoom(id int, minStack float64, maxStack float64) *Room {
 	}
 }
 
-func (r *Room) has(id string) bool {
+// returns true if playerid is in room
+func (r *Room) hasPlayer(id string) bool {
 	for _, p := range r.players {
 		if p.ID == id {
 			return true
@@ -106,6 +110,15 @@ func (r *Room) startNextHandIfReady() {
 	}(r.currentHand)
 }
 
+// for sending a reply to the client
+func safeReply(ch chan error, err error) {
+	select {
+	case ch <- err: // this means that there is a channel to receive
+	default:
+		// receiver not ready; drop so the room goroutine keeps running
+	}
+}
+
 // function operates on a pointer receiver to actually change the room in memory, r Room would make a copy
 func (r *Room) run() {
 	ticker := time.NewTicker(400 * time.Millisecond) // every 400ms the room checks for new joins/leaves also checks if a hand is over
@@ -116,20 +129,38 @@ func (r *Room) run() {
 		case cmd := <-r.joinAndLeaveChan:
 			switch cmd.Kind {
 			case "join":
-				if !r.has(cmd.Player.ID) {
-					r.players = append(r.players, cmd.Player)
+				// if the player is not in room
+				if !r.hasPlayer(cmd.PlayerID) {
+					//make new player and add to room
+					newPlayer := newPlayer(cmd.PlayerID, cmd.PlayerName, cmd.stack)
+					r.players = append(r.players, newPlayer)
+					//send good reply to client
+					safeReply(cmd.reply, nil)
 				} else {
-					fmt.Printf("Player %s already in room %d\n", cmd.Player.ID, r.id)
+					//send bad reply to client
+					safeReply(cmd.reply, fmt.Errorf("player already in room"))
 				}
 			case "leave":
-				id := cmd.Player.ID
-				dst := r.players[:0]
-				for _, p := range r.players {
-					if p.ID != id {
-						dst = append(dst, p)
+				//see if player is in room
+				id := cmd.PlayerID
+				//if player is in room
+				if r.hasPlayer(id) {
+					//leave room and send good reply to client
+					for i, p := range r.players {
+						if p.ID == id {
+							// remove player (appends all elements before i and all elements after i)
+							r.players = append(r.players[:i], r.players[i+1:]...)
+							//send good reply to client
+							safeReply(cmd.reply, nil)
+							break
+						}
 					}
+				} else {
+					//send bad reply to client
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
 				}
-				r.players = dst
+			default:
+				panic("unknown command kind")
 			}
 			// optional: print roster
 			fmt.Println("Players in room", r.id, ":")

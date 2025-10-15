@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -110,9 +111,7 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := newPlayer(u.ID, u.Username, b.Stack)
-
-	room.joinAndLeaveChan <- Command{Kind: "join", Player: p}
+	room.joinAndLeaveChan <- Command{Kind: "join", PlayerID: u.ID, PlayerName: u.Username, stack: b.Stack}
 	w.WriteHeader(http.StatusNoContent)
 
 }
@@ -131,18 +130,42 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	//parse which room from body
-	var rmNumber int
-	if err := json.NewDecoder(req.Body).Decode(&rmNumber); err != nil || rmNumber < 0 {
-		http.Error(w, "bad json (need room)", http.StatusBadRequest)
+	roomID := req.URL.Query().Get("room")
+	if roomID == "" {
+		http.Error(w, "missing room", http.StatusBadRequest)
+		return
+	}
+	room := s.getRoom(roomID)
+
+	if room == nil {
+		http.Error(w, "no such room", http.StatusBadRequest)
 		return
 	}
 
-	rm := s.getRoom(req.URL.Query().Get("room"))
+	// user lookup
+	u, ok := s.usersByID[uid]
+	if !ok {
+		http.Error(w, "no such user", http.StatusBadRequest)
+		return
+	}
 
-	//get player pointer
-	p := getPlayerFromID(uid, rm.players)
+	//send leave command
+	reply := make(chan error, 1)
+	room.joinAndLeaveChan <- Command{Kind: "leave", PlayerID: u.ID, PlayerName: u.Username, reply: reply}
 
-	rm.joinAndLeaveChan <- Command{Kind: "leave", Player: p}
+	//now we awaiteither the reply or a timeout
+	timeout := time.NewTimer(5 * time.Second)
+	select {
+	case err := <-reply:
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	case <-req.Context().Done():
+		http.Error(w, "request canceled", http.StatusGatewayTimeout)
+	}
+
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("left\n"))
 }

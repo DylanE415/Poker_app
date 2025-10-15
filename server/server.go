@@ -32,6 +32,7 @@ func (s *Server) initSessions() {
 	}
 }
 
+// returns the room object for a particular room number
 func (s *Server) getRoom(q string) *Room {
 	if q == "2" {
 		return s.room2
