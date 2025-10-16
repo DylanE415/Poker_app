@@ -112,7 +112,7 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reply := make(chan error, 1)
-	room.joinAndLeaveChan <- Command{Kind: "join", PlayerID: u.ID, PlayerName: u.Username, stack: b.Stack, reply: reply}
+	room.commandChan <- Command{Kind: "join", PlayerID: u.ID, PlayerName: u.Username, stack: b.Stack, reply: reply}
 	//now we awaiteither the reply or a timeout
 	select {
 	case err := <-reply:
@@ -128,8 +128,6 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "request canceled", http.StatusGatewayTimeout)
 		return
 	}
-
-	w.WriteHeader(http.StatusNoContent)
 
 }
 
@@ -168,7 +166,7 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 
 	//send leave command
 	reply := make(chan error, 1)
-	room.joinAndLeaveChan <- Command{Kind: "leave", PlayerID: u.ID, PlayerName: u.Username, reply: reply}
+	room.commandChan <- Command{Kind: "leave", PlayerID: u.ID, PlayerName: u.Username, reply: reply}
 
 	//now we awaiteither the reply or a timeout
 	select {
@@ -186,8 +184,6 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("left\n"))
 }
 
 // simple get request to return players in room for display purposes
@@ -273,25 +269,13 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // exaample request
 /*POST http://localhost:8080/action?room=1
+//actions: call, raise, fold, check
 Content-Type: application/json
 {
-  "playerId": "123",
   "action": "fold"
+  "amount": 0
 }
 */
-
-// for rmaking the latest action the current action in the channel
-func enqueueLatest(ch chan Action, a Action) {
-	for {
-		select {
-		case ch <- a:
-			// sent successfully; done
-			return
-		case <-ch:
-			// channel was full; drop the value; and repeat statement to do first case
-		}
-	}
-}
 
 func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -310,45 +294,57 @@ func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	rm := s.getRoom(fmt.Sprint(roomID))
-	if rm == nil || rm.currentHand == nil {
-		http.Error(w, "no active hand", http.StatusConflict)
+	// get room
+	room := s.getRoom(fmt.Sprint(roomID))
+	if room == nil {
+		http.Error(w, "no such room", http.StatusBadRequest)
 		return
 	}
-	h := rm.currentHand
 
-	// decode body
+	// decode action from body
 	var a Action
-	if err := json.NewDecoder(r.Body).Decode(&a); err != nil || a.PlayerID == "" || a.Action == "" {
-		http.Error(w, "bad json (need playerId, action)", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
 		return
 	}
+	a.PlayerID = uid
 	// make sure cookie matches
 	if a.PlayerID != uid {
 		http.Error(w, "auth required", http.StatusUnauthorized)
 		return
 	}
 
-	// find player in hand
-	idx := FindPlayerIndexInHand(h, a.PlayerID)
-	if idx < 0 {
-		http.Error(w, "unknown player", http.StatusBadRequest)
+	if a.Amount < 0 {
+		http.Error(w, "amount must be greater than 0", http.StatusBadRequest)
 		return
 	}
 
-	//check if valid action
-	if !contains(h.avaliableActions, a.Action) {
-		http.Error(w, "invalid action", http.StatusBadRequest)
+	reply := make(chan error, 1)
+	command := Command{
+		Kind:       "action",
+		ActionType: a.Action,
+		PlayerID:   a.PlayerID,
+		reply:      reply,
+		actionAmt:  a.Amount,
+	}
+	//sned command to room
+	room.commandChan <- command
+
+	//wait for timeout,reply, or the client to cancel
+	select {
+	case err := <-reply:
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent) // done
+	case <-time.After(2 * time.Second):
+		http.Error(w, "timeout waiting for action ack", http.StatusGatewayTimeout)
+		return
+	case <-r.Context().Done():
+		http.Error(w, "request canceled", http.StatusGatewayTimeout)
 		return
 	}
-
-	// enqueue latest action into channel
-	p := h.Players[idx]
-
-	enqueueLatest(p.pendingAction, a)
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("action queued\n"))
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -393,10 +389,10 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 	reply := make(chan error, 1)
 	if sitIn {
 		Command := Command{Kind: "sitIn", PlayerID: uid, reply: reply}
-		room.joinAndLeaveChan <- Command
+		room.commandChan <- Command
 	} else {
 		Command := Command{Kind: "sitOut", PlayerID: uid, reply: reply}
-		room.joinAndLeaveChan <- Command
+		room.commandChan <- Command
 	}
 
 	//wait for timeout,reply, or the client to cancel
@@ -408,14 +404,11 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusNoContent) // done
 	case <-time.After(2 * time.Second):
-		http.Error(w, "timeout waiting for leave ack", http.StatusGatewayTimeout)
+		http.Error(w, "timeout waiting for action ack", http.StatusGatewayTimeout)
 		return
 	case <-r.Context().Done():
 		http.Error(w, "request canceled", http.StatusGatewayTimeout)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("OK!\n"))
 
 }

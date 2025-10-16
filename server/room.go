@@ -2,21 +2,22 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 )
 
 type Command struct {
-	Kind       string // "join, leave, sit_out, sit_in"
+	Kind       string // "join, leave, sitOut, sitIn, action"
+	ActionType string // "fold, call, raise, check"
 	PlayerID   string
 	PlayerName string
 	stack      float64
 	reply      chan error //for sending a reply to client
+	actionAmt  float64
 }
 
 type Room struct {
 	id                 int
-	joinAndLeaveChan   chan Command
+	commandChan        chan Command
 	players            []*Player
 	minStack           float64
 	maxStack           float64
@@ -30,7 +31,7 @@ type Room struct {
 func newRoom(id int, minStack float64, maxStack float64) *Room {
 	return &Room{
 		id:                 id,
-		joinAndLeaveChan:   make(chan Command, 16),
+		commandChan:        make(chan Command, 16),
 		players:            make([]*Player, 0),
 		minStack:           minStack,
 		maxStack:           maxStack,
@@ -111,48 +112,25 @@ func (r *Room) startNextHandIfReady() {
 	}(r.currentHand)
 }
 
+// for rmaking the latest action the current action in the channel
+func enqueueLatestAction(ch chan Action, a Action) {
+	for {
+		select {
+		case ch <- a:
+			// sent successfully; done
+			return
+		case <-ch:
+			// channel was full; drop the value; and repeat the loop
+		}
+	}
+}
+
 // for sending a reply to the client
 func safeReply(ch chan error, err error) {
 	select {
 	case ch <- err: // this means that there is a channel to receive
 	default:
 		// receiver not ready; drop so the room goroutine keeps running
-	}
-}
-
-func SitInOrOut(r *Room, id string, sitIn bool) {
-	// check if player is in room
-	rm := s.getRoom(fmt.Sprint(roomID))
-	if getPlayerFromID(r.URL.Query().Get("playerId"), rm.players) == nil {
-		http.Error(w, "unknown player", http.StatusBadRequest)
-		return
-	}
-	// check if player is in a hand, if they are they can not sit in or out
-	h := rm.currentHand
-	p := rm.players[FindPlayerIndexInRoom(rm, r.URL.Query().Get("playerId"))]
-
-	if h == nil {
-		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
-			p.sittingOut = false
-		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
-			p.sittingOut = true
-		} else {
-			http.Error(w, "already in that state", http.StatusBadRequest)
-			return
-		}
-	} else if FindPlayerIndexInHand(h, r.URL.Query().Get("playerId")) >= 0 {
-		http.Error(w, "player already in hand", http.StatusConflict)
-		return
-	} else {
-
-		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
-			p.sittingOut = false
-		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
-			p.sittingOut = true
-		} else {
-			http.Error(w, "already in that state", http.StatusBadRequest)
-			return
-		}
 	}
 }
 
@@ -163,7 +141,7 @@ func (r *Room) run() {
 
 	for {
 		select {
-		case cmd := <-r.joinAndLeaveChan:
+		case cmd := <-r.commandChan:
 			switch cmd.Kind {
 			case "join":
 				// if the player is not in room
@@ -196,6 +174,42 @@ func (r *Room) run() {
 					//send bad reply to client
 					safeReply(cmd.reply, fmt.Errorf("player not in room"))
 				}
+			case "sitIn":
+				player := getPlayerFromID(cmd.PlayerID, r.players)
+				//send good reply to client
+				safeReply(cmd.reply, nil)
+				player.sittingOut = false
+			case "sitOut":
+				player := getPlayerFromID(cmd.PlayerID, r.players)
+				//send good reply to client
+				safeReply(cmd.reply, nil)
+				player.sittingOut = true
+			case "action":
+				player := getPlayerFromID(cmd.PlayerID, r.players)
+				if player == nil {
+					//send bad reply to client
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
+				if player.sittingOut {
+					safeReply(cmd.reply, fmt.Errorf("player is sitting out"))
+					break
+				}
+				//check if valid action
+				h := r.currentHand
+				if h == nil {
+					safeReply(cmd.reply, fmt.Errorf("no hand in progress"))
+					break
+				}
+				if !contains(h.avaliableActions, cmd.ActionType) {
+					safeReply(cmd.reply, fmt.Errorf("invalid action"))
+					break
+				}
+				//send good reply to client
+				safeReply(cmd.reply, nil)
+				// enqueue the action
+				enqueueLatestAction(player.pendingAction, Action{PlayerID: player.ID, Action: cmd.ActionType, Amount: cmd.actionAmt})
+
 			default:
 				panic("unknown command kind")
 			}

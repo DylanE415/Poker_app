@@ -36,8 +36,11 @@ func (s *Server) initSessions() {
 func (s *Server) getRoom(q string) *Room {
 	if q == "2" {
 		return s.room2
+	} else if q == "1" {
+		return s.room1
 	}
-	return s.room1
+
+	return nil
 }
 
 // newSessionID returns a 32-byte random token
