@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 )
 
 type Command struct {
-	Kind       string // "join, leave, sit_out"
+	Kind       string // "join, leave, sit_out, sit_in"
 	PlayerID   string
 	PlayerName string
 	stack      float64
@@ -116,6 +117,42 @@ func safeReply(ch chan error, err error) {
 	case ch <- err: // this means that there is a channel to receive
 	default:
 		// receiver not ready; drop so the room goroutine keeps running
+	}
+}
+
+func SitInOrOut(r *Room, id string, sitIn bool) {
+	// check if player is in room
+	rm := s.getRoom(fmt.Sprint(roomID))
+	if getPlayerFromID(r.URL.Query().Get("playerId"), rm.players) == nil {
+		http.Error(w, "unknown player", http.StatusBadRequest)
+		return
+	}
+	// check if player is in a hand, if they are they can not sit in or out
+	h := rm.currentHand
+	p := rm.players[FindPlayerIndexInRoom(rm, r.URL.Query().Get("playerId"))]
+
+	if h == nil {
+		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
+			p.sittingOut = false
+		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
+			p.sittingOut = true
+		} else {
+			http.Error(w, "already in that state", http.StatusBadRequest)
+			return
+		}
+	} else if FindPlayerIndexInHand(h, r.URL.Query().Get("playerId")) >= 0 {
+		http.Error(w, "player already in hand", http.StatusConflict)
+		return
+	} else {
+
+		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
+			p.sittingOut = false
+		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
+			p.sittingOut = true
+		} else {
+			http.Error(w, "already in that state", http.StatusBadRequest)
+			return
+		}
 	}
 }
 

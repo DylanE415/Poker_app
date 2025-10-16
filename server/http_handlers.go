@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -110,8 +111,24 @@ func (s *Server) joinHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no such user", http.StatusBadRequest)
 		return
 	}
+	reply := make(chan error, 1)
+	room.joinAndLeaveChan <- Command{Kind: "join", PlayerID: u.ID, PlayerName: u.Username, stack: b.Stack, reply: reply}
+	//now we awaiteither the reply or a timeout
+	select {
+	case err := <-reply:
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent) // done
+	case <-time.After(2 * time.Second):
+		http.Error(w, "timeout waiting for join ack", http.StatusGatewayTimeout)
+		return
+	case <-r.Context().Done():
+		http.Error(w, "request canceled", http.StatusGatewayTimeout)
+		return
+	}
 
-	room.joinAndLeaveChan <- Command{Kind: "join", PlayerID: u.ID, PlayerName: u.Username, stack: b.Stack}
 	w.WriteHeader(http.StatusNoContent)
 
 }
@@ -154,16 +171,19 @@ func (s *Server) leaveHandler(w http.ResponseWriter, req *http.Request) {
 	room.joinAndLeaveChan <- Command{Kind: "leave", PlayerID: u.ID, PlayerName: u.Username, reply: reply}
 
 	//now we awaiteither the reply or a timeout
-	timeout := time.NewTimer(5 * time.Second)
 	select {
 	case err := <-reply:
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent) // done
+	case <-time.After(2 * time.Second):
+		http.Error(w, "timeout waiting for leave ack", http.StatusGatewayTimeout)
+		return
 	case <-req.Context().Done():
 		http.Error(w, "request canceled", http.StatusGatewayTimeout)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -236,6 +256,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	rm := s.getRoom(fmt.Sprint(roomID))
 
 	w.Header().Set("Content-Type", "application/json")
@@ -333,7 +354,7 @@ func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // need id of player
-// format is :8080/sitInOrOut?room=1&playerId=2&sitIn=true
+// format is :8080/sitInOrOut?room=1&sitIn=true
 func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
@@ -341,7 +362,7 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//make sure valid cookie
-	_, ok := s.userIDFromRequest(r)
+	uid, ok := s.userIDFromRequest(r)
 	if !ok {
 		http.Error(w, "auth required", http.StatusUnauthorized)
 		return
@@ -354,38 +375,44 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check if player is in room
-	rm := s.getRoom(fmt.Sprint(roomID))
-	if getPlayerFromID(r.URL.Query().Get("playerId"), rm.players) == nil {
-		http.Error(w, "unknown player", http.StatusBadRequest)
+	// user lookup
+	_, ok = s.usersByID[uid]
+	if !ok {
+		http.Error(w, "no such user", http.StatusBadRequest)
 		return
 	}
-	// check if player is in a hand, if they are they can not sit in or out
-	h := rm.currentHand
-	p := rm.players[FindPlayerIndexInRoom(rm, r.URL.Query().Get("playerId"))]
 
-	if h == nil {
-		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
-			p.sittingOut = false
-		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
-			p.sittingOut = true
-		} else {
-			http.Error(w, "already in that state", http.StatusBadRequest)
-			return
-		}
-	} else if FindPlayerIndexInHand(h, r.URL.Query().Get("playerId")) >= 0 {
-		http.Error(w, "player already in hand", http.StatusConflict)
+	//parse the sitIn or sitOut
+	sitIn, err := strconv.ParseBool(r.URL.Query().Get("sitIn"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	//send sitIn or sitOut command to room
+	room := s.getRoom(fmt.Sprint(roomID))
+	reply := make(chan error, 1)
+	if sitIn {
+		Command := Command{Kind: "sitIn", PlayerID: uid, reply: reply}
+		room.joinAndLeaveChan <- Command
 	} else {
+		Command := Command{Kind: "sitOut", PlayerID: uid, reply: reply}
+		room.joinAndLeaveChan <- Command
+	}
 
-		if r.URL.Query().Get("sitIn") == "true" && p.sittingOut {
-			p.sittingOut = false
-		} else if r.URL.Query().Get("sitIn") == "false" && !p.sittingOut {
-			p.sittingOut = true
-		} else {
-			http.Error(w, "already in that state", http.StatusBadRequest)
+	//wait for timeout,reply, or the client to cancel
+	select {
+	case err := <-reply:
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		w.WriteHeader(http.StatusNoContent) // done
+	case <-time.After(2 * time.Second):
+		http.Error(w, "timeout waiting for leave ack", http.StatusGatewayTimeout)
+		return
+	case <-r.Context().Done():
+		http.Error(w, "request canceled", http.StatusGatewayTimeout)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
