@@ -47,7 +47,7 @@ func main() {
 	mux.Handle("/join", s.requireAuth(http.HandlerFunc(s.joinHandler)))
 	mux.Handle("/leave", s.requireAuth(http.HandlerFunc(s.leaveHandler)))
 	mux.Handle("/players", s.requireAuth(http.HandlerFunc(s.playersHandler)))
-	mux.Handle("/state", s.requireAuth(http.HandlerFunc(s.stateHandler)))
+	mux.Handle("/state", s.requireAuth(http.HandlerFunc(s.getStateHandler)))
 	mux.Handle("/action", s.requireAuth(http.HandlerFunc(s.setActionHandler)))
 	mux.Handle("/sitInOrOut", s.requireAuth(http.HandlerFunc(s.sitInOrOutHandler)))
 

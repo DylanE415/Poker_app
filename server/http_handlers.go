@@ -233,7 +233,7 @@ func (s *Server) playersHandler(w http.ResponseWriter, r *http.Request) {
 
 // for return state of room to client
 // GET /state?room=1  -> { room, actionPlayerIndex, players }
-func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getStateHandler(w http.ResponseWriter, r *http.Request) {
 	//TODO var hand = s.getRoom(r.URL.Query().Get("room")).currentHand
 	if r.Method != http.MethodGet {
 		http.Error(w, "use GET", http.StatusMethodNotAllowed)
@@ -241,28 +241,50 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//make sure valid cookie
-	_, ok := s.userIDFromRequest(r)
+	uid, ok := s.userIDFromRequest(r)
 	if !ok {
 		http.Error(w, "auth required", http.StatusUnauthorized)
 		return
 	}
-
-	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
+	_, err := room_request_to_int(r.URL.Query().Get("room"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	rm := s.getRoom(fmt.Sprint(roomID))
+	// user lookup
+	u, ok := s.usersByID[uid]
+	if !ok {
+		http.Error(w, "no such user", http.StatusBadRequest)
+		return
+	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(struct {
-		Room              int       `json:"room"`
-		ActionPlayerIndex int       `json:"actionPlayerIndex"`
-		Players           []*Player `json:"players"`
-	}{
-		Room: rm.id, ActionPlayerIndex: rm.smallBlindPosition + 1, Players: rm.players,
-	})
+	room := s.getRoom(r.URL.Query().Get("room"))
+	reply := make(chan error, 1)
+	stateReply := make(chan roomState, 1)
+	room.commandChan <- Command{Kind: "getState", PlayerID: u.ID, PlayerName: u.Username, reply: reply, stateReply: stateReply}
+	select {
+	case err := <-reply:
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		} else {
+			//await state reply
+			select {
+			case state := <-stateReply:
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(state)
+
+			}
+		}
+	case <-time.After(2 * time.Second):
+		http.Error(w, "timeout waiting for getState ack", http.StatusGatewayTimeout)
+		return
+	case <-r.Context().Done():
+		http.Error(w, "request canceled", http.StatusGatewayTimeout)
+		return
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////

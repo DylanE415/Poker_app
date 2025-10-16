@@ -6,12 +6,13 @@ import (
 )
 
 type Command struct {
-	Kind       string // "join, leave, sitOut, sitIn, action"
+	Kind       string // "join, leave, sitOut, sitIn, action, "getState"
 	ActionType string // "fold, call, raise, check"
 	PlayerID   string
 	PlayerName string
 	stack      float64
 	reply      chan error //for sending a reply to client
+	stateReply chan roomState
 	actionAmt  float64
 }
 
@@ -25,6 +26,30 @@ type Room struct {
 	currentHand        *Hand
 	previousHand       *Hand
 	handDone           chan struct{}
+}
+
+type playerState struct {
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	Stack      float64 `json:"stack"`
+	timebank   float64
+	sittingOut bool
+	hand       []Card
+	currentBet float64
+}
+
+type handState struct {
+	board            []Card
+	pot              float64
+	avaliableActions []string
+	raiseAmount      float64
+	currentBet       float64
+	actionPlayerName string
+}
+
+type roomState struct {
+	players []playerState
+	hand    handState
 }
 
 // has a command buffer of 16 commands
@@ -134,6 +159,14 @@ func safeReply(ch chan error, err error) {
 	}
 }
 
+func sendStateReply(ch chan roomState, rs roomState) {
+	select {
+	case ch <- rs: // this means that there is a channel to receive
+	default:
+		// receiver not ready; drop so the room goroutine keeps running
+	}
+}
+
 // function operates on a pointer receiver to actually change the room in memory, r Room would make a copy
 func (r *Room) run() {
 	ticker := time.NewTicker(400 * time.Millisecond) // every 400ms the room checks for new joins/leaves also checks if a hand is over
@@ -210,6 +243,45 @@ func (r *Room) run() {
 				// enqueue the action
 				enqueueLatestAction(player.pendingAction, Action{PlayerID: player.ID, Action: cmd.ActionType, Amount: cmd.actionAmt})
 
+			case "getState":
+				//send state to client
+				p := getPlayerFromID(cmd.PlayerID, r.players)
+				if p == nil {
+					//send bad reply to client
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
+				h := r.currentHand
+				//fill in various fields of the state
+				state := roomState{}
+				state.players = make([]playerState, len(r.players))
+				// only info needed to display to client about other players(name, stack, sittingOut, timebank, currentBet) and hand if it is clients id
+				for i, p := range r.players {
+					state.players[i] = playerState{
+						Name:       p.Name,
+						Stack:      p.Stack,
+						timebank:   p.timebank,
+						sittingOut: p.sittingOut,
+						currentBet: p.currentBet,
+					}
+					if p.ID == cmd.PlayerID {
+						state.players[i].hand = p.hand
+					}
+				}
+				//fill in hand state ( board, available actions, pot, currentBet, actionplayername, raiseAmount)
+				if h != nil {
+					state.hand = handState{
+						board:            h.board,
+						pot:              h.pot,
+						avaliableActions: h.avaliableActions,
+						raiseAmount:      h.raiseAmount,
+						currentBet:       h.currentBet,
+						actionPlayerName: h.Players[h.actionPlayerIndex].Name,
+					}
+				}
+				//send reply and statereply
+				safeReply(cmd.reply, nil)
+				sendStateReply(cmd.stateReply, state)
 			default:
 				panic("unknown command kind")
 			}
