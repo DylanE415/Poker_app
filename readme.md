@@ -1,11 +1,7 @@
 compile and run the server with:
 - cd server
-- go run .
-
-for testing, 
-run: 
-- npx serve 
-and open the html file
+- go run -race . (use -race for testing to detect data races)
+- go to http://localhost:8080/login
 
 
 to run test fucntions run 
@@ -17,7 +13,7 @@ test besthand logic: go test -v -run TestGetPlayerBestHand_AllTypes
 
 to register a new user
 - cd users
-- go run .
+- go run 
 - copy the hash and put it into the users.json file
 
 *important notes*
