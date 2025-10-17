@@ -297,16 +297,6 @@ func (r *Room) run() {
 			default:
 				panic("unknown command kind")
 			}
-			// optional: print roster
-			fmt.Println("Players in room", r.id, ":")
-			if len(r.players) == 0 {
-				fmt.Println("(none)")
-			} else {
-				for _, pl := range r.players {
-					fmt.Printf("- %s (%s) stack: %.2f\n", pl.Name, pl.ID, pl.Stack)
-				}
-			}
-			fmt.Println()
 			// After any roster change, we might now be eligible to start a hand:
 			r.startNextHandIfReady()
 
