@@ -72,7 +72,7 @@ func (s *Server) createSessionFor(w http.ResponseWriter, userID string) error {
 		Value:    sid,
 		Path:     "/",
 		HttpOnly: true,                 // JS can't read it
-		Secure:   true,                 // require HTTPS on the internet
+		Secure:   false,                // require HTTPS on the internet(set false when testing)
 		SameSite: http.SameSiteLaxMode, // or Strict if you prefer
 		MaxAge:   6 * 60 * 60,          // seconds
 	})

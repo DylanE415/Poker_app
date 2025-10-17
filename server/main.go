@@ -5,45 +5,9 @@ import (
 	"net/http"
 )
 
-/* wrapper for CORS */
-
-func withCORS(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
-/* === main === */
-
-func main() {
-	// 1) load users.json
-	uByName, _, err := loadUsersJSON("../users/users.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// 2) make server with rooms + users, and init sessions
-	s := &Server{
-		room1:           newRoom(1, 30.0, 100.0),
-		room2:           newRoom(2, 30.0, 100.0),
-		usersByUsername: uByName,
-	}
-	s.initSessions()
-
-	// launch room loops
-	go s.room1.run()
-
+func (s *Server) handleRoutes() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login", s.loginHandler)
 
-	// wrapped in require auth to make sure the user is logged in(has a session cookie)
 	mux.Handle("/join", s.requireAuth(http.HandlerFunc(s.joinHandler)))
 	mux.Handle("/leave", s.requireAuth(http.HandlerFunc(s.leaveHandler)))
 	mux.Handle("/players", s.requireAuth(http.HandlerFunc(s.playersHandler)))
@@ -51,6 +15,60 @@ func main() {
 	mux.Handle("/action", s.requireAuth(http.HandlerFunc(s.setActionHandler)))
 	mux.Handle("/sitInOrOut", s.requireAuth(http.HandlerFunc(s.sitInOrOutHandler)))
 
+	///the static pages
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			http.ServeFile(w, r, "./static/login.html")
+		case http.MethodPost:
+			s.loginHandler(w, r)
+		default:
+			http.Error(w, "use GET or POST", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.Handle("/play", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "use GET", http.StatusMethodNotAllowed)
+			return
+		}
+		http.ServeFile(w, r, "./static/play.html")
+	})))
+
+	// --- Static files (css, images, extra js) under /static/... ---
+	mux.Handle("/static/", http.StripPrefix("/static/",
+		http.FileServer(http.Dir("./static")),
+	))
+
+	// redirect to login
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	})
+
+	return mux
+}
+
+/* === main === */
+func main() {
+	// load users
+	uByName, uByID, err := loadUsersJSON("../users/users.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := &Server{
+		room1:           newRoom(1, 30.0, 100.0),
+		room2:           newRoom(2, 30.0, 100.0),
+		usersByUsername: uByName,
+		usersByID:       uByID, // <-- you use this in handlers; make sure it’s populated
+	}
+	s.initSessions()
+
+	go s.room1.run()
+	go s.room2.run()
+
+	// Same-origin setup: you can serve without CORS.
+	// If you *must* keep CORS, see the note below.
 	log.Println("Server on :8080")
-	log.Fatal(http.ListenAndServe(":8080", withCORS(mux)))
+	log.Fatal(http.ListenAndServe(":8080", s.handleRoutes()))
 }

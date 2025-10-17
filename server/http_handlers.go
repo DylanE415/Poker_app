@@ -11,6 +11,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// to prevent people from getting to the play page without logging in
+func (s *Server) playPage(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.userIDFromRequest(r); !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	// serve play.html
+}
+
 /* === HTTP server handlers === */
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -274,6 +283,12 @@ func (s *Server) getStateHandler(w http.ResponseWriter, r *http.Request) {
 			case state := <-stateReply:
 				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(state)
+			case <-time.After(2 * time.Second):
+				http.Error(w, "timeout waiting for getState ack", http.StatusGatewayTimeout)
+				return
+			case <-r.Context().Done():
+				http.Error(w, "request canceled", http.StatusGatewayTimeout)
+				return
 
 			}
 		}

@@ -32,24 +32,24 @@ type playerState struct {
 	ID         string  `json:"id"`
 	Name       string  `json:"name"`
 	Stack      float64 `json:"stack"`
-	timebank   float64
-	sittingOut bool
-	hand       []Card
-	currentBet float64
+	timebank   float64 `json:"timebank"`
+	sittingOut bool    `json:"sittingOut"`
+	hand       []Card  `json:"hand"`
+	currentBet float64 `json:"currentBet"`
 }
 
 type handState struct {
-	board            []Card
-	pot              float64
-	avaliableActions []string
-	raiseAmount      float64
-	currentBet       float64
-	actionPlayerName string
+	board            []Card   `json:"board"`
+	pot              float64  `json:"pot"`
+	avaliableActions []string `json:"avaliableActions"`
+	raiseAmount      float64  `json:"raiseAmount"`
+	currentBet       float64  `json:"currentBet"`
+	actionPlayerName string   `json:"actionPlayerName"`
 }
 
 type roomState struct {
-	players []playerState
-	hand    handState
+	players []playerState `json:"players"`
+	hand    handState     `json:"hand"`
 }
 
 // has a command buffer of 16 commands
@@ -209,11 +209,23 @@ func (r *Room) run() {
 				}
 			case "sitIn":
 				player := getPlayerFromID(cmd.PlayerID, r.players)
+				//see if player is in room
+				if player == nil {
+					//send bad reply to client
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
 				//send good reply to client
 				safeReply(cmd.reply, nil)
 				player.sittingOut = false
 			case "sitOut":
 				player := getPlayerFromID(cmd.PlayerID, r.players)
+				//see if player is in room
+				if player == nil {
+					//send bad reply to client
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
 				//send good reply to client
 				safeReply(cmd.reply, nil)
 				player.sittingOut = true
