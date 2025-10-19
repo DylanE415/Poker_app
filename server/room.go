@@ -125,6 +125,14 @@ func (r *Room) startNextHandIfReady() {
 	// advance blinds for the NEXT hand
 	r.smallBlindPosition = (r.smallBlindPosition + 1) % len(eligible)
 
+	//clear everyones action channel
+	for _, p := range r.players {
+		select {
+		case <-p.pendingAction:
+		default:
+		}
+	}
+
 	// run the hand as a go routine
 	go func(h *Hand) {
 		h.run()
@@ -183,6 +191,7 @@ func (r *Room) run() {
 					newPlayer := newPlayer(cmd.PlayerID, cmd.PlayerName, cmd.stack)
 					r.players = append(r.players, newPlayer)
 					//send good reply to client
+					print(cmd.PlayerName, " joined room\n")
 					safeReply(cmd.reply, nil)
 				} else {
 					//send bad reply to client
@@ -199,6 +208,7 @@ func (r *Room) run() {
 							// remove player (appends all elements before i and all elements after i)
 							r.players = append(r.players[:i], r.players[i+1:]...)
 							//send good reply to client
+							print(p.Name, " left room\n")
 							safeReply(cmd.reply, nil)
 							break
 						}
@@ -216,6 +226,11 @@ func (r *Room) run() {
 					break
 				}
 				//send good reply to client
+				print("players in room:\n")
+				for _, p := range r.players {
+					print(p.Name, "\n")
+				}
+				print(player.Name, " is sitting in\n")
 				safeReply(cmd.reply, nil)
 				player.sittingOut = false
 			case "sitOut":
@@ -227,6 +242,7 @@ func (r *Room) run() {
 					break
 				}
 				//send good reply to client
+				print(player.Name, " is sitting out\n")
 				safeReply(cmd.reply, nil)
 				player.sittingOut = true
 			case "action":
@@ -264,6 +280,7 @@ func (r *Room) run() {
 					break
 				}
 				h := r.currentHand
+
 				//fill in various fields of the state
 				state := roomState{}
 				state.players = make([]playerState, len(r.players))
@@ -281,7 +298,9 @@ func (r *Room) run() {
 					}
 				}
 				//fill in hand state ( board, available actions, pot, currentBet, actionplayername, raiseAmount)
+				//must now lock the hand thread to ensure that the hand is not being updated while we are sending it to the player
 				if h != nil {
+					h.lock.Lock()
 					state.hand = handState{
 						board:            h.board,
 						pot:              h.pot,
@@ -290,6 +309,7 @@ func (r *Room) run() {
 						currentBet:       h.currentBet,
 						actionPlayerName: h.Players[h.actionPlayerIndex].Name,
 					}
+					h.lock.Unlock()
 				}
 				//send reply and statereply
 				safeReply(cmd.reply, nil)

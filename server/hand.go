@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type Hand struct {
 	raiseAmount       float64
 	currentBet        float64
 	smallBlindIndex   int
+	//for locking hand to prevent race conditions
+	lock sync.Mutex
 }
 
 func shuffleDeck(deck []Card) {
@@ -155,7 +158,6 @@ func streetLoop(h *Hand) {
 	if h.currentState == "pre-flop" {
 		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
 		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: 1})
-		print("debug check for current bet: ", h.Players[h.actionPlayerIndex].currentBet, "\n")
 		//blind cant still act after raising
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
