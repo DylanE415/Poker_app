@@ -11,6 +11,12 @@
       "username": "Dylan",
       "password_hash": "$2a$10$Vv72cEkciRVe.Jg58LgxRenC0HFascdN0XOYq49kFh063uMnFI4oi",
       "display_name": "Dylan"
+    },
+    {
+      "id": "03",
+      "username": "alec",
+      "password_hash": "$2a$10$XEtwWCYKLKaYZnkKZs5KmOpDBYUqLOAWVYhVzi7OgHs1tEgc3xHti",
+      "display_name": "alec"
     }
   ]
 }

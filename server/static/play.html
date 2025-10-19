@@ -2,40 +2,117 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Poker — Table</title>
+  <title>Poker — Table (Seated Layout)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root { --bg:#0b1020; --panel:#121a33; --muted:#aab3cc; --accent:#4da3ff; --bad:#f25f5c; --good:#3ecf8e; }
+    
     * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff;}
+
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff; }
+
     header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom: 1px solid #1f2a4d; }
+
     .row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+
     .card { background: var(--panel); border:1px solid #1f2a4d; border-radius:14px; padding:1rem; }
-    .grid { display:grid; gap:1rem; grid-template-columns: 1fr 1fr; padding:1rem; }
-    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+
     label { font-size:.9rem; color: var(--muted); }
+
     select, input, button { font: inherit; padding:.55rem .7rem; border-radius:10px; border:1px solid #243158; background:#0e1530; color:#e9efff; }
+
     button { background:#13214a; cursor:pointer; border-color:#2b3b71; }
+
     button:hover { background:#182a5c; }
+
     button[disabled] { opacity:.5; cursor:not-allowed; }
+
     .pill { padding:.25rem .6rem; border-radius:999px; font-size:.8rem; border:1px solid #2b3b71; color:#cfe0ff; }
+
     .ok { color: var(--good); }
+
     .err { color: var(--bad); }
-    table { width:100%; border-collapse: collapse; }
-    th, td { text-align:left; padding:.4rem .5rem; border-bottom: 1px solid #223062; font-size:.95rem; }
-    .actions button { margin-right:.4rem; margin-bottom:.4rem; }
+
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    
     .muted { color: var(--muted); }
-    .board { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
-    .hand { display:flex; gap:.4rem; align-items:center; }
-    .statusline { font-size:.95rem; }
-    .hint { margin-top:.5rem; font-size:.95rem; color:#b9c4e8; }
+
+    /* --- table layout --- */
+    .layout {
+      display:grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    /* controls + actions on a single rail */
+    .control-rail { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 900px) { .control-rail { grid-template-columns: 1fr; } }
+
+    /* Poker table */
+    .table-wrap {
+      position: relative;
+      width: min(1100px, 95vw);
+      height: min(560px, 62vh);
+      margin: 0 auto;
+    }
+    .felt {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%);
+      border: 10px solid #3a240f;
+      border-radius: 999px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35);
+    }
+
+    /* board in center */
+    .board {
+      position: absolute;
+      left: 50%; top: 50%; transform: translate(-50%, -50%);
+      display:flex; gap:.5rem; align-items:center;
+      padding:.6rem .8rem; border-radius:12px;
+      background: rgba(0,0,0,.25);
+      border:1px solid #1f2a4d;
+    }
+
+    /* seats around ellipse */
+    .seat {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 180px; max-width: 36vw;
+      display:flex; flex-direction:column; align-items:center; gap:.35rem;
+      padding:.45rem .6rem; border-radius:12px;
+      background: rgba(10,20,40,.55);
+      border:1px solid #223062;
+      box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      text-align:center;
+    }
+    .seat .meta { font-size:.88rem; color: var(--muted); }
+    .seat .chips { font-weight:600; }
+    .seat .bet   { font-size:.9rem; color:#d5e4ff; opacity:.9; }
+    .seat .badge { font-size:.75rem; padding:.15rem .45rem; border-radius:999px; border:1px solid #2b3b71; }
+    .acting      { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
+    .sittingout  { opacity:.6; }
 
     /* card image sizing */
     .cardimg { width: 52px; height: 72px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
-    @media (max-width: 520px) {
-      .cardimg { width: 44px; height: 60px; }
+    @media (max-width: 520px) { .cardimg { width: 44px; height: 60px; } }
+
+    /* table HUD */
+    .hud {
+      position:absolute; left:50%; top: 10%; transform: translateX(-50%);
+      display:flex; gap:1rem; align-items:center; justify-content:center;
+      background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.4rem .75rem; font-size:.95rem;
     }
+
+    /* my hand docked at bottom */
+    .myhand {
+      position: relative; width: min(700px, 94vw); margin: 0.25rem auto 0; text-align:center;
+    }
+    .myhand .cards { display:flex; gap:.5rem; justify-content:center; align-items:center; }
+    .myhand .label { margin-top:.35rem; font-size:.95rem; color: var(--muted); }
+
   </style>
 </head>
 <body>
@@ -50,71 +127,66 @@
     </div>
   </header>
 
-  <section class="grid">
-    <!-- Controls -->
-    <div class="card">
-      <h3 style="margin-top:0">Controls</h3>
-      <div class="row">
-        <label for="room">Room</label>
-        <select id="room">
-          <option value="1">Room 1</option>
-          <option value="2">Room 2</option>
-        </select>
+  <main class="layout">
+    <section class="control-rail">
+      <!-- Controls -->
+      <div class="card">
+        <h3 style="margin-top:0">Controls</h3>
+        <div class="row">
+          <label for="room">Room</label>
+          <select id="room">
+            <option value="1">Room 1</option>
+            <option value="2">Room 2</option>
+          </select>
 
-        <label for="stack">Stack</label>
-        <input id="stack" type="number" step="0.01" min="0" value="100" />
-        <button id="joinBtn">Join</button>
-        <button id="leaveBtn">Leave</button>
-        <button id="sitToggleBtn" title="Toggle sit in/out">Sit In / Out</button>
+          <label for="stack">Stack</label>
+          <input id="stack" type="number" step="0.01" min="0" value="100" />
+          <button id="joinBtn">Join</button>
+          <button id="leaveBtn">Leave</button>
+          <button id="sitToggleBtn" title="Toggle sit in/out">Sit In / Out</button>
+        </div>
+        <div id="msg" style="margin-top:.6rem;"></div>
+        <div class="muted" style="margin-top:.5rem; font-size:.95rem">
+          If the table looks empty, you probably aren’t seated yet — click <em>Join</em>.
+        </div>
       </div>
-      <div id="msg" style="margin-top:.6rem;"></div>
-      <div class="hint">
-        If the table looks empty, you probably aren’t seated yet — click <em>Join</em>.
-      </div>
-    </div>
 
-    <!-- Actions -->
-    <div class="card">
-      <h3 style="margin-top:0">Actions</h3>
-      <div class="actions">
-        <button id="checkBtn">Check</button>
-        <button id="callBtn">Call</button>
-        <input id="raiseAmt" type="number" step="0.01" min="0" value="1" style="width:7rem" />
-        <button id="raiseBtn">Raise</button>
-        <button id="foldBtn">Fold</button>
+      <!-- Actions -->
+      <div class="card">
+        <h3 style="margin-top:0">Actions</h3>
+        <div class="row" style="flex-wrap:wrap">
+          <button id="checkBtn">Check</button>
+          <button id="callBtn">Call</button>
+          <input id="raiseAmt" type="number" step="0.01" min="0" value="1" style="width:7rem" />
+          <button id="raiseBtn">Raise</button>
+          <button id="foldBtn">Fold</button>
+        </div>
+        <div class="muted" style="margin-top:.5rem; font-size:.9rem">
+          Buttons auto-enable based on <code>availableActions</code> from <span class="mono">/state</span>.
+        </div>
       </div>
-      <div class="muted" style="margin-top:.5rem; font-size:.9rem">
-        Buttons auto-enable based on <code>availableActions</code> from <span class="mono">/state</span>.
-      </div>
-    </div>
+    </section>
 
-    <!-- Table State -->
-    <div class="card">
-      <h3 style="margin-top:0">Table</h3>
-      <div class="statusline">
+    <!-- Poker Table -->
+    <section class="table-wrap">
+      <div class="felt" aria-hidden="true"></div>
+      <div class="hud">
         <div>Room: <span id="roomId">—</span></div>
-        <div>Pot: <span id="pot">—</span> • Current Bet: <span id="currentBet">—</span></div>
-        <div>To Act: <span id="toAct">—</span></div>
+        <div>• Pot: <span id="pot">—</span></div>
+        <div>• Current Bet: <span id="currentBet">—</span></div>
+        <div>• To Act: <span id="toAct">—</span></div>
       </div>
-      <div style="margin-top:.6rem;">
-        <div class="muted" style="margin-bottom:.3rem">Board</div>
-        <div id="board" class="board"></div>
-      </div>
-    </div>
+      <div id="board" class="board"></div>
+      <!-- dynamic seats injected here -->
+      <div id="seatsLayer"></div>
+    </section>
 
-    <!-- Players -->
-    <div class="card">
-      <h3 style="margin-top:0">Players</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th><th class="mono">ID</th><th>Stack</th><th>Bet</th><th>Status</th><th>Your hand</th>
-          </tr>
-        </thead>
-        <tbody id="playersTbody"></tbody>
-      </table>
-    </div>
-  </section>
+    <!-- My hand docked under the table -->
+    <section class="myhand">
+      <div class="cards" id="myHand"></div>
+      <div class="label" id="myHandLabel">Your hand</div>
+    </section>
+  </main>
 
   <script>
     // ---- helpers ----
@@ -139,97 +211,72 @@
     }
 
     // -------- card image utils --------
-    // map single-letter suit to folder name
-function suitName(s) {
-  const ch = (s || '').toString().toUpperCase();
-  if (ch === 'S') return 'SPADE';
-  if (ch === 'H') return 'HEART';
-  if (ch === 'D') return 'DIAMOND';
-  if (ch === 'C') return 'CLUB';
-  return '';
-}
-
-// turn rank into "<NUMBER>" or "<NUMBER>-<FACE>" per your files
-function rankToken(r) {
-  const n = Number(r);
-  if (Number.isFinite(n)) {
-    if (n >= 2 && n <= 10) return String(n);          // 2..10 -> "2".."10"
-    if (n === 11) return "11-JACK";
-    if (n === 12) return "12-QUEEN";
-    if (n === 13) return "13-KING";
-    if (n === 14 || n === 1) return "1-ACE";          // Ace file uses 1
-  }
-  // also accept "A/K/Q/J"
-  const up = String(r || '').toUpperCase();
-  if (up === 'A') return "1-ACE";
-  if (up === 'K') return "13-KING";
-  if (up === 'Q') return "12-QUEEN";
-  if (up === 'J') return "11-JACK";
-  // numeric strings like "10" already handled above
-  return '';
-}
-
-// parse "14D" or {Rank:"14", Suit:"D"}
-function parseCard(card) {
-  if (typeof card === 'string') {
-    const suit = card.slice(-1);
-    const rank = card.slice(0, -1);
-    return { rank, suit };
-  }
-  return {
-    rank: card?.rank ?? card?.Rank ?? '',
-    suit: card?.suit ?? card?.Suit ?? '',
-  };
-}
-
-// build image URL like /static/card_svgs/SPADE-12-QUEEN.svg
-function cardImageURL(card) {
-  const { rank, suit } = parseCard(card);
-  const s = suitName(suit);
-  const rt = rankToken(rank);
-  if (!s || !rt) return null;
-  return `/static/card_svgs/${s}-${rt}.svg`; // change .svg if your files are .png
-}
-
-// render <img> (fallback to text if mapping fails)
-function renderCardImg(card) {
-  const url = cardImageURL(card);
-  const img = document.createElement('img');
-  img.className = 'cardimg';
-  if (url) {
-    img.src = url;
-    img.alt = url.split('/').pop();
-  } else {
-    img.alt = '??';
-    img.title = JSON.stringify(card);
-  }
-  return img;
-}
+    function suitName(s) {
+      const ch = (s || '').toString().toUpperCase();
+      if (ch === 'S') return 'SPADE';
+      if (ch === 'H') return 'HEART';
+      if (ch === 'D') return 'DIAMOND';
+      if (ch === 'C') return 'CLUB';
+      return '';
+    }
+    function rankToken(r) {
+      const n = Number(r);
+      if (Number.isFinite(n)) {
+        if (n >= 2 && n <= 10) return String(n);
+        if (n === 11) return '11-JACK';
+        if (n === 12) return '12-QUEEN';
+        if (n === 13) return '13-KING';
+        if (n === 14 || n === 1) return '1-ACE';
+      }
+      const up = String(r || '').toUpperCase();
+      if (up === 'A') return '1-ACE';
+      if (up === 'K') return '13-KING';
+      if (up === 'Q') return '12-QUEEN';
+      if (up === 'J') return '11-JACK';
+      return '';
+    }
+    function parseCard(card) {
+      if (typeof card === 'string') {
+        const suit = card.slice(-1);
+        const rank = card.slice(0, -1);
+        return { rank, suit };
+      }
+      return {
+        rank: card?.rank ?? card?.Rank ?? '',
+        suit: card?.suit ?? card?.Suit ?? '',
+      };
+    }
+    function cardImageURL(card) {
+      const { rank, suit } = parseCard(card);
+      const s = suitName(suit);
+      const rt = rankToken(rank);
+      if (!s || !rt) return null;
+      return `/static/card_svgs/${s}-${rt}.svg`;
+    }
+    function renderCardImg(card) {
+      const url = cardImageURL(card);
+      const img = document.createElement('img');
+      img.className = 'cardimg';
+      if (url) { img.src = url; img.alt = url.split('/').pop(); }
+      else { img.alt = '??'; img.title = JSON.stringify(card); }
+      return img;
+    }
 
     const api = {
       async join(room, stack) {
         const res = await fetch(`/join?room=${encodeURIComponent(room)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ stack: Number(stack) || 0 })
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ stack: Number(stack) || 0 })
         });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'join failed');
       },
       async leave(room) {
-        const res = await fetch(`/leave?room=${encodeURIComponent(room)}`, {
-          method: 'POST',
-          credentials: 'include'
-        });
+        const res = await fetch(`/leave?room=${encodeURIComponent(room)}`, { method: 'POST', credentials: 'include' });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'leave failed');
       },
       async state(room) {
-        const res = await fetch(`/state?room=${encodeURIComponent(room)}`, {
-          method: 'GET',
-          credentials: 'include'
-        });
+        const res = await fetch(`/state?room=${encodeURIComponent(room)}`, { method: 'GET', credentials: 'include' });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'state failed');
         const text = await res.text();
@@ -238,19 +285,13 @@ function renderCardImg(card) {
       },
       async action(room, action, amount=0) {
         const res = await fetch(`/action?room=${encodeURIComponent(room)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ action, amount: Number(amount) || 0 })
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action, amount: Number(amount) || 0 })
         });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'action failed');
       },
       async sit(room, sitIn) {
-        const res = await fetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, {
-          method: 'POST',
-          credentials: 'include'
-        });
+        const res = await fetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method: 'POST', credentials: 'include' });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'sit toggle failed');
       },
@@ -275,42 +316,28 @@ function renderCardImg(card) {
     const currentBetEl = $('currentBet');
     const toActEl      = $('toAct');
     const boardEl      = $('board');
-    const playersTbody = $('playersTbody');
+    const seatsLayer   = $('seatsLayer');
+    const myHandEl     = $('myHand');
 
     $('logoutBtn').addEventListener('click', api.logout);
 
     joinBtn.addEventListener('click', async () => {
       const room = roomSel.value;
       const stack = stackInp.value;
-      try {
-        await api.join(room, stack);
-        showMsg(`Joined room ${room}`, 'ok');
-        pollState.now();
-      } catch (e) { showMsg(e.message || 'join failed', 'err'); }
+      try { await api.join(room, stack); showMsg(`Joined room ${room}`, 'ok'); pollState.now(); }
+      catch (e) { showMsg(e.message || 'join failed', 'err'); }
     });
 
     leaveBtn.addEventListener('click', async () => {
       const room = roomSel.value;
-      try {
-        await api.leave(room);
-        showMsg(`Left room ${room}`, 'ok');
-        renderState(null);
-      } catch (e) { showMsg(e.message || 'leave failed', 'err'); }
+      try { await api.leave(room); showMsg(`Left room ${room}`, 'ok'); renderState(null); }
+      catch (e) { showMsg(e.message || 'leave failed', 'err'); }
     });
 
     sitBtn.addEventListener('click', async () => {
       const room = roomSel.value;
-      try {
-        await api.sit(room, true);
-        showMsg('Sat in', 'ok');
-      } catch {
-        try {
-          await api.sit(room, false);
-          showMsg('Sat out', 'ok');
-        } catch (e2) {
-          showMsg(e2.message || 'sit toggle failed', 'err');
-        }
-      }
+      try { await api.sit(room, true); showMsg('Sat in', 'ok'); }
+      catch { try { await api.sit(room, false); showMsg('Sat out', 'ok'); } catch (e2) { showMsg(e2.message || 'sit toggle failed', 'err'); } }
       pollState.soon();
     });
 
@@ -321,13 +348,8 @@ function renderCardImg(card) {
 
     async function doAction(act, amt=0) {
       const room = roomSel.value;
-      try {
-        await api.action(room, act, amt);
-        showMsg(`Action: ${act}${act==='raise' ? ' ' + (Number(amt)||0) : ''}`, 'ok');
-        pollState.soon();
-      } catch (e) {
-        showMsg(e.message || 'action failed', 'err');
-      }
+      try { await api.action(room, act, amt); showMsg(`Action: ${act}${act==='raise' ? ' ' + (Number(amt)||0) : ''}`, 'ok'); pollState.soon(); }
+      catch (e) { showMsg(e.message || 'action failed', 'err'); }
     }
 
     // ---- polling ----
@@ -357,68 +379,32 @@ function renderCardImg(card) {
       return { start, stop, now, soon };
     })();
 
-    // ---- rendering ----
-    function renderState(st) {
-      if (!st || (Object.keys(st).length === 0)) {
-        roomIdEl.textContent = '—';
-        potEl.textContent = '—';
-        currentBetEl.textContent = '—';
-        toActEl.textContent = '—';
-        boardEl.innerHTML = '';
-        playersTbody.innerHTML = '';
-        return;
+    // --- seat geometry helpers ---
+    /**
+     * Compute N seat positions around the felt (ellipse). Returns array of {x,y} in % of container.
+     * Bottom seat is index 0; indices proceed clockwise.
+     */
+    function computeSeatPositions(n) {
+      const pts = [];
+      const cx = 50, cy = 50; // center
+      const rx = 42; // horizontal radius (% of width)
+      const ry = 34; // vertical radius (% of height)
+      for (let i=0;i<n;i++) {
+        // angle 90deg at bottom, then clockwise
+        const theta = (Math.PI/2) - (i * (2*Math.PI / n));
+        const x = cx + rx * Math.cos(theta);
+        const y = cy + ry * Math.sin(theta);
+        pts.push({ x, y });
       }
+      return pts;
+    }
 
-      const roomId = st.room ?? st.Room ?? '—';
-      roomIdEl.textContent = roomId;
-
-      const hand = st.hand || st.Hand || null;
-      potEl.textContent        = fmtMoney(hand?.pot ?? hand?.Pot ?? '');
-      currentBetEl.textContent = fmtMoney(hand?.currentBet ?? hand?.CurrentBet ?? '');
-      toActEl.textContent      = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
-
-      // --- board images ---
-      const board = hand?.board ?? hand?.Board ?? [];
-      boardEl.innerHTML = '';
-      (board || []).forEach(card => {
-        boardEl.appendChild(renderCardImg(card));
-      });
-
-      // --- players table ---
-      const players = st.players || st.Players || [];
-      playersTbody.innerHTML = '';
-      players.forEach(p => {
-        const tr = document.createElement('tr');
-        const id   = p.id ?? p.ID ?? '';
-        const name = p.name ?? p.Name ?? '';
-        const stack = p.stack ?? p.Stack ?? '';
-        const bet = p.currentBet ?? p.CurrentBet ?? '';
-        const sitting = (p.sittingOut ?? p.SittingOut) ? 'Sitting out' : 'Active';
-        const handArr = p.hand ?? p.Hand ?? null;
-
-        const handTd = document.createElement('td');
-        if (Array.isArray(handArr) && handArr.length) {
-          const wrap = document.createElement('div');
-          wrap.className = 'hand';
-          handArr.forEach(c => wrap.appendChild(renderCardImg(c)));
-          handTd.appendChild(wrap);
-        } else {
-          handTd.textContent = '';
-        }
-
-        tr.innerHTML = `
-          <td>${escapeHtml(name)}</td>
-          <td class="mono">${escapeHtml(id)}</td>
-          <td>${fmtMoney(stack)}</td>
-          <td>${fmtMoney(bet)}</td>
-          <td>${sitting}</td>
-        `;
-        tr.appendChild(handTd);
-        playersTbody.appendChild(tr);
-      });
-
-      const avail = (hand?.availableActions ?? hand?.AvailableActions) || [];
-      enableActionsFrom(avail);
+    function escapeHtml(s) {
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+    }
+    function fmtMoney(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n.toFixed(2) : (v ?? '');
     }
 
     function enableActionsFrom(avail) {
@@ -433,28 +419,104 @@ function renderCardImg(card) {
       foldBtn.disabled  = !has('fold');
     }
 
-    function escapeHtml(s) {
-      return String(s)
-        .replaceAll('&','&amp;')
-        .replaceAll('<','&lt;')
-        .replaceAll('>','&gt;')
-        .replaceAll('"','&quot;')
-        .replaceAll("'",'&#39;');
-    }
-    function fmtMoney(v) {
-      const n = Number(v);
-      return Number.isFinite(n) ? n.toFixed(2) : (v ?? '');
+    // ---- rendering ----
+    function renderState(st) {
+      // clear states when empty
+      if (!st || (Object.keys(st).length === 0)) {
+        roomIdEl.textContent = '—';
+        potEl.textContent = '—';
+        currentBetEl.textContent = '—';
+        toActEl.textContent = '—';
+        boardEl.innerHTML = '';
+        seatsLayer.innerHTML = '';
+        myHandEl.innerHTML = '';
+        return;
+      }
+
+      const roomId = st.room ?? st.Room ?? '—';
+      roomIdEl.textContent = roomId;
+
+      const hand = st.hand || st.Hand || null;
+      potEl.textContent        = fmtMoney(hand?.pot ?? hand?.Pot ?? '');
+      currentBetEl.textContent = fmtMoney(hand?.currentBet ?? hand?.CurrentBet ?? '');
+      toActEl.textContent      = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
+
+      // --- board images in center ---
+      const board = hand?.board ?? hand?.Board ?? [];
+      boardEl.innerHTML = '';
+      (board || []).forEach(card => { boardEl.appendChild(renderCardImg(card)); });
+
+      // --- players to seats ---
+      const rawPlayers = (st.players || st.Players || []).slice();
+      const myIndex = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand) && (p.hand?.length || p.Hand?.length));
+
+      // rotate players so that me (if any) sits at bottom (index 0)
+      let players = rawPlayers;
+      if (myIndex >= 0) {
+        players = [...rawPlayers.slice(myIndex), ...rawPlayers.slice(0, myIndex)];
+      }
+
+      // seat count: clamp between number of players and 9 for spacing
+      const n = Math.max(players.length, Math.min(6, players.length));
+      const positions = computeSeatPositions(Math.max(players.length, Math.min(9, Math.max(players.length, 6))));
+
+      seatsLayer.innerHTML = '';
+      players.forEach((p, i) => {
+        const id   = p.id ?? p.ID ?? '';
+        const name = p.name ?? p.Name ?? '';
+        const stack = p.stack ?? p.Stack ?? '';
+        const bet = p.currentBet ?? p.CurrentBet ?? '';
+        const sittingOut = (p.sittingOut ?? p.SittingOut) ? true : false;
+        const isActing = (toActEl.textContent && (name === toActEl.textContent));
+
+        const pos = positions[i];
+        const seat = document.createElement('div');
+        seat.className = 'seat' + (isActing ? ' acting' : '') + (sittingOut ? ' sittingout' : '');
+        seat.style.left = pos.x + '%';
+        seat.style.top  = pos.y + '%';
+
+        // name / id / chips
+        const title = document.createElement('div');
+        title.innerHTML = `<strong>${escapeHtml(name)}</strong>`;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `<span class="mono">${escapeHtml(id)}</span>`;
+        const chips = document.createElement('div');
+        chips.className = 'chips';
+        chips.textContent = `${fmtMoney(stack)}`;
+        const betEl = document.createElement('div');
+        betEl.className = 'bet';
+        betEl.textContent = bet ? `Bet: ${fmtMoney(bet)}` : '';
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = sittingOut ? 'Sitting out' : 'Active';
+
+        seat.appendChild(title);
+        seat.appendChild(meta);
+        seat.appendChild(chips);
+        if (bet) seat.appendChild(betEl);
+        seat.appendChild(badge);
+
+        seatsLayer.appendChild(seat);
+      });
+
+      // --- my hand dock ---
+      myHandEl.innerHTML = '';
+      const me = rawPlayers[myIndex];
+      const myCards = me ? (me.hand ?? me.Hand ?? []) : [];
+      if (Array.isArray(myCards) && myCards.length) {
+        myCards.forEach(c => myHandEl.appendChild(renderCardImg(c)));
+      }
+
+      const avail = (hand?.availableActions ?? hand?.AvailableActions) || [];
+      enableActionsFrom(avail);
     }
 
     // kickoff
     (async () => {
       await loadMe();
-      try {
-        const st = await api.state(roomSel.value);
-        renderState(st);
-      } catch (e) {
-        if (e && /401/.test(String(e))) location.href = '/login';
-      }
+      try { const st = await api.state(roomSel.value); renderState(st); }
+      catch (e) { if (e && /401/.test(String(e))) location.href = '/login'; }
     })();
   </script>
 </body>

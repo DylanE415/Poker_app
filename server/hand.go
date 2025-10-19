@@ -160,10 +160,9 @@ func streetLoop(h *Hand) {
 		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: 1})
 		//blind can still act after raising
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
-	}
-	//at start everyone can act
-	for i := range h.Players {
-		h.Players[i].canAct = true
+		for i := range h.Players {
+			h.Players[i].canAct = true
+		}
 	}
 	for {
 
@@ -226,9 +225,15 @@ func streetLoop(h *Hand) {
 		h.actionPlayerIndex %= len(h.Players)
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
-
+	//resert all current bets and actions
 	h.avaliableActions = []string{"raise", "check", "fold"}
 	h.raiseAmount = 0
+	h.currentBet = 0
+	for i := range h.Players {
+		h.Players[i].canAct = true
+		h.Players[i].currentBet = 0
+	}
+
 }
 
 func (h *Hand) run() {
