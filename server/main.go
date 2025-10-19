@@ -35,10 +35,8 @@ func (s *Server) handleRoutes() http.Handler {
 		http.ServeFile(w, r, "./static/play.html")
 	})))
 
-	// --- Static files (css, images, extra js) under /static/... ---
-	mux.Handle("/static/", http.StripPrefix("/static/",
-		http.FileServer(http.Dir("./static")),
-	))
+	//for any URL starting with /static/, strip that prefix and serve the remaining path from the local ./static/ folder
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 
 	// redirect to login
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

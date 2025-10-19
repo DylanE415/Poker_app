@@ -32,24 +32,24 @@ type playerState struct {
 	ID         string  `json:"id"`
 	Name       string  `json:"name"`
 	Stack      float64 `json:"stack"`
-	timebank   float64 `json:"timebank"`
-	sittingOut bool    `json:"sittingOut"`
-	hand       []Card  `json:"hand"`
-	currentBet float64 `json:"currentBet"`
+	Timebank   float64 `json:"timebank"`
+	SittingOut bool    `json:"sittingOut"`
+	Hand       []Card  `json:"hand"`
+	CurrentBet float64 `json:"currentBet"`
 }
 
 type handState struct {
-	board            []Card   `json:"board"`
-	pot              float64  `json:"pot"`
-	avaliableActions []string `json:"avaliableActions"`
-	raiseAmount      float64  `json:"raiseAmount"`
-	currentBet       float64  `json:"currentBet"`
-	actionPlayerName string   `json:"actionPlayerName"`
+	Board            []Card   `json:"board"`
+	Pot              float64  `json:"pot"`
+	AvaliableActions []string `json:"avaliableActions"`
+	RaiseAmount      float64  `json:"raiseAmount"`
+	CurrentBet       float64  `json:"currentBet"`
+	ActionPlayerName string   `json:"actionPlayerName"`
 }
 
 type roomState struct {
-	players []playerState `json:"players"`
-	hand    handState     `json:"hand"`
+	Players []playerState `json:"players"`
+	Hand    handState     `json:"hand"`
 }
 
 // has a command buffer of 16 commands
@@ -283,31 +283,31 @@ func (r *Room) run() {
 
 				//fill in various fields of the state
 				state := roomState{}
-				state.players = make([]playerState, len(r.players))
+				state.Players = make([]playerState, len(r.players))
 				// only info needed to display to client about other players(name, stack, sittingOut, timebank, currentBet) and hand if it is clients id
 				for i, p := range r.players {
-					state.players[i] = playerState{
+					state.Players[i] = playerState{
 						Name:       p.Name,
 						Stack:      p.Stack,
-						timebank:   p.timebank,
-						sittingOut: p.sittingOut,
-						currentBet: p.currentBet,
+						SittingOut: p.sittingOut,
+						Timebank:   p.timebank,
+						CurrentBet: p.currentBet,
 					}
 					if p.ID == cmd.PlayerID {
-						state.players[i].hand = p.hand
+						state.Players[i].Hand = p.Hand
 					}
 				}
 				//fill in hand state ( board, available actions, pot, currentBet, actionplayername, raiseAmount)
 				//must now lock the hand thread to ensure that the hand is not being updated while we are sending it to the player
 				if h != nil {
 					h.lock.Lock()
-					state.hand = handState{
-						board:            h.board,
-						pot:              h.pot,
-						avaliableActions: h.avaliableActions,
-						raiseAmount:      h.raiseAmount,
-						currentBet:       h.currentBet,
-						actionPlayerName: h.Players[h.actionPlayerIndex].Name,
+					state.Hand = handState{
+						Board:            h.board,
+						Pot:              h.pot,
+						AvaliableActions: h.avaliableActions,
+						RaiseAmount:      h.raiseAmount,
+						CurrentBet:       h.currentBet,
+						ActionPlayerName: h.Players[h.actionPlayerIndex].Name,
 					}
 					h.lock.Unlock()
 				}

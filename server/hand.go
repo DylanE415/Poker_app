@@ -158,7 +158,7 @@ func streetLoop(h *Hand) {
 	if h.currentState == "pre-flop" {
 		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
 		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: 1})
-		//blind cant still act after raising
+		//blind can still act after raising
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
 	//at start everyone can act
@@ -166,6 +166,11 @@ func streetLoop(h *Hand) {
 		h.Players[i].canAct = true
 	}
 	for {
+
+		//check if everyone called the small blind, then set actions to either check/raise/fold for small blind
+		if h.currentBet == 1 && h.actionPlayerIndex == h.smallBlindIndex && h.Players[h.actionPlayerIndex].currentBet == 1 {
+			h.avaliableActions = []string{"check", "raise", "fold"}
+		}
 		// if only one player left, street over
 		if len(h.Players) == 1 {
 			break
@@ -230,14 +235,14 @@ func (h *Hand) run() {
 
 	//clear player cards
 	for i := range h.Players {
-		h.Players[i].hand = []Card{}
+		h.Players[i].Hand = []Card{}
 	}
 	h.board = []Card{}
 	h.pot = 0
 	//deal players 2 cards, 1 card at a time
 	for i := 0; i < 2; i++ {
 		for j := range h.Players {
-			h.Players[j].hand = append(h.Players[j].hand, h.deck[0])
+			h.Players[j].Hand = append(h.Players[j].Hand, h.deck[0])
 			h.deck = h.deck[1:]
 		}
 	}
@@ -245,7 +250,7 @@ func (h *Hand) run() {
 	println("players have cards:")
 	for _, p := range h.Players {
 		print(p.Name, ": ")
-		for _, c := range p.hand {
+		for _, c := range p.Hand {
 			print(c.Rank, c.Suit)
 			print(", ")
 		}

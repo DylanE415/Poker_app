@@ -7,7 +7,7 @@ type Player struct {
 	canAct        bool
 	timebank      float64
 	sittingOut    bool
-	hand          []Card
+	Hand          []Card `json:"hand"`
 	pendingAction chan Action
 	currentBet    float64
 }

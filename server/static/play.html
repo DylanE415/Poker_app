@@ -26,9 +26,16 @@
     .actions button { margin-right:.4rem; margin-bottom:.4rem; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .muted { color: var(--muted); }
-    .board { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
-    .cardface { background:#0a1433; border:1px solid #2b3b71; padding:.45rem .55rem; border-radius:8px; min-width:2.2rem; text-align:center; }
+    .board { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+    .hand { display:flex; gap:.4rem; align-items:center; }
     .statusline { font-size:.95rem; }
+    .hint { margin-top:.5rem; font-size:.95rem; color:#b9c4e8; }
+
+    /* card image sizing */
+    .cardimg { width: 52px; height: 72px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
+    @media (max-width: 520px) {
+      .cardimg { width: 44px; height: 60px; }
+    }
   </style>
 </head>
 <body>
@@ -38,6 +45,7 @@
       <span id="status" class="pill muted">disconnected</span>
     </div>
     <div class="row">
+      <span id="who" class="muted"></span>
       <button id="logoutBtn" title="Log out">Log out</button>
     </div>
   </header>
@@ -60,6 +68,9 @@
         <button id="sitToggleBtn" title="Toggle sit in/out">Sit In / Out</button>
       </div>
       <div id="msg" style="margin-top:.6rem;"></div>
+      <div class="hint">
+        If the table looks empty, you probably aren’t seated yet — click <em>Join</em>.
+      </div>
     </div>
 
     <!-- Actions -->
@@ -110,11 +121,90 @@
     const $ = (id) => document.getElementById(id);
     const statusEl = $('status');
     const msgEl = $('msg');
+    const whoEl = $('who');
 
     function showMsg(text, type='') {
       msgEl.className = type ? type : '';
       msgEl.textContent = text;
     }
+
+    async function loadMe() {
+      try {
+        const res = await fetch('/me', { credentials: 'include' });
+        if (res.status === 401) { location.href = '/login'; return; }
+        if (!res.ok) return;
+        const me = await res.json();
+        whoEl.textContent = me.username ? `Signed in as ${me.username}` : '';
+      } catch {}
+    }
+
+    // -------- card image utils --------
+    // map single-letter suit to folder name
+function suitName(s) {
+  const ch = (s || '').toString().toUpperCase();
+  if (ch === 'S') return 'SPADE';
+  if (ch === 'H') return 'HEART';
+  if (ch === 'D') return 'DIAMOND';
+  if (ch === 'C') return 'CLUB';
+  return '';
+}
+
+// turn rank into "<NUMBER>" or "<NUMBER>-<FACE>" per your files
+function rankToken(r) {
+  const n = Number(r);
+  if (Number.isFinite(n)) {
+    if (n >= 2 && n <= 10) return String(n);          // 2..10 -> "2".."10"
+    if (n === 11) return "11-JACK";
+    if (n === 12) return "12-QUEEN";
+    if (n === 13) return "13-KING";
+    if (n === 14 || n === 1) return "1-ACE";          // Ace file uses 1
+  }
+  // also accept "A/K/Q/J"
+  const up = String(r || '').toUpperCase();
+  if (up === 'A') return "1-ACE";
+  if (up === 'K') return "13-KING";
+  if (up === 'Q') return "12-QUEEN";
+  if (up === 'J') return "11-JACK";
+  // numeric strings like "10" already handled above
+  return '';
+}
+
+// parse "14D" or {Rank:"14", Suit:"D"}
+function parseCard(card) {
+  if (typeof card === 'string') {
+    const suit = card.slice(-1);
+    const rank = card.slice(0, -1);
+    return { rank, suit };
+  }
+  return {
+    rank: card?.rank ?? card?.Rank ?? '',
+    suit: card?.suit ?? card?.Suit ?? '',
+  };
+}
+
+// build image URL like /static/card_svgs/SPADE-12-QUEEN.svg
+function cardImageURL(card) {
+  const { rank, suit } = parseCard(card);
+  const s = suitName(suit);
+  const rt = rankToken(rank);
+  if (!s || !rt) return null;
+  return `/static/card_svgs/${s}-${rt}.svg`; // change .svg if your files are .png
+}
+
+// render <img> (fallback to text if mapping fails)
+function renderCardImg(card) {
+  const url = cardImageURL(card);
+  const img = document.createElement('img');
+  img.className = 'cardimg';
+  if (url) {
+    img.src = url;
+    img.alt = url.split('/').pop();
+  } else {
+    img.alt = '??';
+    img.title = JSON.stringify(card);
+  }
+  return img;
+}
 
     const api = {
       async join(room, stack) {
@@ -142,7 +232,9 @@
         });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'state failed');
-        return res.json(); // expects the JSON your getStateHandler encodes
+        const text = await res.text();
+        if (!text || text.trim() === '' || text.trim() === 'null') return null;
+        try { return JSON.parse(text); } catch { return null; }
       },
       async action(room, action, amount=0) {
         const res = await fetch(`/action?room=${encodeURIComponent(room)}`, {
@@ -162,11 +254,7 @@
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'sit toggle failed');
       },
-      async logout() {
-        // you don't have a /logout handler in the snippet; if you add one, call it here.
-        // As a fallback, redirect to login; server will treat you as logged out when cookie expires.
-        location.href = '/login';
-      }
+      async logout() { location.href = '/login'; }
     };
 
     // ---- UI wiring ----
@@ -182,11 +270,11 @@
     const raiseAmt = $('raiseAmt');
     const foldBtn  = $('foldBtn');
 
-    const roomIdEl   = $('roomId');
-    const potEl      = $('pot');
+    const roomIdEl     = $('roomId');
+    const potEl        = $('pot');
     const currentBetEl = $('currentBet');
-    const toActEl    = $('toAct');
-    const boardEl    = $('board');
+    const toActEl      = $('toAct');
+    const boardEl      = $('board');
     const playersTbody = $('playersTbody');
 
     $('logoutBtn').addEventListener('click', api.logout);
@@ -206,14 +294,12 @@
       try {
         await api.leave(room);
         showMsg(`Left room ${room}`, 'ok');
-        // Clear table UI a bit
-        renderState({});
+        renderState(null);
       } catch (e) { showMsg(e.message || 'leave failed', 'err'); }
     });
 
     sitBtn.addEventListener('click', async () => {
       const room = roomSel.value;
-      // naive toggle: try sitIn=true first, if server says already in that state you could flip
       try {
         await api.sit(room, true);
         showMsg('Sat in', 'ok');
@@ -247,14 +333,11 @@
     // ---- polling ----
     const pollState = (() => {
       let timer = null;
-      let inflight = null;
-
       async function tick() {
         const room = roomSel.value;
         statusEl.textContent = 'updating…';
         try {
-          inflight = api.state(room);
-          const st = await inflight;
+          const st = await api.state(room);
           renderState(st);
           statusEl.textContent = 'connected';
           statusEl.className = 'pill';
@@ -263,16 +346,11 @@
           statusEl.className = 'pill err';
           if (e && /401|auth/i.test(String(e))) location.href = '/login';
         } finally {
-          inflight = null;
           timer = setTimeout(tick, 1000);
         }
       }
-      function start() {
-        if (!timer) timer = setTimeout(tick, 50);
-      }
-      function stop() {
-        if (timer) { clearTimeout(timer); timer = null; }
-      }
+      function start() { if (!timer) timer = setTimeout(tick, 80); }
+      function stop() { if (timer) { clearTimeout(timer); timer = null; } }
       function now() { stop(); start(); }
       function soon() { stop(); timer = setTimeout(tick, 300); }
       start();
@@ -281,34 +359,32 @@
 
     // ---- rendering ----
     function renderState(st) {
-      // Expecting something like:
-      // { room:int, actionPlayerIndex:int, players:[{id,name,stack,sittingOut,currentBet,hand?}], hand: {board:[], pot, currentBet, availableActions[], actionPlayerName, raiseAmount} }
-      // Be defensive in case fields are missing or differently cased.
+      if (!st || (Object.keys(st).length === 0)) {
+        roomIdEl.textContent = '—';
+        potEl.textContent = '—';
+        currentBetEl.textContent = '—';
+        toActEl.textContent = '—';
+        boardEl.innerHTML = '';
+        playersTbody.innerHTML = '';
+        return;
+      }
+
       const roomId = st.room ?? st.Room ?? '—';
       roomIdEl.textContent = roomId;
 
       const hand = st.hand || st.Hand || null;
-      potEl.textContent = hand?.pot ?? hand?.Pot ?? '—';
-      currentBetEl.textContent = hand?.currentBet ?? hand?.CurrentBet ?? '—';
-      toActEl.textContent = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
+      potEl.textContent        = fmtMoney(hand?.pot ?? hand?.Pot ?? '');
+      currentBetEl.textContent = fmtMoney(hand?.currentBet ?? hand?.CurrentBet ?? '');
+      toActEl.textContent      = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
 
+      // --- board images ---
       const board = hand?.board ?? hand?.Board ?? [];
       boardEl.innerHTML = '';
       (board || []).forEach(card => {
-        const face = document.createElement('div');
-        face.className = 'cardface mono';
-        // Show as "RankSuit" or JSON if unknown
-        if (typeof card === 'string') {
-          face.textContent = card;
-        } else if (card && (card.rank || card.suit)) {
-          face.textContent = `${card.rank ?? card.Rank ?? '?'}${card.suit ?? card.Suit ?? ''}`;
-        } else {
-          face.textContent = JSON.stringify(card);
-        }
-        boardEl.appendChild(face);
+        boardEl.appendChild(renderCardImg(card));
       });
 
-      // Players table
+      // --- players table ---
       const players = st.players || st.Players || [];
       playersTbody.innerHTML = '';
       players.forEach(p => {
@@ -320,25 +396,33 @@
         const sitting = (p.sittingOut ?? p.SittingOut) ? 'Sitting out' : 'Active';
         const handArr = p.hand ?? p.Hand ?? null;
 
+        const handTd = document.createElement('td');
+        if (Array.isArray(handArr) && handArr.length) {
+          const wrap = document.createElement('div');
+          wrap.className = 'hand';
+          handArr.forEach(c => wrap.appendChild(renderCardImg(c)));
+          handTd.appendChild(wrap);
+        } else {
+          handTd.textContent = '';
+        }
+
         tr.innerHTML = `
           <td>${escapeHtml(name)}</td>
           <td class="mono">${escapeHtml(id)}</td>
-          <td>${Number(stack).toFixed ? Number(stack).toFixed(2) : stack}</td>
-          <td>${Number(bet).toFixed ? Number(bet).toFixed(2) : bet}</td>
+          <td>${fmtMoney(stack)}</td>
+          <td>${fmtMoney(bet)}</td>
           <td>${sitting}</td>
-          <td class="mono">${handArr ? renderHandText(handArr) : ''}</td>
         `;
+        tr.appendChild(handTd);
         playersTbody.appendChild(tr);
       });
 
-      // Enable/disable action buttons from availableActions
       const avail = (hand?.availableActions ?? hand?.AvailableActions) || [];
       enableActionsFrom(avail);
     }
 
     function enableActionsFrom(avail) {
-      const has = (k) => avail.includes(k);
-      // If server doesn’t send avail, enable all; else gate by list.
+      const has = (k) => Array.isArray(avail) && avail.includes(k);
       if (!Array.isArray(avail) || avail.length === 0) {
         [checkBtn, callBtn, raiseBtn, foldBtn].forEach(b => b.disabled = false);
         return;
@@ -349,17 +433,6 @@
       foldBtn.disabled  = !has('fold');
     }
 
-    function renderHandText(hand) {
-      try {
-        return (hand || []).map(c => {
-          if (typeof c === 'string') return c;
-          const r = c.rank ?? c.Rank ?? '?';
-          const s = c.suit ?? c.Suit ?? '';
-          return `${r}${s}`;
-        }).join(' ');
-      } catch { return ''; }
-    }
-
     function escapeHtml(s) {
       return String(s)
         .replaceAll('&','&amp;')
@@ -368,12 +441,14 @@
         .replaceAll('"','&quot;')
         .replaceAll("'",'&#39;');
     }
+    function fmtMoney(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n.toFixed(2) : (v ?? '');
+    }
 
-    // kick things off
-    statusEl.textContent = 'connected';
-    statusEl.className = 'pill';
-    // First paint
+    // kickoff
     (async () => {
+      await loadMe();
       try {
         const st = await api.state(roomSel.value);
         renderState(st);

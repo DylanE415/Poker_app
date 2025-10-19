@@ -6,8 +6,8 @@ import (
 )
 
 type Card struct {
-	Suit string
-	Rank string
+	Suit string `json:"suit"`
+	Rank string `json:"rank"`
 }
 
 // all hand combos (pairs, sets, etc)
@@ -62,7 +62,7 @@ func getCardFrequencies(h *Hand, p *Player) []CardFrequency {
 		freqs[c.Rank]++
 	}
 	// count player cards
-	for _, c := range p.hand {
+	for _, c := range p.Hand {
 		freqs[c.Rank]++
 	}
 
@@ -105,7 +105,7 @@ func getSuitFrequencies(h *Hand, p *Player) ([]SuitFrequency, map[string]int) {
 		update(c)
 	}
 	// count player cards
-	for _, c := range p.hand {
+	for _, c := range p.Hand {
 		update(c)
 	}
 	// convert freqs into a slice
@@ -229,7 +229,7 @@ func getPlayerBestHand(h *Hand, p *Player) BestHand {
 				BestHand.flushRanks = append(BestHand.flushRanks, rankToInt(card.Rank))
 			}
 		}
-		for _, card := range p.hand {
+		for _, card := range p.Hand {
 			if card.Suit == flushSuit {
 				BestHand.flushRanks = append(BestHand.flushRanks, rankToInt(card.Rank))
 			}

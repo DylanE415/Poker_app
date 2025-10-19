@@ -15,8 +15,8 @@ func evalTwo(board []Card, h1 []Card, h2 []Card) (BestHand, BestHand) {
 	p1 := Player{ID: "P1", Name: "P1"}
 	p2 := Player{ID: "P2", Name: "P2"}
 	h.board = append([]Card{}, board...)
-	p1.hand = append([]Card{}, h1...)
-	p2.hand = append([]Card{}, h2...)
+	p1.Hand = append([]Card{}, h1...)
+	p2.Hand = append([]Card{}, h2...)
 	b1 := getPlayerBestHand(&h, &p1) // your function taking *Hand, *Player
 	b2 := getPlayerBestHand(&h, &p2)
 	return b1, b2
