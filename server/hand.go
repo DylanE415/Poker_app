@@ -238,9 +238,10 @@ func streetLoop(h *Hand) {
 
 func (h *Hand) run() {
 
-	//clear player cards
+	//clear player cards and amount they can win this hand
 	for i := range h.Players {
 		h.Players[i].Hand = []Card{}
+		h.Players[i].potCommitment = 0
 	}
 	h.board = []Card{}
 	h.pot = 0

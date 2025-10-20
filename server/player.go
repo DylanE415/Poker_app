@@ -10,6 +10,7 @@ type Player struct {
 	Hand          []Card `json:"hand"`
 	pendingAction chan Action
 	currentBet    float64
+	potCommitment float64
 }
 
 func newPlayer(id string, name string, stack float64) *Player {
