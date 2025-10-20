@@ -4,9 +4,9 @@ compile and run the server with:
 - go to http://localhost:8080/login
 
 
-to run test fucntions run 
+to run _test.go files run 
 cd server
-go test -v -run 'function name'
+go test -v 
 
 test besthand logic: go test -v -run TestGetPlayerBestHand_AllTypes
 

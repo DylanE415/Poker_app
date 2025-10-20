@@ -121,7 +121,7 @@ func (r *Room) startNextHandIfReady() {
 	r.smallBlindPosition %= len(eligible)
 
 	// create the new hand (newHand returns *Hand)
-	r.currentHand = newHand(eligible, r.smallBlindPosition)
+	r.currentHand = newHand(eligible, r.smallBlindPosition, 1)
 	// advance blinds for the NEXT hand
 	r.smallBlindPosition = (r.smallBlindPosition + 1) % len(eligible)
 

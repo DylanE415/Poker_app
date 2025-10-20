@@ -26,8 +26,32 @@ type Hand struct {
 	raiseAmount       float64
 	currentBet        float64
 	smallBlindIndex   int
+	smallBlindSize    float64
 	//for locking hand to prevent race conditions
 	lock sync.Mutex
+}
+
+// 7 2 off bounty
+func isSevenTwoOff(player *Player) bool {
+	if player.Hand[0].Rank == "2" && player.Hand[1].Rank == "7" && (player.Hand[0].Suit != player.Hand[1].Suit) {
+		return true
+
+	}
+	return false
+}
+func collectSevenTwoBounty(h *Hand, p *Player) {
+	for i := range h.Players {
+		if h.Players[i].ID == p.ID {
+			continue
+		} else if h.Players[i].Stack < h.smallBlindSize {
+			p.Stack += h.Players[i].Stack
+			h.Players[i].Stack = 0
+		} else {
+			p.Stack += h.smallBlindSize
+			h.Players[i].Stack -= h.smallBlindSize
+		}
+	}
+
 }
 
 func shuffleDeck(deck []Card) {
@@ -76,24 +100,34 @@ func handleAction(H *Hand, action Action) bool {
 		return true
 	case "raise":
 		//must raise by double the previous raise
+		p := H.Players[H.actionPlayerIndex]
 
-		if action.Amount > H.Players[H.actionPlayerIndex].Stack {
-			action.Amount = H.Players[H.actionPlayerIndex].Stack
+		// can raise by less than min raise if player has less than min raise
+		if action.Amount > p.Stack {
+			action.Amount = p.Stack
 		} else if action.Amount < (H.raiseAmount) {
 			print("cannot raise by less than current raise amount\n")
 			return false
 		}
-		//current bet
+		//current bet(if raised 2 to a current hand bet of 1 the new bet is 3)
 		newBet := action.Amount + H.currentBet
-		H.Players[H.actionPlayerIndex].Stack -= newBet
-		H.pot += newBet
+		//if player had already had 1 chip in front of them and they raised a raise of 2 by 1 then they would only need to bet 2 more chips
+		newChips := newBet - p.currentBet
+		if p.Stack < newChips {
+			print("not enough chips to raise\n")
+			return false
+		}
+		p.Stack -= newChips
+		H.pot += newChips
 		H.avaliableActions = []string{"call", "fold", "raise"}
 
 		H.raiseAmount = action.Amount
+		//pot commitment update(they put x new chips into the pot)
+		p.potCommitment += newChips
 		//new current bet everyone has to match
 		H.currentBet = newBet
-		//chips in front of player
-		H.Players[H.actionPlayerIndex].currentBet = newBet
+		//total chips in front of player on this street
+		p.currentBet = newBet
 
 		// everyone still in hand can act again execpt raiser
 		for i := range H.Players {
@@ -129,7 +163,7 @@ func handleAction(H *Hand, action Action) bool {
 	return false
 }
 
-func newHand(players []*Player, smallBlindPosition int) *Hand {
+func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) *Hand {
 	suits := []string{"S", "H", "D", "C"}
 	ranks := []string{"14", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}
 	deck := make([]Card, 0, 52)
@@ -149,6 +183,9 @@ func newHand(players []*Player, smallBlindPosition int) *Hand {
 		currentState:      "pre-flop",
 		pot:               0,
 		avaliableActions:  []string{"raise", "fold", "check"},
+		smallBlindSize:    smallBlindSize,
+		currentBet:        0,
+		raiseAmount:       0,
 	}
 }
 
@@ -157,7 +194,7 @@ func streetLoop(h *Hand) {
 	//if pre flop small blind raises
 	if h.currentState == "pre-flop" {
 		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
-		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: 1})
+		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: h.smallBlindSize})
 		//blind can still act after raising
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 		for i := range h.Players {
@@ -344,6 +381,9 @@ func (h *Hand) run() {
 		println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
 		tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
 		h.Players[tmpIndex].Stack += h.pot
+		if isSevenTwoOff(h.Players[tmpIndex]) {
+			collectSevenTwoBounty(h, h.Players[tmpIndex])
+		}
 	}
 
 	// take players with 0 stack out of hand

@@ -6,87 +6,48 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root { --bg:#0b1020; --panel:#121a33; --muted:#aab3cc; --accent:#4da3ff; --bad:#f25f5c; --good:#3ecf8e; }
-    
     * { box-sizing: border-box; }
-
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff; }
-
     header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom: 1px solid #1f2a4d; }
-
     .row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
-
     .card { background: var(--panel); border:1px solid #1f2a4d; border-radius:14px; padding:1rem; }
-
     label { font-size:.9rem; color: var(--muted); }
-
     select, input, button { font: inherit; padding:.55rem .7rem; border-radius:10px; border:1px solid #243158; background:#0e1530; color:#e9efff; }
-
-    button { background:#13214a; cursor:pointer; border-color:#2b3b71; }
-
+    button { background:#13214a; cursor:pointer; border-color:#2b3b71; transition: filter .15s ease, opacity .15s ease; }
     button:hover { background:#182a5c; }
-
-    button[disabled] { opacity:.5; cursor:not-allowed; }
-
+    button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
     .pill { padding:.25rem .6rem; border-radius:999px; font-size:.8rem; border:1px solid #2b3b71; color:#cfe0ff; }
-
-    .ok { color: var(--good); }
-
-    .err { color: var(--bad); }
-
+    .ok { color: var(--good); } .err { color: var(--bad); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    
     .muted { color: var(--muted); }
 
-    /* --- table layout --- */
-    .layout {
-      display:grid;
-      grid-template-rows: auto auto 1fr auto;
-      gap: 1rem;
-      padding: 1rem;
-    }
-
-    /* controls + actions on a single rail */
+    /* --- layout --- */
+    .layout { display:grid; grid-template-rows: auto auto 1fr auto; gap: 1rem; padding: 1rem; }
     .control-rail { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
     @media (max-width: 900px) { .control-rail { grid-template-columns: 1fr; } }
 
     /* Poker table */
-    .table-wrap {
-      position: relative;
-      width: min(1100px, 95vw);
-      height: min(560px, 62vh);
-      margin: 0 auto;
-    }
+    .table-wrap { position: relative; width: min(1100px, 95vw); height: min(560px, 62vh); margin: 0 auto; }
     .felt {
-      position: absolute;
-      inset: 0;
-      margin: auto;
+      position: absolute; inset: 0; margin: auto;
       background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%);
-      border: 10px solid #3a240f;
-      border-radius: 999px;
+      border: 10px solid #3a240f; border-radius: 999px;
       box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35);
     }
-
-    /* board in center */
     .board {
-      position: absolute;
-      left: 50%; top: 50%; transform: translate(-50%, -50%);
-      display:flex; gap:.5rem; align-items:center;
-      padding:.6rem .8rem; border-radius:12px;
-      background: rgba(0,0,0,.25);
-      border:1px solid #1f2a4d;
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      display:flex; gap:.5rem; align-items:center; padding:.6rem .8rem; border-radius:12px;
+      background: rgba(0,0,0,.25); border:1px solid #1f2a4d;
     }
 
-    /* seats around ellipse */
+    /* seats */
     .seat {
-      position: absolute;
-      transform: translate(-50%, -50%);
+      position: absolute; transform: translate(-50%, -50%);
       width: 180px; max-width: 36vw;
       display:flex; flex-direction:column; align-items:center; gap:.35rem;
       padding:.45rem .6rem; border-radius:12px;
-      background: rgba(10,20,40,.55);
-      border:1px solid #223062;
-      box-shadow: 0 4px 16px rgba(0,0,0,.25);
-      text-align:center;
+      background: rgba(10,20,40,.55); border:1px solid #223062;
+      box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center;
     }
     .seat .meta { font-size:.88rem; color: var(--muted); }
     .seat .chips { font-weight:600; }
@@ -95,24 +56,35 @@
     .acting      { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
     .sittingout  { opacity:.6; }
 
-    /* card image sizing */
+    /* cards */
     .cardimg { width: 52px; height: 72px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
     @media (max-width: 520px) { .cardimg { width: 44px; height: 60px; } }
 
-    /* table HUD */
+    /* HUD */
     .hud {
       position:absolute; left:50%; top: 10%; transform: translateX(-50%);
       display:flex; gap:1rem; align-items:center; justify-content:center;
       background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.4rem .75rem; font-size:.95rem;
     }
 
-    /* my hand docked at bottom */
-    .myhand {
-      position: relative; width: min(700px, 94vw); margin: 0.25rem auto 0; text-align:center;
-    }
+    /* my hand & actions */
+    .myhand { position: relative; width: min(700px, 94vw); margin: 0.25rem auto 0; text-align:center; }
     .myhand .cards { display:flex; gap:.5rem; justify-content:center; align-items:center; }
     .myhand .label { margin-top:.35rem; font-size:.95rem; color: var(--muted); }
 
+    .actions {
+      margin-top: .6rem; display: inline-flex; gap: .8rem;
+      align-items: flex-start; justify-content: center; flex-wrap: wrap;
+      background: rgba(10,20,40,.55); border: 1px solid #223062; border-radius: 12px; padding: .55rem .6rem;
+    }
+    .actions button, .actions input {
+      font: inherit; padding: .55rem .7rem; border-radius: 10px; border: 1px solid #243158;
+      background: #0e1530; color: #e9efff;
+    }
+    .raise-group { display:flex; flex-direction:column; gap:.35rem; align-items:center; }
+    #raiseAmt { width: 8rem; text-align:center; }
+    #raiseAmt[disabled] { opacity:.45; filter: grayscale(60%); }
+    @media (max-width: 520px) { .actions { gap: .5rem; } #raiseAmt { width: 6.5rem; } }
   </style>
 </head>
 <body>
@@ -129,7 +101,6 @@
 
   <main class="layout">
     <section class="control-rail">
-      <!-- Controls -->
       <div class="card">
         <h3 style="margin-top:0">Controls</h3>
         <div class="row">
@@ -150,24 +121,14 @@
           If the table looks empty, you probably aren’t seated yet — click <em>Join</em>.
         </div>
       </div>
-
-      <!-- Actions -->
       <div class="card">
-        <h3 style="margin-top:0">Actions</h3>
-        <div class="row" style="flex-wrap:wrap">
-          <button id="checkBtn">Check</button>
-          <button id="callBtn">Call</button>
-          <input id="raiseAmt" type="number" step="0.01" min="0" value="1" style="width:7rem" />
-          <button id="raiseBtn">Raise</button>
-          <button id="foldBtn">Fold</button>
-        </div>
-        <div class="muted" style="margin-top:.5rem; font-size:.9rem">
-          Buttons auto-enable based on <code>availableActions</code> from <span class="mono">/state</span>.
+        <h3 style="margin-top:0">Tips</h3>
+        <div class="muted" style="font-size:.95rem">
+          Buttons below are disabled when not valid for the current state. The number field is only for raises.
         </div>
       </div>
     </section>
 
-    <!-- Poker Table -->
     <section class="table-wrap">
       <div class="felt" aria-hidden="true"></div>
       <div class="hud">
@@ -177,13 +138,22 @@
         <div>• To Act: <span id="toAct">—</span></div>
       </div>
       <div id="board" class="board"></div>
-      <!-- dynamic seats injected here -->
       <div id="seatsLayer"></div>
     </section>
 
-    <!-- My hand docked under the table -->
     <section class="myhand">
       <div class="cards" id="myHand"></div>
+      <div class="actions">
+        <button id="checkBtn">Check</button>
+        <button id="callBtn">Call</button>
+
+        <div class="raise-group">
+          <button id="raiseBtn">raise current bet by:</button>
+          <input id="raiseAmt" type="number" step="0.01" min="0" value="1" />
+        </div>
+
+        <button id="foldBtn">Fold</button>
+      </div>
       <div class="label" id="myHandLabel">Your hand</div>
     </section>
   </main>
@@ -191,9 +161,7 @@
   <script>
     // ---- helpers ----
     const $ = (id) => document.getElementById(id);
-    const statusEl = $('status');
-    const msgEl = $('msg');
-    const whoEl = $('who');
+    const statusEl = $('status'), msgEl = $('msg'), whoEl = $('who');
 
     function showMsg(text, type='') {
       msgEl.className = type ? type : '';
@@ -210,7 +178,26 @@
       } catch {}
     }
 
-    // -------- card image utils --------
+    // ---- actions normalizer (handles misspelling + string vs array) ----
+    function getAvailableActionsFromHand(hand) {
+      let raw =
+        hand?.availableActions ??
+        hand?.AvailableActions ??
+        hand?.avaliableActions ??    // misspelled from Go state
+        hand?.AvaliableActions ??
+        [];
+
+      if (typeof raw === 'string') {
+        raw = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      } else if (Array.isArray(raw)) {
+        raw = raw.map(x => String(x).trim().toLowerCase());
+      } else {
+        raw = [];
+      }
+      return raw;
+    }
+
+    // ---- card utils ----
     function suitName(s) {
       const ch = (s || '').toString().toUpperCase();
       if (ch === 'S') return 'SPADE';
@@ -241,15 +228,11 @@
         const rank = card.slice(0, -1);
         return { rank, suit };
       }
-      return {
-        rank: card?.rank ?? card?.Rank ?? '',
-        suit: card?.suit ?? card?.Suit ?? '',
-      };
+      return { rank: card?.rank ?? card?.Rank ?? '', suit: card?.suit ?? card?.Suit ?? '' };
     }
     function cardImageURL(card) {
       const { rank, suit } = parseCard(card);
-      const s = suitName(suit);
-      const rt = rankToken(rank);
+      const s = suitName(suit), rt = rankToken(rank);
       if (!s || !rt) return null;
       return `/static/card_svgs/${s}-${rt}.svg`;
     }
@@ -262,10 +245,12 @@
       return img;
     }
 
+    // ---- API ----
     const api = {
       async join(room, stack) {
         const res = await fetch(`/join?room=${encodeURIComponent(room)}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ stack: Number(stack) || 0 })
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ stack: Number(stack) || 0 })
         });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'join failed');
@@ -285,7 +270,8 @@
       },
       async action(room, action, amount=0) {
         const res = await fetch(`/action?room=${encodeURIComponent(room)}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ action, amount: Number(amount) || 0 })
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({ action, amount: Number(amount) || 0 })
         });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error(await res.text() || 'action failed');
@@ -318,12 +304,12 @@
     const boardEl      = $('board');
     const seatsLayer   = $('seatsLayer');
     const myHandEl     = $('myHand');
+    const actionsBar   = document.querySelector('.myhand .actions');
 
     $('logoutBtn').addEventListener('click', api.logout);
 
     joinBtn.addEventListener('click', async () => {
-      const room = roomSel.value;
-      const stack = stackInp.value;
+      const room = roomSel.value, stack = stackInp.value;
       try { await api.join(room, stack); showMsg(`Joined room ${room}`, 'ok'); pollState.now(); }
       catch (e) { showMsg(e.message || 'join failed', 'err'); }
     });
@@ -352,6 +338,25 @@
       catch (e) { showMsg(e.message || 'action failed', 'err'); }
     }
 
+    // ---- enable/disable helpers ----
+    function setEnabled(el, enabled) {
+      if (!el) return;
+      el.disabled = !enabled;
+      el.setAttribute('aria-disabled', String(!enabled));
+      if (!enabled) el.title = 'Not available right now'; else el.removeAttribute('title');
+    }
+
+    function enableActionsFrom(avail) {
+      const a = Array.isArray(avail) ? avail.map(x => String(x).toLowerCase()) : [];
+      const has = (k) => a.includes(k);
+
+      setEnabled(checkBtn, has('check'));
+      setEnabled(callBtn,  has('call'));
+      setEnabled(raiseBtn, has('raise'));
+      setEnabled(foldBtn,  has('fold'));
+      setEnabled(raiseAmt, has('raise')); // input only when raise is allowed
+    }
+
     // ---- polling ----
     const pollState = (() => {
       let timer = null;
@@ -372,64 +377,33 @@
         }
       }
       function start() { if (!timer) timer = setTimeout(tick, 80); }
-      function stop() { if (timer) { clearTimeout(timer); timer = null; } }
-      function now() { stop(); start(); }
-      function soon() { stop(); timer = setTimeout(tick, 300); }
+      function stop()  { if (timer) { clearTimeout(timer); timer = null; } }
+      function now()   { stop(); start(); }
+      function soon()  { stop(); timer = setTimeout(tick, 300); }
       start();
       return { start, stop, now, soon };
     })();
 
-    // --- seat geometry helpers ---
-    /**
-     * Compute N seat positions around the felt (ellipse). Returns array of {x,y} in % of container.
-     * Bottom seat is index 0; indices proceed clockwise.
-     */
+    // --- seat geometry ---
     function computeSeatPositions(n) {
-      const pts = [];
-      const cx = 50, cy = 50; // center
-      const rx = 42; // horizontal radius (% of width)
-      const ry = 34; // vertical radius (% of height)
+      const pts = [], cx = 50, cy = 50, rx = 42, ry = 34;
       for (let i=0;i<n;i++) {
-        // angle 90deg at bottom, then clockwise
         const theta = (Math.PI/2) - (i * (2*Math.PI / n));
-        const x = cx + rx * Math.cos(theta);
-        const y = cy + ry * Math.sin(theta);
-        pts.push({ x, y });
+        pts.push({ x: cx + rx * Math.cos(theta), y: cy + ry * Math.sin(theta) });
       }
       return pts;
     }
-
-    function escapeHtml(s) {
-      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-    }
-    function fmtMoney(v) {
-      const n = Number(v);
-      return Number.isFinite(n) ? n.toFixed(2) : (v ?? '');
-    }
-
-    function enableActionsFrom(avail) {
-      const has = (k) => Array.isArray(avail) && avail.includes(k);
-      if (!Array.isArray(avail) || avail.length === 0) {
-        [checkBtn, callBtn, raiseBtn, foldBtn].forEach(b => b.disabled = false);
-        return;
-      }
-      checkBtn.disabled = !has('check');
-      callBtn.disabled  = !has('call');
-      raiseBtn.disabled = !has('raise');
-      foldBtn.disabled  = !has('fold');
-    }
+    function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+    function fmtMoney(v){ const n = Number(v); return Number.isFinite(n) ? n.toFixed(2) : (v ?? ''); }
 
     // ---- rendering ----
     function renderState(st) {
       // clear states when empty
       if (!st || (Object.keys(st).length === 0)) {
-        roomIdEl.textContent = '—';
-        potEl.textContent = '—';
-        currentBetEl.textContent = '—';
-        toActEl.textContent = '—';
-        boardEl.innerHTML = '';
-        seatsLayer.innerHTML = '';
-        myHandEl.innerHTML = '';
+        roomIdEl.textContent = '—'; potEl.textContent = '—'; currentBetEl.textContent = '—'; toActEl.textContent = '—';
+        boardEl.innerHTML = ''; seatsLayer.innerHTML = ''; myHandEl.innerHTML = '';
+        if (actionsBar) actionsBar.style.display = 'none';
+        enableActionsFrom([]); // disable all
         return;
       }
 
@@ -441,23 +415,16 @@
       currentBetEl.textContent = fmtMoney(hand?.currentBet ?? hand?.CurrentBet ?? '');
       toActEl.textContent      = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
 
-      // --- board images in center ---
+      // --- board ---
       const board = hand?.board ?? hand?.Board ?? [];
       boardEl.innerHTML = '';
-      (board || []).forEach(card => { boardEl.appendChild(renderCardImg(card)); });
+      (board || []).forEach(card => boardEl.appendChild(renderCardImg(card)));
 
-      // --- players to seats ---
+      // --- players/seats ---
       const rawPlayers = (st.players || st.Players || []).slice();
       const myIndex = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand) && (p.hand?.length || p.Hand?.length));
-
-      // rotate players so that me (if any) sits at bottom (index 0)
       let players = rawPlayers;
-      if (myIndex >= 0) {
-        players = [...rawPlayers.slice(myIndex), ...rawPlayers.slice(0, myIndex)];
-      }
-
-      // seat count: clamp between number of players and 9 for spacing
-      const n = Math.max(players.length, Math.min(6, players.length));
+      if (myIndex >= 0) players = [...rawPlayers.slice(myIndex), ...rawPlayers.slice(0, myIndex)];
       const positions = computeSeatPositions(Math.max(players.length, Math.min(9, Math.max(players.length, 6))));
 
       seatsLayer.innerHTML = '';
@@ -468,35 +435,19 @@
         const bet = p.currentBet ?? p.CurrentBet ?? '';
         const sittingOut = (p.sittingOut ?? p.SittingOut) ? true : false;
         const isActing = (toActEl.textContent && (name === toActEl.textContent));
-
         const pos = positions[i];
+
         const seat = document.createElement('div');
         seat.className = 'seat' + (isActing ? ' acting' : '') + (sittingOut ? ' sittingout' : '');
-        seat.style.left = pos.x + '%';
-        seat.style.top  = pos.y + '%';
+        seat.style.left = pos.x + '%'; seat.style.top  = pos.y + '%';
 
-        // name / id / chips
-        const title = document.createElement('div');
-        title.innerHTML = `<strong>${escapeHtml(name)}</strong>`;
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.innerHTML = `<span class="mono">${escapeHtml(id)}</span>`;
-        const chips = document.createElement('div');
-        chips.className = 'chips';
-        chips.textContent = `${fmtMoney(stack)}`;
-        const betEl = document.createElement('div');
-        betEl.className = 'bet';
-        betEl.textContent = bet ? `Bet: ${fmtMoney(bet)}` : '';
-        const badge = document.createElement('div');
-        badge.className = 'badge';
-        badge.textContent = sittingOut ? 'Sitting out' : 'Active';
+        const title = document.createElement('div'); title.innerHTML = `<strong>${escapeHtml(name)}</strong>`;
+        const meta = document.createElement('div'); meta.className = 'meta'; meta.innerHTML = `<span class="mono">${escapeHtml(id)}</span>`;
+        const chips = document.createElement('div'); chips.className = 'chips'; chips.textContent = `${fmtMoney(stack)}`;
+        const betEl = document.createElement('div'); betEl.className = 'bet'; betEl.textContent = bet ? `Bet: ${fmtMoney(bet)}` : '';
+        const badge = document.createElement('div'); badge.className = 'badge'; badge.textContent = sittingOut ? 'Sitting out' : 'Active';
 
-        seat.appendChild(title);
-        seat.appendChild(meta);
-        seat.appendChild(chips);
-        if (bet) seat.appendChild(betEl);
-        seat.appendChild(badge);
-
+        seat.appendChild(title); seat.appendChild(meta); seat.appendChild(chips); if (bet) seat.appendChild(betEl); seat.appendChild(badge);
         seatsLayer.appendChild(seat);
       });
 
@@ -506,9 +457,13 @@
       const myCards = me ? (me.hand ?? me.Hand ?? []) : [];
       if (Array.isArray(myCards) && myCards.length) {
         myCards.forEach(c => myHandEl.appendChild(renderCardImg(c)));
+        if (actionsBar) actionsBar.style.display = 'inline-flex';
+      } else {
+        if (actionsBar) actionsBar.style.display = 'none';
       }
 
-      const avail = (hand?.availableActions ?? hand?.AvailableActions) || [];
+      // enable/disable buttons based on (possibly misspelled) actions
+      const avail = getAvailableActionsFromHand(hand);
       enableActionsFrom(avail);
     }
 

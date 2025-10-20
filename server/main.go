@@ -63,7 +63,6 @@ func main() {
 	s.initSessions()
 
 	go s.room1.run()
-	go s.room2.run()
 
 	// Same-origin setup: you can serve without CORS.
 	// If you *must* keep CORS, see the note below.
