@@ -15,7 +15,7 @@ type Action struct {
 }
 
 type Hand struct {
-	//need to be a reference to rooms players
+	//all pointers to players
 	Players           []*Player
 	actionPlayerIndex int
 	deck              []Card
@@ -27,6 +27,7 @@ type Hand struct {
 	currentBet        float64
 	smallBlindIndex   int
 	smallBlindSize    float64
+	skipToShowdown    bool
 	//for locking hand to prevent race conditions
 	lock sync.Mutex
 }
@@ -62,7 +63,7 @@ func shuffleDeck(deck []Card) {
 	}
 }
 
-func checkPlayerCanAct(H *Hand, p *Player) bool {
+func checkPlayerCanAct(p *Player) bool {
 	return p.Stack > 0 && p.canAct
 }
 
@@ -76,14 +77,29 @@ func FindPlayerIndexInHand(H *Hand, id string) int {
 }
 
 func nextEligible(H *Hand, start int) int {
+
 	n := len(H.Players)
 	for step := 0; step < n; step++ {
 		i := (start + step) % n
-		if checkPlayerCanAct(H, H.Players[i]) {
+		if checkPlayerCanAct(H.Players[i]) {
 			return i
 		}
 	}
 	return -1
+}
+
+// if only 1 or 0 players can act, skip to showdown
+func skipToShowdown(H *Hand) bool {
+	playersLeft := 0
+	for i := range H.Players {
+		if checkPlayerCanAct(H.Players[i]) {
+			playersLeft++
+		}
+	}
+	if playersLeft <= 1 {
+		return true
+	}
+	return false
 }
 
 // take action from channel and do it (mutates H via pointer), returns if action was valid
@@ -147,6 +163,7 @@ func handleAction(H *Hand, action Action) bool {
 		//update player stack/pot and what the current player has in front of them
 		H.Players[H.actionPlayerIndex].Stack -= amountToCall
 		H.pot += amountToCall
+		H.Players[H.actionPlayerIndex].potCommitment += amountToCall
 		H.Players[H.actionPlayerIndex].currentBet = amountToCall + H.Players[H.actionPlayerIndex].currentBet
 		H.Players[H.actionPlayerIndex].canAct = false
 		return true
@@ -186,6 +203,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) 
 		smallBlindSize:    smallBlindSize,
 		currentBet:        0,
 		raiseAmount:       0,
+		skipToShowdown:    false,
 	}
 }
 
@@ -276,9 +294,11 @@ func streetLoop(h *Hand) {
 func (h *Hand) run() {
 
 	//clear player cards and amount they can win this hand
+	playerCount := 0
 	for i := range h.Players {
 		h.Players[i].Hand = []Card{}
 		h.Players[i].potCommitment = 0
+		playerCount++
 	}
 	h.board = []Card{}
 	h.pot = 0
@@ -304,6 +324,9 @@ func (h *Hand) run() {
 	print("pre-flop\n")
 	if h.currentState == "pre-flop" {
 		streetLoop(h)
+		if skipToShowdown(h) {
+			h.skipToShowdown = true
+		}
 		h.currentState = "flop"
 	}
 
@@ -320,7 +343,11 @@ func (h *Hand) run() {
 			print(", ")
 		}
 
-		streetLoop(h)
+		if !h.skipToShowdown {
+			streetLoop(h)
+		}
+		//wait 1 sec to display board
+		time.Sleep(1 * time.Second)
 		h.currentState = "turn"
 	}
 
@@ -336,8 +363,10 @@ func (h *Hand) run() {
 			print(c.Rank, c.Suit)
 			print(", ")
 		}
-
-		streetLoop(h)
+		if !h.skipToShowdown {
+			streetLoop(h)
+		}
+		time.Sleep(1 * time.Second)
 		h.currentState = "river"
 	}
 
@@ -353,39 +382,56 @@ func (h *Hand) run() {
 			print(c.Rank, c.Suit)
 			print(", ")
 		}
-
-		streetLoop(h)
+		if !h.skipToShowdown {
+			streetLoop(h)
+		}
+		time.Sleep(1 * time.Second)
 
 	}
 
 	print("River done, moving to showdown\n")
-	//playerhand is struct with player id and best hand
-	playerHands := make([]playerHand, len(h.Players))
-	for i := range h.Players {
-		playerHands[i] = playerHand{playerId: h.Players[i].ID, hand: getPlayerBestHand(h, h.Players[i])}
-	}
+
 	// showdown
 
-	winningHands := getShowdownBestHand(playerHands)
-	print(len(winningHands), " winners\n")
+	//while there is still money in the pot we need to allocate it
+	for h.pot > 0 {
+		//playerhand is struct with player id and best hand
+		playerHands := make([]playerHand, len(h.Players))
+		for i := range h.Players {
+			playerHands[i] = playerHand{playerId: h.Players[i].ID, hand: getPlayerBestHand(h, h.Players[i])}
+		}
+		winningHands := getShowdownBestHand(playerHands)
+		print(len(winningHands), " winners\n")
 
-	if len(winningHands) > 1 {
-		println("chopping")
+		if len(winningHands) > 1 {
+			println("chopping")
+			for i := range winningHands {
+				println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
+				tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
+				//can win the amount they committed divided by the number of players(but they are chopping)
+				amountCanWin := ((h.Players[tmpIndex].potCommitment * float64(playerCount)) / float64(len(winningHands)))
+				h.Players[tmpIndex].Stack += amountCanWin
+				h.pot -= amountCanWin
+			}
+
+		} else {
+			println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
+			tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
+			amountCanWin := h.Players[tmpIndex].potCommitment * float64(playerCount)
+			h.Players[tmpIndex].Stack += amountCanWin
+			h.pot -= amountCanWin
+			if isSevenTwoOff(h.Players[tmpIndex]) {
+				collectSevenTwoBounty(h, h.Players[tmpIndex])
+			}
+		}
+		//now remove those players from the hand so loop can reward the next person
 		for i := range winningHands {
-			println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
-			tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
-			h.Players[tmpIndex].Stack += h.pot / float64(len(winningHands))
+			playerIndex := FindPlayerIndex(h, winningHands[i].playerId)
+			h.Players = append(h.Players[:playerIndex], h.Players[playerIndex+1:]...)
 		}
 
-	} else {
-		println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
-		tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
-		h.Players[tmpIndex].Stack += h.pot
-		if isSevenTwoOff(h.Players[tmpIndex]) {
-			collectSevenTwoBounty(h, h.Players[tmpIndex])
-		}
 	}
-
+	time.Sleep(1 * time.Second)
 	// take players with 0 stack out of hand
 	tmp := h.Players[:0] // reuse capacity
 	for _, p := range h.Players {
@@ -397,4 +443,6 @@ func (h *Hand) run() {
 		}
 	}
 	h.Players = tmp
+
+	h.skipToShowdown = false
 }
