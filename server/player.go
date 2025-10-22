@@ -22,6 +22,8 @@ func newPlayer(id string, name string, stack float64) *Player {
 		canAct:        true,
 		timebank:      60,
 		pendingAction: make(chan Action, 1),
+		currentBet:    0,
+		potCommitment: 0,
 	}
 }
 

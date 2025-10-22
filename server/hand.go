@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -86,6 +87,42 @@ func nextEligible(H *Hand, start int) int {
 		}
 	}
 	return -1
+}
+
+type SidePot struct {
+	eligiblePlayerIDs []string
+	Amount            float64
+}
+
+func buildSidePots(H *Hand) []SidePot {
+	totalPot := H.pot
+	var sidePots []SidePot
+	//first sort players by pot commitment
+	players := make([]*Player, len(H.Players))
+	copy(players, H.Players)
+
+	// ascending order(lowest to highest)
+	sort.Slice(players, func(i, j int) bool {
+		return players[i].potCommitment < players[j].potCommitment
+	})
+
+	//each side pot is the lowest pot commitment player and everyone else(then next side pot remove the lowest player and so on)
+	for i := range players {
+		newPot := SidePot{eligiblePlayerIDs: []string{players[i].ID}, Amount: players[i].potCommitment}
+		for j := i + 1; j < len(players); j++ {
+			newPot.eligiblePlayerIDs = append(newPot.eligiblePlayerIDs, players[j].ID)
+		}
+		newPot.Amount = newPot.Amount * float64(len(newPot.eligiblePlayerIDs))
+		//if side pot amount is greater than total pot, reduce to total pot
+		if newPot.Amount > totalPot {
+			newPot.Amount = totalPot
+		}
+		totalPot -= newPot.Amount
+		sidePots = append(sidePots, newPot)
+
+	}
+	return sidePots
+
 }
 
 // if only 1 or 0 players can act, skip to showdown
@@ -272,7 +309,6 @@ func streetLoop(h *Hand) {
 		}
 
 	nextActor:
-		fmt.Printf("pot: %.2f\n", h.pot)
 		// Advance seat (slice may have shrunk on fold; modulo keeps us in range)
 		if len(h.Players) == 0 {
 			break
@@ -326,6 +362,7 @@ func (h *Hand) run() {
 		streetLoop(h)
 		if skipToShowdown(h) {
 			h.skipToShowdown = true
+			h.actionPlayerIndex = 0
 		}
 		h.currentState = "flop"
 	}
@@ -345,6 +382,8 @@ func (h *Hand) run() {
 
 		if !h.skipToShowdown {
 			streetLoop(h)
+		} else {
+			h.actionPlayerIndex = 0
 		}
 		//wait 1 sec to display board
 		time.Sleep(1 * time.Second)
@@ -365,6 +404,8 @@ func (h *Hand) run() {
 		}
 		if !h.skipToShowdown {
 			streetLoop(h)
+		} else {
+			h.actionPlayerIndex = 0
 		}
 		time.Sleep(1 * time.Second)
 		h.currentState = "river"
@@ -384,6 +425,8 @@ func (h *Hand) run() {
 		}
 		if !h.skipToShowdown {
 			streetLoop(h)
+		} else {
+			h.actionPlayerIndex = 0
 		}
 		time.Sleep(1 * time.Second)
 
@@ -393,44 +436,76 @@ func (h *Hand) run() {
 
 	// showdown
 
-	//while there is still money in the pot we need to allocate it
-	for h.pot > 0 {
-		//playerhand is struct with player id and best hand
-		playerHands := make([]playerHand, len(h.Players))
-		for i := range h.Players {
-			playerHands[i] = playerHand{playerId: h.Players[i].ID, hand: getPlayerBestHand(h, h.Players[i])}
-		}
-		winningHands := getShowdownBestHand(playerHands)
-		print(len(winningHands), " winners\n")
+	//make all side pots
+	SidePots := buildSidePots(h)
+	//get all players best hands
+	playerHands := make([]playerHand, len(h.Players))
+	for i := range h.Players {
+		playerHands[i] = playerHand{playerId: h.Players[i].ID, hand: getPlayerBestHand(h, h.Players[i])}
+	}
 
-		if len(winningHands) > 1 {
-			println("chopping")
-			for i := range winningHands {
-				println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
-				tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
-				//can win the amount they committed divided by the number of players(but they are chopping)
-				amountCanWin := ((h.Players[tmpIndex].potCommitment * float64(playerCount)) / float64(len(winningHands)))
+	//for each side pot
+	for i := range SidePots {
+		currentPot := SidePots[i]
+		// get playerands with only the ids that can win the side pot(for i=0 its all players)
+		if i == 0 {
+			print("first side pot is:", currentPot.Amount, "\n")
+			winningHands := getShowdownBestHand(playerHands)
+			if len(winningHands) > 1 {
+				println("chopping")
+				for i := range winningHands {
+					println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
+					tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
+					//can win the amount they committed divided by the number of players(but they are chopping)
+					amountCanWin := currentPot.Amount / float64(len(winningHands))
+					h.Players[tmpIndex].Stack += amountCanWin
+					h.pot -= amountCanWin
+				}
+			} else {
+				println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
+				tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
+				amountCanWin := currentPot.Amount
 				h.Players[tmpIndex].Stack += amountCanWin
 				h.pot -= amountCanWin
+				if isSevenTwoOff(h.Players[tmpIndex]) {
+					collectSevenTwoBounty(h, h.Players[tmpIndex])
+				}
 			}
-
 		} else {
-			println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
-			tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
-			amountCanWin := h.Players[tmpIndex].potCommitment * float64(playerCount)
-			h.Players[tmpIndex].Stack += amountCanWin
-			h.pot -= amountCanWin
-			if isSevenTwoOff(h.Players[tmpIndex]) {
-				collectSevenTwoBounty(h, h.Players[tmpIndex])
+			print("side pot is:", currentPot.Amount, "\n")
+			//if the player id is not in the side pot they can't win(remove them from playerhands)
+			tmpPlayerHands := make([]playerHand, len(playerHands))
+			for j := range playerHands {
+				if contains(currentPot.eligiblePlayerIDs, playerHands[j].playerId) {
+					tmpPlayerHands[j] = playerHands[j]
+
+				}
 			}
-		}
-		//now remove those players from the hand so loop can reward the next person
-		for i := range winningHands {
-			playerIndex := FindPlayerIndex(h, winningHands[i].playerId)
-			h.Players = append(h.Players[:playerIndex], h.Players[playerIndex+1:]...)
+			winningHands := getShowdownBestHand(tmpPlayerHands)
+			if len(winningHands) > 1 {
+				println("chopping")
+				for i := range winningHands {
+					println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
+					tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
+					//can win the amount they committed divided by the number of players(but they are chopping)
+					amountCanWin := currentPot.Amount / float64(len(winningHands))
+					h.Players[tmpIndex].Stack += amountCanWin
+					h.pot -= amountCanWin
+				}
+			} else {
+				println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
+				tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
+				amountCanWin := currentPot.Amount
+				h.Players[tmpIndex].Stack += amountCanWin
+				h.pot -= amountCanWin
+				if isSevenTwoOff(h.Players[tmpIndex]) {
+					collectSevenTwoBounty(h, h.Players[tmpIndex])
+				}
+			}
 		}
 
 	}
+
 	time.Sleep(1 * time.Second)
 	// take players with 0 stack out of hand
 	tmp := h.Players[:0] // reuse capacity
