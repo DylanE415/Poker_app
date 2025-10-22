@@ -66,6 +66,6 @@ func main() {
 
 	// Same-origin setup: you can serve without CORS.
 	// If you *must* keep CORS, see the note below.
-	log.Println("Server on :8080")
-	log.Fatal(http.ListenAndServe(":8080", s.handleRoutes()))
+	log.Println("Server on :80")
+	log.Fatal(http.ListenAndServe(":80", s.handleRoutes()))
 }

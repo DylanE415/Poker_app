@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,12 +16,16 @@ type Action struct {
 	Amount   float64 `json:"amount"`
 }
 
+type showDownHand struct {
+	PlayerName string
+	Hand       []Card
+}
 type Hand struct {
 	//all pointers to players
 	Players           []*Player
 	actionPlayerIndex int
 	deck              []Card
-	currentState      string // "pre-flop", "flop", "turn", "river", "showdown", "over"
+	currentState      string // "pre-flop", "flop", "turn", "river", "showdown"
 	board             []Card
 	pot               float64
 	avaliableActions  []string // "raise", "call", "fold", "check" (changes based on state)
@@ -29,6 +34,8 @@ type Hand struct {
 	smallBlindIndex   int
 	smallBlindSize    float64
 	skipToShowdown    bool
+	showDownHands     []showDownHand
+	showDownMessage   string
 	//for locking hand to prevent race conditions
 	lock sync.Mutex
 }
@@ -156,9 +163,22 @@ func handleAction(H *Hand, action Action) bool {
 		p := H.Players[H.actionPlayerIndex]
 
 		// can raise by less than min raise if player has less than min raise
-		if action.Amount > p.Stack {
+		if action.Amount >= p.Stack {
 			action.Amount = p.Stack
-		} else if action.Amount < (H.raiseAmount) {
+			H.pot += p.Stack
+			H.currentBet = action.Amount
+			p.potCommitment += p.Stack
+			H.raiseAmount = action.Amount - p.currentBet
+			p.Stack = 0
+			p.currentBet = action.Amount
+			H.avaliableActions = []string{"call", "fold", "raise"}
+			for i := range H.Players {
+				H.Players[i].canAct = true
+			}
+			H.Players[H.actionPlayerIndex].canAct = false
+			return true
+		}
+		if action.Amount < (H.raiseAmount) {
 			print("cannot raise by less than current raise amount\n")
 			return false
 		}
@@ -166,9 +186,8 @@ func handleAction(H *Hand, action Action) bool {
 		newBet := action.Amount + H.currentBet
 		//if player had already had 1 chip in front of them and they raised a raise of 2 by 1 then they would only need to bet 2 more chips
 		newChips := newBet - p.currentBet
-		if p.Stack < newChips {
-			print("not enough chips to raise\n")
-			return false
+		if newChips >= p.Stack {
+			newChips = p.Stack
 		}
 		p.Stack -= newChips
 		H.pot += newChips
@@ -191,12 +210,11 @@ func handleAction(H *Hand, action Action) bool {
 		return true
 
 	case "call":
-		if action.Amount > H.Players[H.actionPlayerIndex].Stack {
-			action.Amount = H.Players[H.actionPlayerIndex].Stack
-
-		}
 		// amount needed to call is what the most recent raiser bet(current bet in hand) - what the player has in front of them
 		amountToCall := H.currentBet - H.Players[H.actionPlayerIndex].currentBet
+		if amountToCall > H.Players[H.actionPlayerIndex].Stack {
+			amountToCall = H.Players[H.actionPlayerIndex].Stack
+		}
 		//update player stack/pot and what the current player has in front of them
 		H.Players[H.actionPlayerIndex].Stack -= amountToCall
 		H.pot += amountToCall
@@ -305,6 +323,7 @@ func streetLoop(h *Hand) {
 					handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
 				}
 				goto nextActor
+
 			}
 		}
 
@@ -385,6 +404,11 @@ func (h *Hand) run() {
 		} else {
 			h.actionPlayerIndex = 0
 		}
+		//check if we should skip to showdown
+		if skipToShowdown(h) {
+			h.skipToShowdown = true
+			h.actionPlayerIndex = 0
+		}
 		//wait 1 sec to display board
 		time.Sleep(1 * time.Second)
 		h.currentState = "turn"
@@ -405,6 +429,11 @@ func (h *Hand) run() {
 		if !h.skipToShowdown {
 			streetLoop(h)
 		} else {
+			h.actionPlayerIndex = 0
+		}
+
+		if skipToShowdown(h) {
+			h.skipToShowdown = true
 			h.actionPlayerIndex = 0
 		}
 		time.Sleep(1 * time.Second)
@@ -433,18 +462,23 @@ func (h *Hand) run() {
 	}
 
 	print("River done, moving to showdown\n")
+	h.currentState = "showdown"
 
 	// showdown
 
 	//make all side pots
 	SidePots := buildSidePots(h)
 	//get all players best hands
+	showdownhands := make([]showDownHand, len(h.Players))
 	playerHands := make([]playerHand, len(h.Players))
 	for i := range h.Players {
 		playerHands[i] = playerHand{playerId: h.Players[i].ID, hand: getPlayerBestHand(h, h.Players[i])}
+		showdownhands = append(showdownhands, showDownHand{PlayerName: h.Players[i].Name, Hand: h.Players[i].Hand})
+
 	}
 
 	//for each side pot
+	showdownmessage := ""
 	for i := range SidePots {
 		currentPot := SidePots[i]
 		// get playerands with only the ids that can win the side pot(for i=0 its all players)
@@ -453,6 +487,7 @@ func (h *Hand) run() {
 			winningHands := getShowdownBestHand(playerHands)
 			if len(winningHands) > 1 {
 				println("chopping")
+				showdownmessage += "chopping with " + strconv.Itoa(len(winningHands)) + " players \n"
 				for i := range winningHands {
 					println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
 					tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
@@ -460,6 +495,8 @@ func (h *Hand) run() {
 					amountCanWin := currentPot.Amount / float64(len(winningHands))
 					h.Players[tmpIndex].Stack += amountCanWin
 					h.pot -= amountCanWin
+					showdownmessage += "\nplayer " + h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
+
 				}
 			} else {
 				println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
@@ -467,8 +504,10 @@ func (h *Hand) run() {
 				amountCanWin := currentPot.Amount
 				h.Players[tmpIndex].Stack += amountCanWin
 				h.pot -= amountCanWin
+				showdownmessage += "\nplayer " + h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
 				if isSevenTwoOff(h.Players[tmpIndex]) {
 					collectSevenTwoBounty(h, h.Players[tmpIndex])
+					showdownmessage += "\nplayer " + h.Players[tmpIndex].Name + " collected bounty"
 				}
 			}
 		} else {
@@ -506,7 +545,11 @@ func (h *Hand) run() {
 
 	}
 
-	time.Sleep(1 * time.Second)
+	h.showDownHands = showdownhands
+	h.showDownMessage = showdownmessage
+	time.Sleep(5 * time.Second)
+	h.showDownMessage = ""
+	h.showDownHands = nil
 	// take players with 0 stack out of hand
 	tmp := h.Players[:0] // reuse capacity
 	for _, p := range h.Players {

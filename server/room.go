@@ -39,12 +39,15 @@ type playerState struct {
 }
 
 type handState struct {
-	Board            []Card   `json:"board"`
-	Pot              float64  `json:"pot"`
-	AvaliableActions []string `json:"avaliableActions"`
-	RaiseAmount      float64  `json:"raiseAmount"`
-	CurrentBet       float64  `json:"currentBet"`
-	ActionPlayerName string   `json:"actionPlayerName"`
+	Board            []Card         `json:"board"`
+	Pot              float64        `json:"pot"`
+	AvaliableActions []string       `json:"avaliableActions"`
+	RaiseAmount      float64        `json:"raiseAmount"`
+	CurrentBet       float64        `json:"currentBet"`
+	ActionPlayerName string         `json:"actionPlayerName"`
+	Street           string         `json:"street"`
+	ShowDownMessage  string         `json:"showDownMessage"`
+	ShowDownHands    []showDownHand `json:"showDownHands"`
 }
 
 type roomState struct {
@@ -205,6 +208,8 @@ func (r *Room) run() {
 					//leave room and send good reply to client
 					for i, p := range r.players {
 						if p.ID == id {
+							// send fold action to hand
+							enqueueLatestAction(p.pendingAction, Action{id, "fold", 0})
 							// remove player (appends all elements before i and all elements after i)
 							r.players = append(r.players[:i], r.players[i+1:]...)
 							//send good reply to client
@@ -266,6 +271,20 @@ func (r *Room) run() {
 					safeReply(cmd.reply, fmt.Errorf("invalid action"))
 					break
 				}
+				if cmd.ActionType == "raise" && cmd.actionAmt > player.Stack {
+					cmd.actionAmt = player.Stack
+				}
+
+				//if player had already had 1 chip in front of them and they raised a raise of 2 by 1 then they would only need to bet 2 more chips
+				playerBet := cmd.actionAmt + player.currentBet
+				if (playerBet < h.currentBet) && cmd.ActionType == "raise" {
+					safeReply(cmd.reply, fmt.Errorf("not enough chips to raise"))
+					break
+				}
+
+				if cmd.ActionType == "call" && cmd.actionAmt > player.Stack {
+					cmd.actionAmt = player.Stack
+				}
 				//send good reply to client
 				safeReply(cmd.reply, nil)
 				// enqueue the action
@@ -308,6 +327,9 @@ func (r *Room) run() {
 						RaiseAmount:      h.raiseAmount,
 						CurrentBet:       h.currentBet,
 						ActionPlayerName: h.Players[h.actionPlayerIndex].Name,
+						Street:           h.currentState,
+						ShowDownMessage:  h.showDownMessage,
+						ShowDownHands:    h.showDownHands,
 					}
 					h.lock.Unlock()
 				}

@@ -16,6 +16,9 @@ to register a new user
 - go run 
 - copy the hash and put it into the users.json file
 
+
+to make build folder run build.sh(builds a binary for linux x86)
+
 *important notes*
 - card ranks are 2-14
 - suits are "H", "C", "S", "D"
