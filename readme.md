@@ -18,6 +18,21 @@ to register a new user
 
 
 to make build folder run build.sh(builds a binary for linux x86)
+-./build.sh
+
+FOR SETTING APP ON AN EC2:
+to ssh into ec2 instance
+ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220
+-to copy build folder into ec2 
+scp -i ~/.ssh/my-ec2-key.pem -r build/* ec2-user@54.183.19.220:/home/ec2-user/app/
+-allow binary to bind to port 80
+sudo setcap 'cap_net_bind_service=+ep' /home/ec2-user/app/server/server
+-run binary
+chmod +x server/server
+./server/server
+
+
+
 
 *important notes*
 - card ranks are 2-14
