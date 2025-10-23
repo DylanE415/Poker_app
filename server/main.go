@@ -55,7 +55,7 @@ func main() {
 	}
 
 	s := &Server{
-		room1:           newRoom(1, 30.0, 100.0),
+		room1:           newRoom(1, 20.0, 40),
 		room2:           newRoom(2, 30.0, 100.0),
 		usersByUsername: uByName,
 		usersByID:       uByID, // <-- you use this in handlers; make sure it’s populated

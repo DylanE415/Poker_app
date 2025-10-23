@@ -106,3 +106,85 @@ func Test_AllInPreflop_SplitPot_withThreePlayers(t *testing.T) {
 		t.Fatalf("remaining pot = %.0f, want 0", h.pot)
 	}
 }
+
+func Test_AllInPreflop_splitPot_with2Players(t *testing.T) {
+	p1 := Player{ID: "P1", Name: "P1", Stack: 1000, pendingAction: make(chan Action, 2)}
+	p2 := Player{ID: "P2", Name: "P2", Stack: 1000, pendingAction: make(chan Action, 2)}
+
+	players := []*Player{&p1, &p2}
+	sbIndex := 0
+	sbSize := 0.0
+
+	h := newHand(players, sbIndex, sbSize)
+
+	// Everyone can act initially so nextEligible picks them.
+	for _, p := range h.Players {
+		p.canAct = true
+	}
+
+	// Build a deterministic deck so your evaluator gets:
+	// Board: 8♣ 8♦ 10♣ 10♦ 2♠
+	// P1: K♥ 8♠   -> Full House 1010888
+	// P2: 8♥ 3♣   -> Full House 1010888
+	//
+	// Dealing order in run():
+	//  - 2 rounds of hole cards: P1, P2, P3, then P1, P2, P3 (taking deck[0] each time)
+	//  - Flop: burn(1), 3 cards
+	//  - Turn: burn(1), 1 card
+	//  - River: burn(1), 1 card
+	deck := []Card{
+		C("H", 13), // P1
+		C("H", 8),  // P2
+		C("S", 8),  // P1
+		C("C", 3),  // P2
+
+		// burn for flop
+		C("C", 3),
+
+		// flop
+		C("C", 8),  // 8♣
+		C("D", 8),  // 8♦
+		C("S", 10), // 10♣
+
+		// burn for turn
+		C("D", 4), //
+
+		// turn
+		C("D", 10), // 10♦
+
+		// burn for river
+		C("H", 5),
+
+		// river
+		C("S", 2), // 2♠
+	}
+
+	// Pad deck with junk to reach 52 if your code ever expects it
+	for len(deck) < 52 {
+		deck = append(deck, C("C", 2))
+	}
+	h.deck = deck
+
+	// Preflop betting we want:
+	// streetLoop will read from the acting player's pendingAction channel.
+	// We enqueue exactly one action for each in turn.
+	p1.pendingAction <- Action{PlayerID: "P1", Action: "raise", Amount: 1000}
+	p2.pendingAction <- Action{PlayerID: "P2", Action: "raise", Amount: 1000}
+
+	// Now run the full hand with your real logic, including side pots you built.
+	h.run()
+
+	// With correct side-pot logic, expected results:
+	// Final stacks:
+	//split pot so 1000 each
+	if p1.Stack != 1000 {
+		t.Fatalf("P1 stack = %.0f, want 2700", p1.Stack)
+	}
+	if p2.Stack != 1000 {
+		t.Fatalf("P2 stack = %.0f, want 0", p2.Stack)
+	}
+	if h.pot != 0 {
+		t.Fatalf("remaining pot = %.0f, want 0", h.pot)
+	}
+
+}

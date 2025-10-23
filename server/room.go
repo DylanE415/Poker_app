@@ -39,15 +39,16 @@ type playerState struct {
 }
 
 type handState struct {
-	Board            []Card         `json:"board"`
-	Pot              float64        `json:"pot"`
-	AvaliableActions []string       `json:"avaliableActions"`
-	RaiseAmount      float64        `json:"raiseAmount"`
-	CurrentBet       float64        `json:"currentBet"`
-	ActionPlayerName string         `json:"actionPlayerName"`
-	Street           string         `json:"street"`
-	ShowDownMessage  string         `json:"showDownMessage"`
-	ShowDownHands    []showDownHand `json:"showDownHands"`
+	Board                []Card         `json:"board"`
+	Pot                  float64        `json:"pot"`
+	AvaliableActions     []string       `json:"avaliableActions"`
+	RaiseAmount          float64        `json:"raiseAmount"`
+	CurrentBet           float64        `json:"currentBet"`
+	ActionPlayerName     string         `json:"actionPlayerName"`
+	Street               string         `json:"street"`
+	ShowDownMessage      string         `json:"showDownMessage"`
+	ShowDownHands        []showDownHand `json:"showDownHands"`
+	CurrentActionMessage string         `json:"currentActionMessage"`
 }
 
 type roomState struct {
@@ -188,6 +189,11 @@ func (r *Room) run() {
 		case cmd := <-r.commandChan:
 			switch cmd.Kind {
 			case "join":
+
+				if cmd.stack < r.minStack || cmd.stack > r.maxStack {
+					safeReply(cmd.reply, fmt.Errorf("stack must be between %d and %d", int(r.minStack), int(r.maxStack)))
+					break
+				}
 				// if the player is not in room
 				if !r.hasPlayer(cmd.PlayerID) {
 					//make new player and add to room
@@ -198,7 +204,7 @@ func (r *Room) run() {
 					safeReply(cmd.reply, nil)
 				} else {
 					//send bad reply to client
-					safeReply(cmd.reply, fmt.Errorf("player already in room"))
+					safeReply(cmd.reply, fmt.Errorf("join failed: player already in room"))
 				}
 			case "leave":
 				//see if player is in room
@@ -321,15 +327,16 @@ func (r *Room) run() {
 				if h != nil {
 					h.lock.Lock()
 					state.Hand = handState{
-						Board:            h.board,
-						Pot:              h.pot,
-						AvaliableActions: h.avaliableActions,
-						RaiseAmount:      h.raiseAmount,
-						CurrentBet:       h.currentBet,
-						ActionPlayerName: h.Players[h.actionPlayerIndex].Name,
-						Street:           h.currentState,
-						ShowDownMessage:  h.showDownMessage,
-						ShowDownHands:    h.showDownHands,
+						Board:                h.board,
+						Pot:                  h.pot,
+						AvaliableActions:     h.avaliableActions,
+						RaiseAmount:          h.raiseAmount,
+						CurrentBet:           h.currentBet,
+						ActionPlayerName:     h.Players[h.actionPlayerIndex].Name,
+						Street:               h.currentState,
+						ShowDownMessage:      h.showDownMessage,
+						ShowDownHands:        h.showDownHands,
+						CurrentActionMessage: h.currentActionMessage,
 					}
 					h.lock.Unlock()
 				}

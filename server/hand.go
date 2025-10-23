@@ -22,20 +22,21 @@ type showDownHand struct {
 }
 type Hand struct {
 	//all pointers to players
-	Players           []*Player
-	actionPlayerIndex int
-	deck              []Card
-	currentState      string // "pre-flop", "flop", "turn", "river", "showdown"
-	board             []Card
-	pot               float64
-	avaliableActions  []string // "raise", "call", "fold", "check" (changes based on state)
-	raiseAmount       float64
-	currentBet        float64
-	smallBlindIndex   int
-	smallBlindSize    float64
-	skipToShowdown    bool
-	showDownHands     []showDownHand
-	showDownMessage   string
+	Players              []*Player
+	actionPlayerIndex    int
+	deck                 []Card
+	currentState         string // "pre-flop", "flop", "turn", "river", "showdown"
+	board                []Card
+	pot                  float64
+	avaliableActions     []string // "raise", "call", "fold", "check" (changes based on state)
+	raiseAmount          float64
+	currentBet           float64
+	smallBlindIndex      int
+	smallBlindSize       float64
+	skipToShowdown       bool
+	showDownHands        []showDownHand
+	showDownMessage      string
+	currentActionMessage string
 	//for locking hand to prevent race conditions
 	lock sync.Mutex
 }
@@ -157,6 +158,7 @@ func handleAction(H *Hand, action Action) bool {
 	switch action.Action {
 	case "check":
 		H.Players[H.actionPlayerIndex].canAct = false
+		H.currentActionMessage = H.Players[H.actionPlayerIndex].Name + " checked"
 		return true
 	case "raise":
 		//must raise by double the previous raise
@@ -176,7 +178,9 @@ func handleAction(H *Hand, action Action) bool {
 				H.Players[i].canAct = true
 			}
 			H.Players[H.actionPlayerIndex].canAct = false
+			H.currentActionMessage = p.Name + " went all in with " + strconv.Itoa(int(action.Amount))
 			return true
+
 		}
 		if action.Amount < (H.raiseAmount) {
 			print("cannot raise by less than current raise amount\n")
@@ -206,7 +210,7 @@ func handleAction(H *Hand, action Action) bool {
 			H.Players[i].canAct = true
 		}
 		H.Players[H.actionPlayerIndex].canAct = false
-
+		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.Itoa(int(action.Amount))
 		return true
 
 	case "call":
@@ -221,12 +225,15 @@ func handleAction(H *Hand, action Action) bool {
 		H.Players[H.actionPlayerIndex].potCommitment += amountToCall
 		H.Players[H.actionPlayerIndex].currentBet = amountToCall + H.Players[H.actionPlayerIndex].currentBet
 		H.Players[H.actionPlayerIndex].canAct = false
+
+		H.currentActionMessage = H.Players[H.actionPlayerIndex].Name + " called"
 		return true
 
 	case "fold":
 		for i, p := range H.Players {
 			if p.ID == action.PlayerID {
 				H.Players = append(H.Players[:i], H.Players[i+1:]...)
+				H.currentActionMessage = p.Name + " folded"
 				return true
 			}
 		}
@@ -320,6 +327,8 @@ func streetLoop(h *Hand) {
 				if contains(h.avaliableActions, "check") {
 					handleAction(h, Action{PlayerID: cur.ID, Action: "check"})
 				} else {
+					// if they folded because of timeout make them sit out
+					cur.sittingOut = true
 					handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
 				}
 				goto nextActor
@@ -336,6 +345,7 @@ func streetLoop(h *Hand) {
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
 	//resert all current bets and actions
+	h.currentActionMessage = ""
 	h.avaliableActions = []string{"raise", "check", "fold"}
 	h.raiseAmount = 0
 	h.currentBet = 0
@@ -489,25 +499,25 @@ func (h *Hand) run() {
 				println("chopping")
 				showdownmessage += "chopping with " + strconv.Itoa(len(winningHands)) + " players \n"
 				for i := range winningHands {
-					println("player ", winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
+					println(winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
 					tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
 					//can win the amount they committed divided by the number of players(but they are chopping)
 					amountCanWin := currentPot.Amount / float64(len(winningHands))
 					h.Players[tmpIndex].Stack += amountCanWin
 					h.pot -= amountCanWin
-					showdownmessage += "\nplayer " + h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
+					showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
 
 				}
 			} else {
-				println("player ", winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
+				println(winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
 				tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
 				amountCanWin := currentPot.Amount
 				h.Players[tmpIndex].Stack += amountCanWin
 				h.pot -= amountCanWin
-				showdownmessage += "\nplayer " + h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
+				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
 				if isSevenTwoOff(h.Players[tmpIndex]) {
 					collectSevenTwoBounty(h, h.Players[tmpIndex])
-					showdownmessage += "\nplayer " + h.Players[tmpIndex].Name + " collected bounty"
+					showdownmessage += h.Players[tmpIndex].Name + " collected bounty"
 				}
 			}
 		} else {
@@ -547,7 +557,7 @@ func (h *Hand) run() {
 
 	h.showDownHands = showdownhands
 	h.showDownMessage = showdownmessage
-	time.Sleep(5 * time.Second)
+	time.Sleep(6 * time.Second)
 	h.showDownMessage = ""
 	h.showDownHands = nil
 	// take players with 0 stack out of hand
