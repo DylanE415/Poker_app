@@ -29,6 +29,18 @@
       "username": "greg",
       "password_hash": "$2a$10$9IZuYZo6jOtax2ajHYGimeUmoJXP2YPl7CYa46IEVYTLNeN8vsCe6",
       "display_name": "greg"
+    },
+    {
+      "id": "06",
+      "username": "zio",
+      "password_hash": "$2a$10$csljmiAax7kf.Vi6CFPvbuM5rCY5aBtIkeiO7v/9VRRW983mpcT2u",
+      "display_name": "zio"
+    },
+    {
+      "id": "07",
+      "username": "owen",
+      "password_hash": "$2a$10$nQP.ml/Mwzq3eqxuqV1C4OiyfH4sP2fR3TDCCaihBDyft/yHdM2U2",
+      "display_name": "owen"
     }
     
   ]

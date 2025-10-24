@@ -49,7 +49,7 @@ type handState struct {
 	ShowDownMessage      string         `json:"showDownMessage"`
 	ShowDownHands        []showDownHand `json:"showDownHands"`
 	CurrentActionMessage string         `json:"currentActionMessage"`
-	SmallBlindId         string         `json:"smallBlindId"`
+	SmallBlindName       string         `json:"smallBlindName"`
 }
 
 type roomState struct {
@@ -126,7 +126,7 @@ func (r *Room) startNextHandIfReady() {
 	r.smallBlindPosition %= len(eligible)
 
 	// create the new hand (newHand returns *Hand)
-	r.currentHand = newHand(eligible, r.smallBlindPosition, 1)
+	r.currentHand = newHand(eligible, r.smallBlindPosition, 0.25)
 	// advance blinds for the NEXT hand
 	r.smallBlindPosition = (r.smallBlindPosition + 1) % len(eligible)
 
@@ -182,6 +182,12 @@ func (r *Room) run() {
 					safeReply(cmd.reply, fmt.Errorf("stack must be between %d and %d", int(r.minStack), int(r.maxStack)))
 					break
 				}
+				// if room is full
+				if len(r.players) >= 9 {
+					//send bad reply to client
+					safeReply(cmd.reply, fmt.Errorf("join failed: room is full"))
+					break
+				}
 				// if the player is not in room
 				if !r.hasPlayer(cmd.PlayerID) {
 					//make new player and add to room
@@ -218,6 +224,10 @@ func (r *Room) run() {
 				}
 			case "sitIn":
 				player := getPlayerFromID(cmd.PlayerID, r.players)
+				if player.Stack <= 0 {
+					safeReply(cmd.reply, fmt.Errorf("player stack too low"))
+					break
+				}
 				//see if player is in room
 				if player == nil {
 					//send bad reply to client
@@ -325,7 +335,7 @@ func (r *Room) run() {
 						ShowDownMessage:      h.showDownMessage,
 						ShowDownHands:        h.showDownHands,
 						CurrentActionMessage: h.currentActionMessage,
-						SmallBlindId:         h.smallBlindId,
+						SmallBlindName:       h.smallBlindName,
 					}
 					h.lock.Unlock()
 				}

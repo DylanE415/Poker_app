@@ -8,7 +8,7 @@
     :root { --bg:#0b1020; --panel:#121a33; --muted:#aab3cc; --accent:#4da3ff; --bad:#f25f5c; --good:#3ecf8e; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff; }
-    header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom: 1px solid #1f2a4d; }
+    header { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom: 1px solid #1f2a4d; }
     .row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
     .card { background: var(--panel); border:1px solid #1f2a4d; border-radius:14px; padding:1rem; }
     label { font-size:.9rem; color: var(--muted); }
@@ -20,58 +20,62 @@
     .ok { color: var(--good); }
     .err { color: var(--bad); }
     .muted { color: var(--muted); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
-    /* layout */
     .layout { display:grid; grid-template-rows: auto auto 1fr auto; gap: 1rem; padding: 1rem; }
-    .control-rail { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+    .control-rail { position:relative; z-index:10; display:grid; gap:1rem; grid-template-columns: 1fr 1fr; }
     @media (max-width: 900px) { .control-rail { grid-template-columns: 1fr; } }
 
-    /* table */
-    .table-wrap { position: relative; width: min(1200px, 96vw); height: min(720px, 75vh); margin: 0 auto; }
-    .felt { position: absolute; inset: 0; margin: auto; background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%); border: 10px solid #3a240f; border-radius: 999px; box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35); }
-    .board { position: absolute; left: 50%; top: 43%; transform: translate(-50%, -50%); display:flex; gap:.5rem; align-items:center; padding:.6rem .8rem; border-radius:12px; background: rgba(0,0,0,.25); border:1px solid #1f2a4d; z-index: 3; }
+    .table-wrap { position: relative; width: min(1100px, 94vw); height: min(680px, 72vh); margin: 0 auto; z-index:1; }
+    .felt { position: absolute; inset: 0; margin: auto; background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%); border: 10px solid #3a240f; border-radius: 999px; box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35); pointer-events:none; }
+    .board { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); display:flex; gap:.45rem; align-items:center; padding:.55rem .75rem; border-radius:12px; background: rgba(0,0,0,.25); border:1px solid #1f2a4d; z-index: 3; pointer-events:none; }
 
     /* seats */
-    .seat { position: absolute; transform: translate(-50%, -50%); width: 156px; max-width: 38vw; display:flex; flex-direction:column; align-items:center; gap:.3rem;
-            padding:.4rem .55rem; border-radius:12px; background: rgba(10,20,40,.55); border:1px solid #223062; box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center; z-index: 1; }
+    .seat { position: absolute; transform: translate(-50%, -50%); width: 150px; max-width: 36vw; display:flex; flex-direction:column; align-items:center; gap:.28rem;
+            padding:.38rem .5rem; border-radius:12px; background: rgba(10,20,40,.55); border:1px solid #223062; box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center; z-index: 2; pointer-events:none; }
     .seat .meta { font-size:.78rem; color: var(--muted); }
-    .seat .chips { font-weight:600; font-size:.95rem; }
-    .seat .bet { font-size:.9rem; color:#d5e4ff; opacity:.9; }
+    .seat .chips { font-weight:600; font-size:.92rem; display:flex; gap:.35rem; align-items:center; justify-content:center; }
+    .seat .chips img { width:16px; height:16px; display:block; }
     .seat .badge { font-size:.72rem; padding:.12rem .4rem; border-radius:999px; border:1px solid #2b3b71; }
+    .seat.hero { z-index: 2; }
     .acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
     .sittingout { opacity:.6; }
 
-    /* cards */
-    .cardimg { width: 90px; height: 120px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
-    @media (max-width: 520px) { .cardimg { width: 52px; height: 88px; } }
-
-    /* HUD, action banner & showdown */
-    .hud { position:absolute; left:50%; top: 16%; transform: translateX(-50%); display:flex; gap:1rem; align-items:center; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.45rem .8rem; font-size:.95rem; z-index: 2; }
-    .actionmsg { position:absolute; left:50%; top: 28%; transform: translateX(-50%); background: rgba(18, 27, 58, .72); border:1px solid #2b3b71; color:#e9efff; border-radius: 12px; padding:.5rem .8rem; font-weight:600; box-shadow: 0 6px 22px rgba(0,0,0,.35); z-index: 3; max-width: 92%; text-align:center; display:none; }
-    .showdown { position:absolute; left:50%; top: 7%; transform: translateX(-50%); background: rgba(20, 34, 70, .75); border:1px solid #315; color:#e9efff; border-radius: 10px; padding: .45rem .7rem; font-weight: 600; text-align: center; box-shadow: 0 6px 22px rgba(0,0,0,.35); max-width: 92%; z-index: 2; }
-
-    /* showdown list directly under the board */
-    .showdown-list {
-      position:absolute; left:50%;
-      top: calc(43% + 90px);
-      transform: translateX(-50%);
-      display:flex; gap:.85rem; flex-wrap:wrap; justify-content:center;
-      background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.5rem .7rem; max-width: 92%; z-index: 2;
+    /* SB badge */
+    .sb-badge {
+      position:absolute; top:-8px; right:-8px; width:26px; height:26px; border-radius:50%;
+      background:#18356e; border: 2px solid #4da3ff; color:#cfe0ff; font-size:.70rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center; box-shadow: 0 2px 8px rgba(0,0,0,.35);
     }
+
+    /* bet chips layer */
+    #betsLayer { position:absolute; inset:0; pointer-events:none; z-index: 4; }
+    .bet-chip { position:absolute; transform: translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; gap:.15rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,.45)); }
+    .bet-chip img { width:22px; height:22px; display:block; }
+    .bet-chip .amt { font-size:.84rem; font-weight:600; color:#e5f0ff; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:8px; padding:.12rem .35rem; }
+
+    .cardimg { width:84px; height:112px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
+    @media (max-width:520px){ .cardimg{ width:50px; height:84px; } }
+
+    .hud { position:absolute; left:50%; top: 27%; transform: translateX(-50%); display:flex; gap:1rem; align-items:center; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.45rem .8rem; font-size:.95rem; z-index: 3; pointer-events:none; }
+    .hud .chip { width:18px; height:18px; vertical-align:middle; margin-right:.25rem; }
+
+    .actionmsg { position:absolute; left:50%; top: 60%; transform: translateX(-50%); background: rgba(18, 27, 58, .72); border:1px solid #2b3b71; color:#e9efff; border-radius: 12px; padding:.5rem .8rem; font-weight:600; box-shadow: 0 6px 22px rgba(0,0,0,.35); z-index: 3; max-width:92%; text-align:center; display:none; pointer-events:none; }
+    .showdown { position:absolute; left:50%; top: 7%; transform: translateX(-50%); background: rgba(20, 34, 70, .75); border:1px solid #315; color:#e9efff; border-radius: 10px; padding: .45rem .7rem; font-weight: 600; text-align: center; box-shadow: 0 6px 22px rgba(0,0,0,.35); max-width: 92%; z-index: 2; pointer-events:none; }
+
+    .showdown-list { position:absolute; left:50%; top: calc(43% + 86px); transform: translateX(-50%); display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.5rem .7rem; max-width: 92%; z-index: 2; pointer-events:none; }
     .showdown-list .entry { display:flex; align-items:center; gap:.45rem; }
     .showdown-list .who { font-size:.9rem; color:#cfe0ff; margin-right:.15rem; }
     .showdown-list .cards { display:flex; gap:.35rem; }
 
-    /* my hand & actions */
-    .myhand { position: relative; width: min(700px, 94vw); margin: 0.25rem auto 0; text-align:center; }
-    .myhand .cards { display:flex; gap:.5rem; justify-content:center; align-items:center; }
-    .actions { margin-top: .6rem; display: inline-flex; gap: .8rem; align-items: flex-start; justify-content: center; flex-wrap: wrap; background: rgba(10,20,40,.55); border: 1px solid #223062; border-radius: 12px; padding: .55rem .6rem; }
-    .actions button, .actions input { font: inherit; padding: .55rem .7rem; border-radius: 10px; border: 1px solid #243158; background: #0e1530; color: #e9efff; }
-    .raise-group { display:flex; flex-direction:column; gap:.35rem; align-items:center; }
-    #raiseAmt { width: 8rem; text-align:center; }
+    .myhand { position: relative; width: min(680px, 94vw); margin: 0.25rem auto 0; text-align:center; z-index:10; }
+    .myhand .cards { display:flex; gap:.45rem; justify-content:center; align-items:center; }
+    .actions { margin-top:.6rem; display:inline-flex; gap:.7rem; align-items:center; justify-content:center; flex-wrap:wrap; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.55rem .6rem; }
+    .actions button, .actions input { font:inherit; padding:.5rem .65rem; border-radius:10px; border:1px solid #243158; background:#0e1530; color:#e9efff; }
+    .raise-group { display:flex; flex-direction:column; gap:.3rem; align-items:center; }
+    #raiseAmt { width:7.5rem; text-align:center; }
     #raiseAmt[disabled] { opacity:.45; filter: grayscale(60%); }
-    @media (max-width: 520px) { .actions { gap: .5rem; } #raiseAmt { width: 6.5rem; } }
+    .queued { font-size:.9rem; color: var(--muted); margin-left:.25rem; }
+    @media (max-width:520px){ .actions{ gap:.45rem; } #raiseAmt{ width:6.25rem; } }
   </style>
 </head>
 <body>
@@ -97,9 +101,9 @@
           </select>
           <label for="stack">Buy In For</label>
           <input id="stack" type="number" step="1" min="0" value="40" />
-          <button id="joinBtn">Join</button>
-          <button id="leaveBtn">Leave</button>
-          <button id="sitToggleBtn" title="Toggle sit in/out">Sit In / Out</button>
+          <button id="joinBtn" type="button">Join</button>
+          <button id="leaveBtn" type="button">Leave</button>
+          <button id="sitToggleBtn" type="button" title="Toggle sit in/out">Sit In / Out</button>
         </div>
         <div id="msg" style="margin-top:.6rem;"></div>
       </div>
@@ -113,476 +117,378 @@
       <div id="actionMsg" class="actionmsg" style="display:none"></div>
       <div id="showdownList" class="showdown-list" style="display:none"></div>
 
-      <!-- HUD (no room id here) -->
+      <!-- HUD -->
       <div class="hud">
-        <div>• Pot: <span id="pot">—</span></div>
-        <div>• Current Bet: <span id="currentBet">—</span></div>
-        <div>• To Act: <span id="toAct">—</span></div>
+        <div>• <img class="chip" src="/static/chips/chips.png" alt="" /> Pot: <span id="pot">—</span></div>
+        <div>• Acting: <span id="toAct">—</span></div>
       </div>
 
       <!-- board & seats -->
       <div id="board" class="board"></div>
       <div id="seatsLayer"></div>
+      <div id="betsLayer"></div>
+
+      <!-- audio -->
+      <audio id="chipSound" src="/static/chips/poker_chip_drop.mp3" preload="auto"></audio>
     </section>
 
     <section class="myhand">
       <div class="cards" id="myHand"></div>
       <div class="actions">
-        <button id="checkBtn">Check</button>
-        <button id="callBtn">Call</button>
+        <button id="checkBtn" type="button">Check</button>
+        <button id="callBtn" type="button">Call</button>
         <div class="raise-group">
-          <button id="raiseBtn" title="Raise by this amount">raise by:</button>
+          <button id="raiseBtn" type="button" title="Raise by this amount">raise by:</button>
           <input id="raiseAmt" type="number" step="0.01" min="0" value="1" />
-          <button id="minBtn" title="Fill minimum raise">Min</button>
+          <button id="minBtn" type="button" title="Fill minimum raise">Min</button>
         </div>
-        <button id="foldBtn">Fold</button>
+        <button id="foldBtn" type="button">Fold</button>
+        <button id="clearBtn" type="button" title="Clear your queued action">Clear</button>
+        <span id="queuedLabel" class="queued">Queued: <strong id="queuedValue">—</strong></span>
       </div>
     </section>
   </main>
 
   <script>
-    // ---------- tiny helpers ----------
-    const $ = (id) => document.getElementById(id);
-    const statusEl = $('status'), msgEl = $('msg'), whoEl = $('who');
+    document.addEventListener('DOMContentLoaded', () => {
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status'), msgEl = $('msg'), whoEl = $('who');
 
-    function showMsg(text, type = '') {
-      msgEl.className = type ? type : '';
-      msgEl.textContent = text;
-    }
+      function showMsg(text, type = '') { msgEl.className = type ? type : ''; msgEl.textContent = text; }
 
-    async function loadMe() {
-      try {
-        const res = await fetch('/me', { credentials: 'include' });
-        if (res.status === 401) { location.href = '/login'; return; }
-        if (!res.ok) return;
-        const me = await res.json();
-        whoEl.textContent = me.username ? `Signed in as ${me.username}` : '';
-      } catch {}
-    }
-
-    // ---------- showdown & action-message helpers ----------
-    function getShowdownHands(st) {
-      const hands = st?.showDownHands ?? st?.ShowDownHands ?? st?.showdownHands ?? st?.hand?.showDownHands ?? st?.hand?.showdownHands ?? [];
-      return (hands || []).filter(h => {
-        const cards = h?.Hand ?? h?.hand;
-        return Array.isArray(cards) && cards.length > 0;
-      });
-    }
-    function getShowdownMessage(st) {
-      const hand = st?.hand ?? st?.Hand;
-      const raw = hand?.showDownMessage ?? hand?.ShowDownMessage ?? st?.showDownMessage ?? st?.ShowDownMessage ?? '';
-      return String(raw || '').trim();
-    }
-    function getCurrentActionMessage(st) {
-      const hand = st?.hand ?? st?.Hand;
-      const raw =
-        hand?.currentActionMessage ?? hand?.CurrentActionMessage ??
-        st?.currentActionMessage ?? st?.CurrentActionMessage ?? '';
-      return String(raw || '').trim();
-    }
-
-    // ---------- card utils ----------
-    function suitName(s) {
-      const ch = (s || '').toString().toUpperCase();
-      if (ch === 'S') return 'SPADE';
-      if (ch === 'H') return 'HEART';
-      if (ch === 'D') return 'DIAMOND';
-      if (ch === 'C') return 'CLUB';
-      return '';
-    }
-    function rankToken(r) {
-      const n = Number(r);
-      if (Number.isFinite(n)) {
-        if (n >= 2 && n <= 10) return String(n);
-        if (n === 11) return '11-JACK';
-        if (n === 12) return '12-QUEEN';
-        if (n === 13) return '13-KING';
-        if (n === 14 || n === 1) return '1-ACE';
-      }
-      const up = String(r || '').toUpperCase();
-      if (up === 'A') return '1-ACE';
-      if (up === 'K') return '13-KING';
-      if (up === 'Q') return '12-QUEEN';
-      if (up === 'J') return '11-JACK';
-      return '';
-    }
-    function parseCard(card) {
-      if (typeof card === 'string') {
-        const suit = card.slice(-1);
-        const rank = card.slice(0, -1);
-        return { rank, suit };
-      }
-      return { rank: card?.rank ?? card?.Rank ?? '', suit: card?.suit ?? card?.Suit ?? '' };
-    }
-    function cardImageURL(card) {
-      const { rank, suit } = parseCard(card);
-      const s = suitName(suit), rt = rankToken(rank);
-      if (!s || !rt) return null;
-      return `/static/card_svgs/${s}-${rt}.svg`;
-    }
-    function renderCardImg(card) {
-      const url = cardImageURL(card);
-      const img = document.createElement('img');
-      img.className = 'cardimg';
-      if (url) { img.src = url; img.alt = url.split('/').pop(); }
-      else { img.alt = '??'; img.title = JSON.stringify(card); }
-      return img;
-    }
-
-    // ---------- API ----------
-    const api = {
-      async join(room, stack) {
-        const res = await fetch(`/join?room=${encodeURIComponent(room)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ stack: Number(stack) || 0 })
-        });
-        if (res.status === 401) location.href = '/login';
-        if (!res.ok) throw new Error((await res.text()) || 'join failed');
-      },
-      async leave(room) {
-        const res = await fetch(`/leave?room=${encodeURIComponent(room)}`, {
-          method: 'POST', credentials: 'include'
-        });
-        if (res.status === 401) location.href = '/login';
-        if (!res.ok) throw new Error((await res.text()) || 'leave failed');
-      },
-      async state(room) {
-        const res = await fetch(`/state?room=${encodeURIComponent(room)}`, {
-          method: 'GET', credentials: 'include'
-        });
-        if (res.status === 401) location.href = '/login';
-        if (!res.ok) throw new Error((await res.text()) || 'state failed');
-        const text = await res.text();
-        if (!text || text.trim() === '' || text.trim() === 'null') return null;
-        try { return JSON.parse(text); } catch { return null; }
-      },
-      async action(room, action, amount = 0) {
-        const res = await fetch(`/action?room=${encodeURIComponent(room)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ action, amount: Number(amount) || 0 })
-        });
-        if (res.status === 401) location.href = '/login';
-        if (!res.ok) throw new Error((await res.text()) || 'action failed');
-      },
-      async sit(room, sitIn) {
-        const res = await fetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, {
-          method: 'POST', credentials: 'include'
-        });
-        if (res.status === 401) location.href = '/login';
-        if (!res.ok) throw new Error((await res.text()) || 'sit toggle failed');
-      },
-      async logout() { location.href = '/login'; }
-    };
-
-    // ---------- UI wiring ----------
-    const roomSel = $('room'), stackInp = $('stack'), joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'), sitBtn = $('sitToggleBtn');
-    const checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'), raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn');
-    const potEl = $('pot'), currentBetEl = $('currentBet'), toActEl = $('toAct');
-    const boardEl = $('board'), seatsLayer = $('seatsLayer'), myHandEl = $('myHand');
-    const actionsBar = document.querySelector('.myhand .actions');
-    const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
-
-    $('logoutBtn').addEventListener('click', api.logout);
-
-    joinBtn.addEventListener('click', async () => {
-      const room = roomSel.value, stack = stackInp.value;
-      try {
-        await api.join(room, stack);
-        showMsg(`Joined room ${room}`, 'ok');
-        pollState.now();
-      } catch (e) { showMsg(e.message || 'join failed', 'err'); }
-    });
-
-    leaveBtn.addEventListener('click', async () => {
-      const room = roomSel.value;
-      try {
-        await api.leave(room);
-        showMsg(`Left room ${room}`, 'ok');
-        renderState(null);
-      } catch (e) { showMsg(e.message || 'leave failed', 'err'); }
-    });
-
-    sitBtn.addEventListener('click', async () => {
-      const room = roomSel.value;
-      try {
-        await api.sit(room, true);
-        showMsg('Sat in', 'ok');
-      } catch {
+      // ---------- AUDIO ----------
+      const chipSound = $('chipSound');
+      let audioUnlocked = false;
+      function unlockAudioOnce() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
         try {
-          await api.sit(room, false);
-          showMsg('Sat out', 'ok');
-        } catch (e2) { showMsg(e2.message || 'sit toggle failed', 'err'); }
+          const p = chipSound.play();
+          if (p?.then) p.then(()=>{ chipSound.pause(); chipSound.currentTime = 0; }).catch(()=>{});
+        } catch {}
       }
-      pollState.soon();
-    });
+      ['click','touchstart','keydown'].forEach(ev => document.addEventListener(ev, unlockAudioOnce, { once:true, passive:true }));
+      function safePlayChip(){ try{ chipSound.currentTime=0; chipSound.play().catch(()=>{});}catch{} }
 
-    checkBtn.addEventListener('click', async () => doAction('check'));
-    callBtn.addEventListener('click', async () => doAction('call'));
-    raiseBtn.addEventListener('click', async () => doAction('raise', raiseAmt.value));
-    foldBtn.addEventListener('click', async () => doAction('fold'));
+      // ---------- ME ----------
+      let myName = '';
+      (async function loadMe(){
+        try {
+          const res = await fetch('/me', { credentials: 'include' });
+          if (res.status === 401) { location.href = '/login'; return; }
+          if (!res.ok) return;
+          const me = await res.json();
+          myName = String(me?.username || '').trim();
+          whoEl.textContent = myName ? `Signed in as ${myName}` : '';
+        } catch {}
+      })();
 
-    minBtn.addEventListener('click', () => {
-      if (typeof minBtn.dataset.minAdd !== 'undefined') {
-        raiseAmt.value = minBtn.dataset.minAdd;
+      // ---------- API ----------
+      async function doFetch(url, opts) {
+        return await fetch(url, Object.assign({ credentials:'include' }, opts||{}));
       }
-    });
+      const api = {
+        async join(room, stack) {
+          const jsonTry = await doFetch(`/join?room=${encodeURIComponent(room)}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ stack: Number(stack)||0 })
+          });
+          if (jsonTry.ok || jsonTry.status === 401) return jsonTry;
+          const formTry = await doFetch(`/join?room=${encodeURIComponent(room)}`, {
+            method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({ stack: String(Number(stack)||0) }).toString()
+          });
+          if (formTry.ok || formTry.status === 401) return formTry;
+          return await doFetch(`/join?room=${encodeURIComponent(room)}&stack=${encodeURIComponent(Number(stack)||0)}`);
+        },
+        async leave(room) { return await doFetch(`/leave?room=${encodeURIComponent(room)}`, { method:'POST' }); },
+        async state(room) { return await doFetch(`/state?room=${encodeURIComponent(room)}`, { method:'GET' }); },
+        async action(room, action, amount=0) {
+          return await doFetch(`/action?room=${encodeURIComponent(room)}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ action, amount: Number(amount)||0 })
+          });
+        },
+        async sit(room, sitIn) { return await doFetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method:'POST' }); },
+        async logout(){ location.href='/login'; }
+      };
 
-    async function doAction(act, amt = 0) {
-      const room = roomSel.value;
-      try {
-        await api.action(room, act, amt);
-        showMsg(`Action: ${act}${act==='raise' ? ' ' + (Number(amt)||0) : ''}`, 'ok');
-        pollState.soon();
-      } catch (e) { showMsg(e.message || 'action failed', 'err'); }
-    }
+      // ---------- ELEMENTS ----------
+      const roomSel = $('room'), stackInp = $('stack'),
+            joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'), sitBtn = $('sitToggleBtn'),
+            checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'),
+            raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn');
 
-    // ---------- enable/disable helpers ----------
-    function setEnabled(el, enabled) {
-      if (!el) return;
-      el.disabled = !enabled;
-      el.setAttribute('aria-disabled', String(!enabled));
-      if (!enabled) el.title = 'Not available right now'; else el.removeAttribute('title');
-    }
-    function getAvailableActionsFromHand(hand) {
-      let raw = hand?.availableActions ?? hand?.AvailableActions ?? hand?.avaliableActions ?? hand?.AvaliableActions ?? [];
-      if (typeof raw === 'string') raw = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-      else if (Array.isArray(raw)) raw = raw.map(x => String(x).trim().toLowerCase());
-      else raw = [];
-      return raw;
-    }
-    function enableActionsFrom(avail) {
-      const a = Array.isArray(avail) ? avail.map(x => String(x).toLowerCase()) : [];
-      const has = (k) => a.includes(k);
-      setEnabled(checkBtn, has('check'));
-      setEnabled(callBtn, has('call'));
-      setEnabled(raiseBtn, has('raise'));
-      setEnabled(foldBtn, has('fold'));
-      setEnabled(raiseAmt, has('raise'));
-      setEnabled(minBtn, has('raise'));
-    }
+      $('logoutBtn').addEventListener('click', api.logout);
 
-    // ---------- polling ----------
-    const pollState = (() => {
-      let timer = null;
-      async function tick() {
+      joinBtn.addEventListener('click', async () => {
+        const room = roomSel.value, stack = stackInp.value;
+        try {
+          const res = await api.join(room, stack);
+          if (res.status === 401) { location.href='/login'; return; }
+          if (!res.ok) { showMsg(`Join failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+          showMsg(`Joined room ${room}`, 'ok');
+          pollState.now();
+        } catch (e) { showMsg(`Join error: ${e.message}`, 'err'); }
+      });
+
+      leaveBtn.addEventListener('click', async () => {
         const room = roomSel.value;
-        statusEl.textContent = 'updating…';
         try {
-          const st = await api.state(room);
-          renderState(st);
-          statusEl.textContent = 'connected';
-          statusEl.className = 'pill';
-        } catch (e) {
-          statusEl.textContent = 'error';
-          statusEl.className = 'pill err';
-          if (e && /401|auth/i.test(String(e))) location.href = '/login';
-        } finally {
-          timer = setTimeout(tick, 1000);
-        }
-      }
-      function start() { if (!timer) timer = setTimeout(tick, 80); }
-      function stop() { if (timer) { clearTimeout(timer); timer = null; } }
-      function now() { stop(); start(); }
-      function soon() { stop(); timer = setTimeout(tick, 300); }
-      document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else now(); });
-      start();
-      return { start, stop, now, soon };
-    })();
-
-    // ---------- geometry + utils ----------
-    function computeSeatPositions(n) {
-      const pts = [], cx = 50, cy = 50, rx = 44, ry = 36;
-      for (let i = 0; i < n; i++) {
-        const theta = (Math.PI/2) - (i * (2*Math.PI / n));
-        pts.push({ x: cx + rx * Math.cos(theta), y: cy + ry * Math.sin(theta) });
-      }
-      return pts;
-    }
-    function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
-    function fmtMoney(v){ const n = Number(v); return Number.isFinite(n) ? n.toFixed(2) : (v ?? ''); }
-    function computeMinRaiseAdd(hand, me) {
-      let v = Number(hand?.raiseAmount ?? hand?.RaiseAmount ?? 0);
-      if (!Number.isFinite(v) || v <= 0) {
-        const tableBet = Number(hand?.currentBet ?? hand?.CurrentBet ?? 0);
-        const myBet = Number(me?.currentBet ?? me?.CurrentBet ?? 0);
-        v = tableBet - myBet;
-      }
-      if (!Number.isFinite(v) || v <= 0) v = 1;
-      return v;
-    }
-
-    // ---------- rendering ----------
-    function renderState(st) {
-      // empty / null state
-      if (!st || (Object.keys(st).length === 0)) {
-        potEl.textContent = '—';
-        currentBetEl.textContent = '—';
-        toActEl.textContent = '—';
-        boardEl.innerHTML = '';
-        seatsLayer.innerHTML = '';
-        myHandEl.innerHTML = '';
-        if (actionsBar) actionsBar.style.display = 'none';
-        showdownBanner.style.display = 'none';
-        showdownList.style.display = 'none';
-        actionMsgEl.style.display = 'none';
-        enableActionsFrom([]);
-        return;
-      }
-
-      const hand = st.hand || st.Hand || null;
-      potEl.textContent = fmtMoney(hand?.pot ?? hand?.Pot ?? '');
-      currentBetEl.textContent = fmtMoney(hand?.currentBet ?? hand?.CurrentBet ?? '');
-      toActEl.textContent = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
-
-      // current action banner
-      const actionMsg = getCurrentActionMessage(st);
-      if (actionMsg) {
-        actionMsgEl.textContent = actionMsg;
-        actionMsgEl.style.display = 'block';
-      } else {
-        actionMsgEl.style.display = 'none';
-        actionMsgEl.textContent = '';
-      }
-
-      // showdown banner & list
-      const sdMsg = getShowdownMessage(st);
-      const sdHands = getShowdownHands(st);
-      const street = String(hand?.street ?? st?.street ?? st?.Street ?? '').toLowerCase();
-      const hasShowdown = (street === 'showdown') && (sdMsg.length > 0 || (Array.isArray(sdHands) && sdHands.length > 0));
-
-      showdownBanner.style.display = hasShowdown ? 'block' : 'none';
-      showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
-
-      // board (guard against null)
-      const board = Array.isArray(hand?.board ?? hand?.Board) ? (hand.board ?? hand.Board) : [];
-      boardEl.innerHTML = '';
-      (board || []).forEach(card => boardEl.appendChild(renderCardImg(card)));
-
-      // players (guard against null)
-      const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
-
-      // id -> name map
-      const nameById = new Map();
-      rawPlayers.forEach(p => {
-        const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
-        const name = String(p.name ?? p.Name ?? '').trim();
-        if (id) nameById.set(id, name);
+          const res = await api.leave(room);
+          if (res.status === 401) { location.href='/login'; return; }
+          if (!res.ok) { showMsg(`Leave failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+          showMsg(`Left room ${room}`, 'ok');
+          renderState(null);
+        } catch (e) { showMsg(`Leave error: ${e.message}`, 'err'); }
       });
 
-      // rotate so the player with visible hand sits at bottom (if any)
-      const myIndex = rawPlayers.findIndex(p => {
-        const h = p.hand ?? p.Hand;
-        return Array.isArray(h) && h.length > 0;
+      sitBtn.addEventListener('click', async () => {
+        const room = roomSel.value;
+        try {
+          let res = await api.sit(room, true);
+          if (res.ok) showMsg('Sat in', 'ok');
+          else {
+            res = await api.sit(room, false);
+            if (res.ok) showMsg('Sat out', 'ok');
+            else showMsg(`Sit toggle failed: ${res.status} ${(await res.text())||''}`, 'err');
+          }
+          pollState.soon();
+        } catch (e) { showMsg(`Sit toggle error: ${e.message}`, 'err'); }
       });
-      let players = rawPlayers;
-      if (myIndex >= 0) players = [...rawPlayers.slice(myIndex), ...rawPlayers.slice(0, myIndex)];
 
-      const positions = computeSeatPositions(Math.max(players.length, Math.min(9, Math.max(players.length, 6))));
-      seatsLayer.innerHTML = '';
+      async function doActionWithQueued(act, amt=0) {
+        const room = roomSel.value;
+        try {
+          const res = await api.action(room, act, amt);
+          if (res.status === 401) { location.href='/login'; return; }
+          if (!res.ok) { showMsg(`Action failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+          if (act === 'raise') { const v = Number(amt)||0; showMsg(`Action: raise ${v.toFixed(2)}`, 'ok'); safePlayChip(); }
+          else if (act === 'call') { showMsg('Action: call', 'ok'); safePlayChip(); }
+          else if (act === 'clear') { showMsg('Cleared queued action', 'ok'); }
+          else { showMsg(`Action: ${act}`, 'ok'); }
+          pollState.soon();
+        } catch (e) { showMsg(`Action error: ${e.message}`, 'err'); }
+      }
+      checkBtn.addEventListener('click', () => doActionWithQueued('check'));
+      callBtn.addEventListener('click', () => doActionWithQueued('call'));
+      raiseBtn.addEventListener('click', () => doActionWithQueued('raise', raiseAmt.value));
+      foldBtn.addEventListener('click', () => doActionWithQueued('fold'));
+      clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
+      minBtn.addEventListener('click', () => {
+        if (typeof minBtn.dataset.minAdd !== 'undefined') raiseAmt.value = minBtn.dataset.minAdd;
+      });
 
-      players.forEach((p, i) => {
+      // ---------- state helpers ----------
+      function getShowdownHands(st) {
+        const hands = st?.showDownHands ?? st?.ShowDownHands ?? st?.showdownHands ?? st?.hand?.showDownHands ?? st?.hand?.showdownHands ?? [];
+        return (hands || []).filter(h => {
+          const cards = h?.Hand ?? h?.hand;
+          return Array.isArray(cards) && cards.length > 0;
+        });
+      }
+      function getShowdownMessage(st) {
+        const hand = st?.hand ?? st?.Hand;
+        const raw = hand?.showDownMessage ?? hand?.ShowDownMessage ?? st?.showDownMessage ?? st?.ShowDownMessage ?? '';
+        return String(raw || '').trim();
+      }
+      function getCurrentActionMessage(st) {
+        const hand = st?.hand ?? st?.Hand;
+        const raw = hand?.currentActionMessage ?? hand?.CurrentActionMessage ?? st?.currentActionMessage ?? st?.CurrentActionMessage ?? '';
+        return String(raw || '').trim();
+      }
+      function getSmallBlindKey(st) {
+        return String(st?.smallBlindId ?? st?.SmallBlindId ?? st?.hand?.smallBlindId ?? st?.hand?.SmallBlindId ?? '').trim();
+      }
+
+      // geometry (seats outward, bet chips inner circle — moved toward middle)
+      const SEAT_RX = 46, SEAT_RY = 38;
+      const BET_RX  = 31, BET_RY  = 26;   // <— pulled inward more so they don't touch cards
+      function heroPolar(){ return Math.PI/2; }
+      function otherPolars(n){ if(!n) return []; const step=2*Math.PI/(n+1); return Array.from({length:n},(_,k)=>Math.PI/2+(k+1)*step); }
+      function ellipseXY(theta, rx, ry){ const cx=50, cy=50; return { x: cx + rx*Math.cos(theta), y: cy + ry*Math.sin(theta) }; }
+
+      const potEl = $('pot'), toActEl = $('toAct');
+      const boardEl = $('board'), seatsLayer = $('seatsLayer'), betsLayer = $('betsLayer'), myHandEl = $('myHand');
+      const actionsBar = document.querySelector('.myhand .actions');
+      const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
+
+      function cardURL(card){
+        const s = (card.suit||card.Suit||'').toString().toUpperCase();
+        const r = (card.rank||card.Rank||'');
+        const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
+        let rt = ''; const n=Number(r);
+        if(Number.isFinite(n)){ rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':''; }
+        else { const up=String(r).toUpperCase(); rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':''; }
+        return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
+      }
+      function renderCardImg(card){
+        const img=document.createElement('img'); img.className='cardimg'; const url=cardURL(card);
+        if(url){ img.src=url; img.alt=url.split('/').pop(); } else { img.alt='??'; img.title=JSON.stringify(card); }
+        return img;
+      }
+      function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
+
+      function renderSeat(p, pos, isActing, isHero, isSB){
         const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
         const name = String(p.name ?? p.Name ?? '').trim();
         const stack = p.stack ?? p.Stack ?? '';
-        const bet = p.currentBet ?? p.CurrentBet ?? '';
         const sittingOut = (p.sittingOut ?? p.SittingOut) ? true : false;
-        const isActing = (toActEl.textContent && (name === toActEl.textContent));
-        const pos = positions[i] || {x:50,y:50};
 
-        const seat = document.createElement('div');
-        seat.className = 'seat' + (isActing ? ' acting' : '') + (sittingOut ? ' sittingout' : '');
-        seat.style.left = pos.x + '%';
-        seat.style.top = pos.y + '%';
+        const seat=document.createElement('div');
+        seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'');
+        seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
 
-        const title = document.createElement('div');
-        title.innerHTML = `<strong>${escapeHtml(name || '(player)')}</strong>`;
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.textContent = name ? '' : (id || '');
-        const chips = document.createElement('div');
-        chips.className = 'chips';
-        chips.textContent = `${fmtMoney(stack)}`;
-        const betEl = document.createElement('div');
-        betEl.className = 'bet';
-        betEl.textContent = bet ? `Bet: ${fmtMoney(bet)}` : '';
-        const badge = document.createElement('div');
-        badge.className = 'badge';
-        badge.textContent = sittingOut ? 'Sitting out' : 'Active';
+        if(isSB){ const sb=document.createElement('div'); sb.className='sb-badge'; sb.textContent='SB'; seat.appendChild(sb); }
 
-        seat.appendChild(title);
-        if (!name) seat.appendChild(meta); // hide pid if we have a display name
+        const t=document.createElement('div'); t.innerHTML=`<strong>${name?name:'(player)'}</strong>`;
+        const meta=document.createElement('div'); meta.className='meta'; meta.textContent = name ? '' : (id||'');
+
+        const chips=document.createElement('div'); chips.className='chips';
+        const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
+        const chipsText=document.createElement('span'); chipsText.textContent=`${fmtMoney(stack)}`;
+        chips.appendChild(chipImg); chips.appendChild(chipsText);
+
+        const badge=document.createElement('div'); badge.className='badge'; badge.textContent=sittingOut?'Sitting out':'Active';
+
+        seat.appendChild(t); if(!name) seat.appendChild(meta);
         seat.appendChild(chips);
-        if (bet) seat.appendChild(betEl);
         seat.appendChild(badge);
+        return seat;
+      }
 
-        seatsLayer.appendChild(seat);
-      });
-
-      // showdown list (uses display names)
-      if (hasShowdown) {
-        showdownList.innerHTML = '';
-        (sdHands || []).forEach(hh => {
-          const cards = hh.Hand ?? hh.hand ?? null;
-          if (!Array.isArray(cards) || cards.length === 0) return;
-          const pid = String(hh.PlayerName ?? hh.playerName ?? '').trim();
-          const displayName = nameById.get(pid) || pid || 'player';
-          const entry = document.createElement('div');
-          entry.className = 'entry';
-          const label = document.createElement('div');
-          label.className = 'who';
-          label.textContent = displayName;
-          const cardsWrap = document.createElement('div');
-          cardsWrap.className = 'cards';
-          cards.forEach(c => cardsWrap.appendChild(renderCardImg(c)));
-          entry.appendChild(label);
-          entry.appendChild(cardsWrap);
-          showdownList.appendChild(entry);
+      function renderBets(players, angles){
+        betsLayer.innerHTML='';
+        players.forEach((p,i)=>{
+          const bet=Number(p.currentBet ?? p.CurrentBet ?? 0);
+          if(!Number.isFinite(bet) || bet<=0) return;
+          const pos=ellipseXY(angles[i], BET_RX, BET_RY);
+          const wrap=document.createElement('div'); wrap.className='bet-chip'; wrap.style.left=pos.x+'%'; wrap.style.top=pos.y+'%';
+          const img=document.createElement('img'); img.src='/static/chips/chips.png'; img.alt='bet';
+          const amt=document.createElement('div'); amt.className='amt'; amt.textContent=fmtMoney(bet);
+          wrap.appendChild(img); wrap.appendChild(amt); betsLayer.appendChild(wrap);
         });
-        showdownList.style.display = showdownList.children.length ? 'flex' : 'none';
-      } else {
-        showdownList.style.display = 'none';
-        showdownList.innerHTML = '';
       }
 
-      // my hand dock
-      myHandEl.innerHTML = '';
-      const me = myIndex >= 0 ? rawPlayers[myIndex] : null;
-      const myCards = me ? (me.hand ?? me.Hand ?? []) : [];
-      if (Array.isArray(myCards) && myCards.length) {
-        myCards.forEach(c => myHandEl.appendChild(renderCardImg(c)));
-        if (actionsBar) actionsBar.style.display = 'inline-flex';
-      } else {
-        if (actionsBar) actionsBar.style.display = 'none';
+      function computeMinRaiseAdd(hand, me) {
+        let v = Number(hand?.raiseAmount ?? hand?.RaiseAmount ?? 0);
+        if (!Number.isFinite(v) || v <= 0) {
+          const tableBet = Number(hand?.currentBet ?? hand?.CurrentBet ?? 0);
+          const myBet = Number(me?.currentBet ?? me?.CurrentBet ?? 0);
+          v = tableBet - myBet;
+        }
+        if (!Number.isFinite(v) || v <= 0) v = 1;
+        return v;
       }
 
-      // min-raise suggestion & quick-fill
-      const minAdd = computeMinRaiseAdd(hand, me);
-      raiseAmt.placeholder = fmtMoney(minAdd);
-      raiseAmt.step = String(minAdd);
-      raiseAmt.min = String(minAdd);
-      minBtn.textContent = `Min (+${fmtMoney(minAdd)})`;
-      minBtn.dataset.minAdd = String(minAdd);
-      raiseBtn.title = `Minimum raise add: ${fmtMoney(minAdd)}`;
+      // ---------- POLLING ----------
+      const pollState = (() => {
+        let timer=null;
+        async function tick(){
+          const room = $('room').value;
+          statusEl.textContent='updating…';
+          try {
+            const res = await api.state(room);
+            if (!res.ok) { statusEl.textContent='error'; statusEl.className='pill err'; return; }
+            const text = await res.text();
+            const st = (!text || text.trim()==='' || text.trim()==='null') ? null : (JSON.parse(text));
+            renderState(st);
+            statusEl.textContent='connected'; statusEl.className='pill';
+          } catch {
+            statusEl.textContent='error'; statusEl.className='pill err';
+          } finally { timer=setTimeout(tick, 1000); }
+        }
+        function start(){ if(!timer) timer=setTimeout(tick, 80); }
+        function stop(){ if(timer){ clearTimeout(timer); timer=null; } }
+        function now(){ stop(); start(); }
+        function soon(){ stop(); timer=setTimeout(tick, 300); }
+        document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stop(); else now(); });
+        start();
+        return { start, stop, now, soon };
+      })();
 
-      // enable/disable action buttons
-      const avail = (hand ? getAvailableActionsFromHand(hand) : []);
-      enableActionsFrom(avail);
-    }
+      // ---------- RENDER ----------
+      let prevActionMessage='';
+      function renderState(st){
+        if (!st || (Object.keys(st).length===0)){
+          potEl.textContent='—'; toActEl.textContent='—';
+          boardEl.innerHTML=''; seatsLayer.innerHTML=''; betsLayer.innerHTML=''; myHandEl.innerHTML='';
+          if (actionsBar) actionsBar.style.display='inline-flex';
+          showdownBanner.style.display='none'; showdownList.style.display='none'; actionMsgEl.style.display='none';
+          return;
+        }
 
-    // ---------- kickoff ----------
-    (async () => {
-      await loadMe();
-      try {
-        const st = await api.state(roomSel.value);
-        renderState(st);
-      } catch (e) {
-        if (e && /401/.test(String(e))) location.href = '/login';
+        const hand = st.hand || st.Hand || null;
+        const sbKey = getSmallBlindKey(st);
+
+        potEl.textContent = fmtMoney(hand?.pot ?? hand?.Pot ?? '');
+        toActEl.textContent = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
+
+        const actionMsg = getCurrentActionMessage(st);
+        if (actionMsg){ actionMsgEl.textContent=actionMsg; actionMsgEl.style.display='block'; }
+        else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
+        if (actionMsg && actionMsg!==prevActionMessage && /\b(call|called|calls|raise|raised|raises|re-?raise|reraise)\b/i.test(actionMsg)) safePlayChip();
+        prevActionMessage = actionMsg;
+
+        const sdMsg = getShowdownMessage(st);
+        const sdHands = getShowdownHands(st);
+        const street = String(hand?.street ?? st?.street ?? st?.Street ?? '').toLowerCase();
+        const hasShowdown = (street==='showdown') && (sdMsg?.length>0 || (Array.isArray(sdHands)&&sdHands.length>0));
+        showdownBanner.style.display = hasShowdown ? 'block' : 'none';
+        showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
+
+        const board = Array.isArray(hand?.board ?? hand?.Board) ? (hand.board ?? hand.Board) : [];
+        boardEl.innerHTML=''; (board||[]).forEach(c=>boardEl.appendChild(renderCardImg(c)));
+
+        const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
+        let heroIdx = -1;
+        if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
+        if (heroIdx < 0) heroIdx = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand));
+        if (heroIdx < 0) heroIdx = 0;
+
+        const hero = rawPlayers[heroIdx] || null;
+        const orderedOthers = rawPlayers.length ? [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)] : [];
+
+        const heroTheta = heroPolar();
+        const othersTheta = otherPolars(orderedOthers.length);
+        const players = hero ? [hero, ...orderedOthers] : orderedOthers.slice();
+        const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
+
+        seatsLayer.innerHTML='';
+        function isSB(p){ const pid=String(p.id??p.ID??p.playerId??p.PlayerID??'').trim(); const pname=String(p.name??p.Name??'').trim(); return sbKey && (pid===sbKey || pname===sbKey); }
+        players.forEach((p,i)=>{
+          const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
+          const name = String(p.name ?? p.Name ?? '').trim();
+          const isActing = (toActEl.textContent && (name === toActEl.textContent));
+          const isHero = (i===0);
+          seatsLayer.appendChild( renderSeat(p, pos, isActing, isHero, isSB(p)) );
+        });
+
+        renderBets(players, angles);
+
+        // my hand dock
+        myHandEl.innerHTML='';
+        const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
+        if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
+
+        // min-raise helper
+        const minAdd = computeMinRaiseAdd(hand, hero);
+        $('raiseAmt').placeholder = fmtMoney(minAdd);
+        $('raiseAmt').step = String(minAdd);
+        $('raiseAmt').min = String(minAdd);
+        $('minBtn').textContent = `Min (+${fmtMoney(minAdd)})`;
+        $('minBtn').dataset.minAdd = String(minAdd);
+        $('raiseBtn').title = `Minimum raise add: ${fmtMoney(minAdd)}`;
       }
-    })();
+
+      // Kickoff initial fetch
+      (async () => {
+        try {
+          const res = await api.state($('room').value);
+          if (res.ok) renderState(JSON.parse(await res.text()));
+        } catch {}
+      })();
+    });
   </script>
 </body>
 </html>

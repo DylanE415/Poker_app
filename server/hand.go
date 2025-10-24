@@ -33,7 +33,7 @@ type Hand struct {
 	currentBet           float64
 	smallBlindIndex      int
 	smallBlindSize       float64
-	smallBlindId         string
+	smallBlindName       string
 	skipToShowdown       bool
 	showDownHands        []showDownHand
 	showDownMessage      string
@@ -217,7 +217,7 @@ func handleAction(H *Hand, action Action) bool {
 			H.Players[i].canAct = true
 		}
 		H.Players[H.actionPlayerIndex].canAct = false
-		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.Itoa(int(action.Amount))
+		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(action.Amount, 'f', -1, 64)
 		return true
 
 	case "call":
@@ -269,7 +269,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) 
 		Players:           players,
 		actionPlayerIndex: smallBlindPosition,
 		smallBlindIndex:   smallBlindPosition,
-		smallBlindId:      players[smallBlindPosition].ID,
+		smallBlindName:    players[smallBlindPosition].Name,
 		deck:              deck,
 		currentState:      "pre-flop",
 		pot:               0,
@@ -283,7 +283,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) 
 
 func streetLoop(h *Hand) {
 	h.actionPlayerIndex = h.smallBlindIndex
-	h.smallBlindId = h.Players[h.smallBlindIndex].ID
+	h.smallBlindName = h.Players[h.smallBlindIndex].Name
 	//if pre flop small blind raises
 	if h.currentState == "pre-flop" {
 		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
@@ -297,7 +297,7 @@ func streetLoop(h *Hand) {
 	for {
 
 		//check if everyone called the small blind, then set actions to either check/raise/fold for small blind
-		if h.currentBet == 1 && h.actionPlayerIndex == h.smallBlindIndex && h.Players[h.actionPlayerIndex].currentBet == 1 {
+		if h.currentBet == h.smallBlindSize && h.actionPlayerIndex == h.smallBlindIndex && h.Players[h.actionPlayerIndex].currentBet == h.smallBlindSize {
 			h.avaliableActions = []string{"check", "raise", "fold", "clear"}
 		}
 		// if only one player left, street over
