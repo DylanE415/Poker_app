@@ -11,6 +11,7 @@ type Player struct {
 	pendingAction chan Action
 	currentBet    float64
 	potCommitment float64
+	folded        bool
 }
 
 func newPlayer(id string, name string, stack float64) *Player {

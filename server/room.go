@@ -36,6 +36,7 @@ type playerState struct {
 	SittingOut bool    `json:"sittingOut"`
 	Hand       []Card  `json:"hand"`
 	CurrentBet float64 `json:"currentBet"`
+	Folded     bool    `json:"folded"`
 }
 
 type handState struct {
@@ -224,14 +225,14 @@ func (r *Room) run() {
 				}
 			case "sitIn":
 				player := getPlayerFromID(cmd.PlayerID, r.players)
-				if player.Stack <= 0 {
-					safeReply(cmd.reply, fmt.Errorf("player stack too low"))
-					break
-				}
 				//see if player is in room
 				if player == nil {
 					//send bad reply to client
 					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
+				if player.Stack <= 0 {
+					safeReply(cmd.reply, fmt.Errorf("player stack too low"))
 					break
 				}
 				//send good reply to client
@@ -315,6 +316,7 @@ func (r *Room) run() {
 						SittingOut: p.sittingOut,
 						Timebank:   p.timebank,
 						CurrentBet: p.currentBet,
+						Folded:     p.folded,
 					}
 					if p.ID == cmd.PlayerID {
 						state.Players[i].Hand = p.Hand

@@ -51,7 +51,7 @@
     .seat .badge { font-size:.72rem; padding:.12rem .4rem; border-radius:999px; border:1px solid #2b3b71; }
     .seat.hero { z-index: 2; }
     .acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
-    .sittingout { opacity:.6; }
+    .sittingout, .folded { opacity:.6; }
 
     /* Small Blind Indicator */
     .sb-indicator {
@@ -200,7 +200,7 @@
         <button id="callBtn" type="button">Call</button>
         <div class="raise-group">
           <button id="raiseBtn" type="button" title="Raise by this amount">raise by:</button>
-          <input id="raiseAmt" type="number" step="0.01" min="0" value="1" />
+          <input id="raiseAmt" type="number" step="0.5" min="0" value="1" />
           <button id="minBtn" type="button" title="Fill minimum raise">Min</button>
         </div>
         <button id="foldBtn" type="button">Fold</button>
@@ -409,14 +409,15 @@
       function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
       function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','<').replaceAll('>','>').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
 
-      // ✅ UPDATED: Render seat with SB indicator by NAME
+      // ✅ UPDATED: Render seat with SB indicator and folded status
       function renderSeat(p, pos, isActing, isHero, isSB){
         const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
         const stack = p.stack ?? p.Stack ?? '';
         const sittingOut = (p.sittingOut ?? p.SittingOut) ? true : false;
+        const folded = (p.folded ?? p.Folded) ? true : false;
 
         const seat=document.createElement('div');
-        seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'');
+        seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'')+(folded?' folded':'');
         seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
 
         // Name + optional SB indicator
@@ -439,7 +440,9 @@
         const chipsText=document.createElement('span'); chipsText.textContent=`${fmtMoney(stack)}`;
         chips.appendChild(chipImg); chips.appendChild(chipsText);
 
-        const badge=document.createElement('div'); badge.className='badge'; badge.textContent=sittingOut?'Sitting out':'Active';
+        const badge=document.createElement('div'); 
+        badge.className='badge'; 
+        badge.textContent = sittingOut ? 'Sitting out' : folded ? 'Folded' : 'Active';
 
         seat.appendChild(nameWrap);
         if(name==='(player)') seat.appendChild(meta);

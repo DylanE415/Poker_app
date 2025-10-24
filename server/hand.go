@@ -241,6 +241,7 @@ func handleAction(H *Hand, action Action) bool {
 			if p.ID == action.PlayerID {
 				H.Players = append(H.Players[:i], H.Players[i+1:]...)
 				H.currentActionMessage = p.Name + " folded"
+				p.folded = true
 				return true
 			}
 		}
@@ -288,6 +289,10 @@ func streetLoop(h *Hand) {
 	if h.currentState == "pre-flop" {
 		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
 		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: h.smallBlindSize})
+		//big blind raise
+		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
+		print("big blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
+		handleAction(h, Action{PlayerID: h.Players[h.actionPlayerIndex].ID, Action: "raise", Amount: h.smallBlindSize})
 		//blind can still act after raising
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 		for i := range h.Players {
@@ -296,8 +301,8 @@ func streetLoop(h *Hand) {
 	}
 	for {
 
-		//check if everyone called the small blind, then set actions to either check/raise/fold for small blind
-		if h.currentBet == h.smallBlindSize && h.actionPlayerIndex == h.smallBlindIndex && h.Players[h.actionPlayerIndex].currentBet == h.smallBlindSize {
+		//check if everyone called the blind, then set actions to either check/raise/fold for big blind
+		if h.currentBet == (h.smallBlindSize*2) && h.actionPlayerIndex == ((h.smallBlindIndex+1)%len(h.Players)) && h.Players[h.actionPlayerIndex].currentBet == h.smallBlindSize*2 {
 			h.avaliableActions = []string{"check", "raise", "fold", "clear"}
 		}
 		// if only one player left, street over
@@ -376,7 +381,9 @@ func (h *Hand) run() {
 	for i := range h.Players {
 		h.Players[i].Hand = []Card{}
 		h.Players[i].potCommitment = 0
+		h.Players[i].folded = false
 		playerCount++
+
 	}
 	h.board = []Card{}
 	h.pot = 0
@@ -570,7 +577,7 @@ func (h *Hand) run() {
 
 	h.showDownHands = showdownhands
 	h.showDownMessage = showdownmessage
-	time.Sleep(4 * time.Second)
+	time.Sleep(5 * time.Second)
 	h.showDownMessage = ""
 	h.showDownHands = nil
 	// take players with 0 stack out of hand
