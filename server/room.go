@@ -49,6 +49,7 @@ type handState struct {
 	ShowDownMessage      string         `json:"showDownMessage"`
 	ShowDownHands        []showDownHand `json:"showDownHands"`
 	CurrentActionMessage string         `json:"currentActionMessage"`
+	SmallBlindId         string         `json:"smallBlindId"`
 }
 
 type roomState struct {
@@ -147,19 +148,6 @@ func (r *Room) startNextHandIfReady() {
 		default:
 		}
 	}(r.currentHand)
-}
-
-// for rmaking the latest action the current action in the channel
-func enqueueLatestAction(ch chan Action, a Action) {
-	for {
-		select {
-		case ch <- a:
-			// sent successfully; done
-			return
-		case <-ch:
-			// channel was full; drop the value; and repeat the loop
-		}
-	}
 }
 
 // for sending a reply to the client
@@ -337,6 +325,7 @@ func (r *Room) run() {
 						ShowDownMessage:      h.showDownMessage,
 						ShowDownHands:        h.showDownHands,
 						CurrentActionMessage: h.currentActionMessage,
+						SmallBlindId:         h.smallBlindId,
 					}
 					h.lock.Unlock()
 				}

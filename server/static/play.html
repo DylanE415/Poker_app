@@ -20,7 +20,6 @@
     .ok { color: var(--good); }
     .err { color: var(--bad); }
     .muted { color: var(--muted); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
     /* layout */
     .layout { display:grid; grid-template-rows: auto auto 1fr auto; gap: 1rem; padding: 1rem; }
@@ -28,35 +27,54 @@
     @media (max-width: 900px) { .control-rail { grid-template-columns: 1fr; } }
 
     /* table */
-    .table-wrap { position: relative; width: min(1200px, 96vw); height: min(720px, 75vh); margin: 0 auto; }
+    .table-wrap { position: relative; width: min(1100px, 94vw); height: min(680px, 72vh); margin: 0 auto; }
     .felt { position: absolute; inset: 0; margin: auto; background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%); border: 10px solid #3a240f; border-radius: 999px; box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35); }
-    .board { position: absolute; left: 50%; top: 43%; transform: translate(-50%, -50%); display:flex; gap:.5rem; align-items:center; padding:.6rem .8rem; border-radius:12px; background: rgba(0,0,0,.25); border:1px solid #1f2a4d; z-index: 3; }
+    .board { position: absolute; left: 50%; top: 43%; transform: translate(-50%, -50%); display:flex; gap:.45rem; align-items:center; padding:.55rem .75rem; border-radius:12px; background: rgba(0,0,0,.25); border:1px solid #1f2a4d; z-index: 3; }
 
     /* seats */
-    .seat { position: absolute; transform: translate(-50%, -50%); width: 156px; max-width: 38vw; display:flex; flex-direction:column; align-items:center; gap:.3rem;
-            padding:.4rem .55rem; border-radius:12px; background: rgba(10,20,40,.55); border:1px solid #223062; box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center; z-index: 1; }
+    .seat { position: absolute; transform: translate(-50%, -50%); width: 150px; max-width: 36vw; display:flex; flex-direction:column; align-items:center; gap:.28rem;
+            padding:.38rem .5rem; border-radius:12px; background: rgba(10,20,40,.55); border:1px solid #223062; box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center; z-index: 1; }
     .seat .meta { font-size:.78rem; color: var(--muted); }
-    .seat .chips { font-weight:600; font-size:.95rem; }
-    .seat .bet { font-size:.9rem; color:#d5e4ff; opacity:.9; }
+    .seat .chips { font-weight:600; font-size:.92rem; display:flex; gap:.35rem; align-items:center; justify-content:center; }
+    .seat .chips img { width:16px; height:16px; display:block; }
+    .seat .bet { font-size:.88rem; color:#d5e4ff; opacity:.9; display:flex; gap:.3rem; align-items:center; justify-content:center; }
+    .seat .bet img { width:14px; height:14px; display:block; }
     .seat .badge { font-size:.72rem; padding:.12rem .4rem; border-radius:999px; border:1px solid #2b3b71; }
+    .seat.hero { z-index: 2; }
     .acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
     .sittingout { opacity:.6; }
 
+    /* SB badge */
+    .sb-badge {
+      position:absolute;
+      top:-8px; right:-8px;
+      width:26px; height:26px;
+      border-radius:50%;
+      background:#18356e;
+      border: 2px solid #4da3ff;
+      color:#cfe0ff;
+      font-size:.70rem;
+      font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+
     /* cards */
-    .cardimg { width: 90px; height: 120px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
-    @media (max-width: 520px) { .cardimg { width: 52px; height: 88px; } }
+    .cardimg { width: 84px; height: 112px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
+    @media (max-width: 520px) { .cardimg { width: 50px; height: 84px; } }
 
     /* HUD, action banner & showdown */
     .hud { position:absolute; left:50%; top: 16%; transform: translateX(-50%); display:flex; gap:1rem; align-items:center; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.45rem .8rem; font-size:.95rem; z-index: 2; }
+    .hud .chip { width:18px; height:18px; vertical-align:middle; margin-right:.25rem; }
     .actionmsg { position:absolute; left:50%; top: 28%; transform: translateX(-50%); background: rgba(18, 27, 58, .72); border:1px solid #2b3b71; color:#e9efff; border-radius: 12px; padding:.5rem .8rem; font-weight:600; box-shadow: 0 6px 22px rgba(0,0,0,.35); z-index: 3; max-width: 92%; text-align:center; display:none; }
     .showdown { position:absolute; left:50%; top: 7%; transform: translateX(-50%); background: rgba(20, 34, 70, .75); border:1px solid #315; color:#e9efff; border-radius: 10px; padding: .45rem .7rem; font-weight: 600; text-align: center; box-shadow: 0 6px 22px rgba(0,0,0,.35); max-width: 92%; z-index: 2; }
 
-    /* showdown list directly under the board */
+    /* showdown list */
     .showdown-list {
       position:absolute; left:50%;
-      top: calc(43% + 90px);
+      top: calc(43% + 86px);
       transform: translateX(-50%);
-      display:flex; gap:.85rem; flex-wrap:wrap; justify-content:center;
+      display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center;
       background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.5rem .7rem; max-width: 92%; z-index: 2;
     }
     .showdown-list .entry { display:flex; align-items:center; gap:.45rem; }
@@ -64,15 +82,15 @@
     .showdown-list .cards { display:flex; gap:.35rem; }
 
     /* my hand & actions */
-    .myhand { position: relative; width: min(700px, 94vw); margin: 0.25rem auto 0; text-align:center; }
-    .myhand .cards { display:flex; gap:.5rem; justify-content:center; align-items:center; }
-    .myhand .label { margin-top:.35rem; font-size:.95rem; color: var(--muted); }
-    .actions { margin-top: .6rem; display: inline-flex; gap: .8rem; align-items: flex-start; justify-content: center; flex-wrap: wrap; background: rgba(10,20,40,.55); border: 1px solid #223062; border-radius: 12px; padding: .55rem .6rem; }
-    .actions button, .actions input { font: inherit; padding: .55rem .7rem; border-radius: 10px; border: 1px solid #243158; background: #0e1530; color: #e9efff; }
-    .raise-group { display:flex; flex-direction:column; gap:.35rem; align-items:center; }
-    #raiseAmt { width: 8rem; text-align:center; }
+    .myhand { position: relative; width: min(680px, 94vw); margin: 0.25rem auto 0; text-align:center; }
+    .myhand .cards { display:flex; gap:.45rem; justify-content:center; align-items:center; }
+    .actions { margin-top: .6rem; display: inline-flex; gap: .7rem; align-items: center; justify-content: center; flex-wrap: wrap; background: rgba(10,20,40,.55); border: 1px solid #223062; border-radius: 12px; padding: .55rem .6rem; }
+    .actions button, .actions input { font: inherit; padding: .5rem .65rem; border-radius: 10px; border: 1px solid #243158; background: #0e1530; color: #e9efff; }
+    .raise-group { display:flex; flex-direction:column; gap:.3rem; align-items:center; }
+    #raiseAmt { width: 7.5rem; text-align:center; }
     #raiseAmt[disabled] { opacity:.45; filter: grayscale(60%); }
-    @media (max-width: 520px) { .actions { gap: .5rem; } #raiseAmt { width: 6.5rem; } }
+    .queued { font-size:.9rem; color: var(--muted); margin-left:.25rem; }
+    @media (max-width: 520px) { .actions { gap: .45rem; } #raiseAmt { width: 6.25rem; } }
   </style>
 </head>
 <body>
@@ -116,7 +134,7 @@
 
       <!-- HUD -->
       <div class="hud">
-        <div>• Pot: <span id="pot">—</span></div>
+        <div>• <img class="chip" src="/static/chips/chips.png" alt="" /> Pot: <span id="pot">—</span></div>
         <div>• Current Bet: <span id="currentBet">—</span></div>
         <div>• To Act: <span id="toAct">—</span></div>
       </div>
@@ -124,6 +142,9 @@
       <!-- board & seats -->
       <div id="board" class="board"></div>
       <div id="seatsLayer"></div>
+
+      <!-- audio -->
+      <audio id="chipSound" src="/static/chips/poker_chip_drop.mp3" preload="auto"></audio>
     </section>
 
     <section class="myhand">
@@ -137,6 +158,8 @@
           <button id="minBtn" title="Fill minimum raise">Min</button>
         </div>
         <button id="foldBtn">Fold</button>
+        <button id="clearBtn" title="Clear your queued action">Clear</button>
+        <span id="queuedLabel" class="queued">Queued: <strong id="queuedValue">—</strong></span>
       </div>
     </section>
   </main>
@@ -146,22 +169,22 @@
     const $ = (id) => document.getElementById(id);
     const statusEl = $('status'), msgEl = $('msg'), whoEl = $('who');
 
-    function showMsg(text, type = '') {
-      msgEl.className = type ? type : '';
-      msgEl.textContent = text;
-    }
+    function showMsg(text, type = '') { msgEl.className = type ? type : ''; msgEl.textContent = text; }
 
+    // Keep track of logged-in username to anchor hero seat
+    let myName = '';
     async function loadMe() {
       try {
         const res = await fetch('/me', { credentials: 'include' });
         if (res.status === 401) { location.href = '/login'; return; }
         if (!res.ok) return;
         const me = await res.json();
-        whoEl.textContent = me.username ? `Signed in as ${me.username}` : '';
+        myName = String(me?.username || '').trim();
+        whoEl.textContent = myName ? `Signed in as ${myName}` : '';
       } catch {}
     }
 
-    // ---------- showdown & action-message helpers ----------
+    // ---------- helpers from state ----------
     function getShowdownHands(st) {
       const hands = st?.showDownHands ?? st?.ShowDownHands ?? st?.showdownHands ?? st?.hand?.showDownHands ?? st?.hand?.showdownHands ?? [];
       return (hands || []).filter(h => {
@@ -171,7 +194,7 @@
     }
     function getShowdownMessage(st) {
       const hand = st?.hand ?? st?.Hand;
-      const raw = hand?.showDownMessage ?? hand?.ShowDownMessage ?? st?.showDownMessage ?? st?.showDownMessage ?? '';
+      const raw = hand?.showDownMessage ?? hand?.ShowDownMessage ?? st?.showDownMessage ?? st?.ShowDownMessage ?? '';
       return String(raw || '').trim();
     }
     function getCurrentActionMessage(st) {
@@ -180,6 +203,12 @@
         hand?.currentActionMessage ?? hand?.CurrentActionMessage ??
         st?.currentActionMessage ?? st?.CurrentActionMessage ?? '';
       return String(raw || '').trim();
+    }
+    function getSmallBlindId(st) {
+      return String(
+        st?.smallBlindId ?? st?.SmallBlindId ??
+        st?.hand?.smallBlindId ?? st?.hand?.SmallBlindId ?? ''
+      ).trim();
     }
 
     // ---------- card utils ----------
@@ -208,11 +237,7 @@
       return '';
     }
     function parseCard(card) {
-      if (typeof card === 'string') {
-        const suit = card.slice(-1);
-        const rank = card.slice(0, -1);
-        return { rank, suit };
-      }
+      if (typeof card === 'string') { const suit = card.slice(-1), rank = card.slice(0, -1); return { rank, suit }; }
       return { rank: card?.rank ?? card?.Rank ?? '', suit: card?.suit ?? card?.Suit ?? '' };
     }
     function cardImageURL(card) {
@@ -234,25 +259,19 @@
     const api = {
       async join(room, stack) {
         const res = await fetch(`/join?room=${encodeURIComponent(room)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({ stack: Number(stack) || 0 })
         });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error((await res.text()) || 'join failed');
       },
       async leave(room) {
-        const res = await fetch(`/leave?room=${encodeURIComponent(room)}`, {
-          method: 'POST', credentials: 'include'
-        });
+        const res = await fetch(`/leave?room=${encodeURIComponent(room)}`, { method: 'POST', credentials: 'include' });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error((await res.text()) || 'leave failed');
       },
       async state(room) {
-        const res = await fetch(`/state?room=${encodeURIComponent(room)}`, {
-          method: 'GET', credentials: 'include'
-        });
+        const res = await fetch(`/state?room=${encodeURIComponent(room)}`, { method: 'GET', credentials: 'include' });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error((await res.text()) || 'state failed');
         const text = await res.text();
@@ -261,18 +280,14 @@
       },
       async action(room, action, amount = 0) {
         const res = await fetch(`/action?room=${encodeURIComponent(room)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({ action, amount: Number(amount) || 0 })
         });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error((await res.text()) || 'action failed');
       },
       async sit(room, sitIn) {
-        const res = await fetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, {
-          method: 'POST', credentials: 'include'
-        });
+        const res = await fetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method: 'POST', credentials: 'include' });
         if (res.status === 401) location.href = '/login';
         if (!res.ok) throw new Error((await res.text()) || 'sit toggle failed');
       },
@@ -281,11 +296,20 @@
 
     // ---------- UI wiring ----------
     const roomSel = $('room'), stackInp = $('stack'), joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'), sitBtn = $('sitToggleBtn');
-    const checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'), raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn');
-    const roomIdEl = $('roomId'), potEl = $('pot'), currentBetEl = $('currentBet'), toActEl = $('toAct');
+    const checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'), raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn');
+    const potEl = $('pot'), currentBetEl = $('currentBet'), toActEl = $('toAct');
     const boardEl = $('board'), seatsLayer = $('seatsLayer'), myHandEl = $('myHand');
     const actionsBar = document.querySelector('.myhand .actions');
     const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
+    const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
+    const chipSound = $('chipSound');
+
+    let lastQueuedAction = '';
+    function setQueuedDisplay(text) {
+      lastQueuedAction = text || '';
+      queuedValue.textContent = lastQueuedAction || '—';
+      queuedLabel.style.display = 'inline';
+    }
 
     $('logoutBtn').addEventListener('click', api.logout);
 
@@ -294,6 +318,7 @@
       try {
         await api.join(room, stack);
         showMsg(`Joined room ${room}`, 'ok');
+        setQueuedDisplay('');
         pollState.now();
       } catch (e) { showMsg(e.message || 'join failed', 'err'); }
     });
@@ -304,6 +329,7 @@
         await api.leave(room);
         showMsg(`Left room ${room}`, 'ok');
         renderState(null);
+        setQueuedDisplay('');
       } catch (e) { showMsg(e.message || 'leave failed', 'err'); }
     });
 
@@ -321,10 +347,12 @@
       pollState.soon();
     });
 
-    checkBtn.addEventListener('click', async () => doAction('check'));
-    callBtn.addEventListener('click', async () => doAction('call'));
-    raiseBtn.addEventListener('click', async () => doAction('raise', raiseAmt.value));
-    foldBtn.addEventListener('click', async () => doAction('fold'));
+    // ---- Action buttons ----
+    checkBtn.addEventListener('click', async () => doActionWithQueued('check'));
+    callBtn.addEventListener('click', async () => doActionWithQueued('call'));
+    raiseBtn.addEventListener('click', async () => doActionWithQueued('raise', raiseAmt.value));
+    foldBtn.addEventListener('click', async () => doActionWithQueued('fold'));
+    clearBtn.addEventListener('click', async () => doActionWithQueued('clear'));
 
     minBtn.addEventListener('click', () => {
       if (typeof minBtn.dataset.minAdd !== 'undefined') {
@@ -332,13 +360,32 @@
       }
     });
 
-    async function doAction(act, amt = 0) {
+    async function doActionWithQueued(act, amt = 0) {
       const room = roomSel.value;
       try {
         await api.action(room, act, amt);
-        showMsg(`Action: ${act}${act==='raise' ? ' ' + (Number(amt)||0) : ''}`, 'ok');
+        if (act === 'clear') {
+          setQueuedDisplay('');
+          showMsg('Cleared queued action', 'ok');
+        } else if (act === 'raise') {
+          const v = Number(amt) || 0;
+          setQueuedDisplay(`Raise +${v.toFixed(2)}`);
+          showMsg(`Action: raise ${v.toFixed(2)}`, 'ok');
+          safePlayChip();
+        } else if (act === 'call') {
+          setQueuedDisplay('Call');
+          showMsg('Action: call', 'ok');
+          safePlayChip();
+        } else {
+          setQueuedDisplay(act.charAt(0).toUpperCase() + act.slice(1));
+          showMsg(`Action: ${act}`, 'ok');
+        }
         pollState.soon();
       } catch (e) { showMsg(e.message || 'action failed', 'err'); }
+    }
+
+    function safePlayChip() {
+      try { chipSound.currentTime = 0; chipSound.play().catch(()=>{}); } catch {}
     }
 
     // ---------- enable/disable helpers ----------
@@ -364,6 +411,7 @@
       setEnabled(foldBtn, has('fold'));
       setEnabled(raiseAmt, has('raise'));
       setEnabled(minBtn, has('raise'));
+      setEnabled(clearBtn, true); // always allowed
     }
 
     // ---------- polling ----------
@@ -394,22 +442,29 @@
       return { start, stop, now, soon };
     })();
 
-    // ---------- geometry + utils ----------
-    function computeSeatPositions(n) {
-      const pts = [], cx = 50, cy = 50, rx = 44, ry = 36;
-      for (let i = 0; i < n; i++) {
-        const theta = (Math.PI/2) - (i * (2*Math.PI / n));
-        pts.push({ x: cx + rx * Math.cos(theta), y: cy + ry * Math.sin(theta) });
+    // ---------- geometry ----------
+    // Hero (logged-in user) is ALWAYS bottom-center. Others are placed around the oval,
+    // starting from IMMEDIATE LEFT of hero and going CLOCKWISE.
+    function heroPosition() {
+      const cx = 50, cy = 50, rx = 42, ry = 34;
+      const thetaHero = Math.PI / 2; // bottom
+      return { x: cx + rx * Math.cos(thetaHero), y: cy + ry * Math.sin(thetaHero) };
+    }
+    function otherPositions(count) {
+      const cx = 50, cy = 50, rx = 42, ry = 34;
+      if (count <= 0) return [];
+      const step = 2 * Math.PI / (count + 1);
+      const positions = [];
+      for (let k = 0; k < count; k++) {
+        const theta = Math.PI / 2 + (k + 1) * step; // start left of hero, go clockwise
+        positions.push({ x: cx + rx * Math.cos(theta), y: cy + ry * Math.sin(theta) });
       }
-      return pts;
+      return positions;
     }
-    function escapeHtml(s){
-      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-    }
-    function fmtMoney(v){
-      const n = Number(v);
-      return Number.isFinite(n) ? n.toFixed(2) : (v ?? '');
-    }
+
+    // ---------- utils ----------
+    function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+    function fmtMoney(v){ const n = Number(v); return Number.isFinite(n) ? n.toFixed(2) : (v ?? ''); }
     function computeMinRaiseAdd(hand, me) {
       let v = Number(hand?.raiseAmount ?? hand?.RaiseAmount ?? 0);
       if (!Number.isFinite(v) || v <= 0) {
@@ -422,16 +477,77 @@
     }
 
     // ---------- rendering ----------
+    let prevActionMessage = '';
+    function renderSeatDiv(p, pos, isActing, isHero, isSB) {
+      const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
+      const name = String(p.name ?? p.Name ?? '').trim();
+      const stack = p.stack ?? p.Stack ?? '';
+      const bet = p.currentBet ?? p.CurrentBet ?? '';
+      const sittingOut = (p.sittingOut ?? p.SittingOut) ? true : false;
+
+      const seat = document.createElement('div');
+      seat.className = 'seat' + (isHero ? ' hero' : '') + (isActing ? ' acting' : '') + (sittingOut ? ' sittingout' : '');
+      seat.style.left = pos.x + '%';
+      seat.style.top = pos.y + '%';
+
+      // SB badge
+      if (isSB) {
+        const sb = document.createElement('div');
+        sb.className = 'sb-badge';
+        sb.textContent = 'SB';
+        seat.appendChild(sb);
+      }
+
+      const title = document.createElement('div');
+      title.innerHTML = `<strong>${escapeHtml(name || '(player)')}</strong>`;
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = name ? '' : (id || '');
+
+      const chips = document.createElement('div');
+      chips.className = 'chips';
+      const chipImg = document.createElement('img');
+      chipImg.src = '/static/chips/chips.png'; chipImg.alt = '';
+      chips.appendChild(chipImg);
+      const chipsText = document.createElement('span');
+      chipsText.textContent = `${fmtMoney(stack)}`;
+      chips.appendChild(chipsText);
+
+      const betEl = document.createElement('div');
+      betEl.className = 'bet';
+      if (bet) {
+        const chipImg2 = document.createElement('img');
+        chipImg2.src = '/static/chips/chips.png'; chipImg2.alt = '';
+        betEl.appendChild(chipImg2);
+        const btxt = document.createElement('span');
+        btxt.textContent = `Bet: ${fmtMoney(bet)}`;
+        betEl.appendChild(btxt);
+      } else {
+        betEl.textContent = '';
+      }
+
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      badge.textContent = sittingOut ? 'Sitting out' : 'Active';
+
+      seat.appendChild(title);
+      if (!name) seat.appendChild(meta);
+      seat.appendChild(chips);
+      if (bet) seat.appendChild(betEl);
+      seat.appendChild(badge);
+      return seat;
+    }
+
     function renderState(st) {
+      // empty / null state
       if (!st || (Object.keys(st).length === 0)) {
-        roomIdEl.textContent = '—';
         potEl.textContent = '—';
         currentBetEl.textContent = '—';
         toActEl.textContent = '—';
         boardEl.innerHTML = '';
         seatsLayer.innerHTML = '';
         myHandEl.innerHTML = '';
-        if (actionsBar) actionsBar.style.display = 'none';
+        if (actionsBar) actionsBar.style.display = 'inline-flex';
         showdownBanner.style.display = 'none';
         showdownList.style.display = 'none';
         actionMsgEl.style.display = 'none';
@@ -440,12 +556,13 @@
       }
 
       const hand = st.hand || st.Hand || null;
-      roomIdEl.textContent = st.room ?? st.Room ?? '—';
+      const sbId = getSmallBlindId(st);
+
       potEl.textContent = fmtMoney(hand?.pot ?? hand?.Pot ?? '');
       currentBetEl.textContent = fmtMoney(hand?.currentBet ?? hand?.CurrentBet ?? '');
       toActEl.textContent = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
 
-      // current action banner
+      // current action banner + sound on raise/call transitions
       const actionMsg = getCurrentActionMessage(st);
       if (actionMsg) {
         actionMsgEl.textContent = actionMsg;
@@ -454,82 +571,75 @@
         actionMsgEl.style.display = 'none';
         actionMsgEl.textContent = '';
       }
+      if (actionMsg && actionMsg !== prevActionMessage && /(called|raised)/i.test(actionMsg)) {
+        safePlayChip();
+      }
+      prevActionMessage = actionMsg;
 
       // showdown banner & list
       const sdMsg = getShowdownMessage(st);
       const sdHands = getShowdownHands(st);
       const street = String(hand?.street ?? st?.street ?? st?.Street ?? '').toLowerCase();
       const hasShowdown = (street === 'showdown') && (sdMsg.length > 0 || (Array.isArray(sdHands) && sdHands.length > 0));
-
       showdownBanner.style.display = hasShowdown ? 'block' : 'none';
       showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
 
-      const board = hand?.board ?? hand?.Board ?? [];
+      // board
+      const board = Array.isArray(hand?.board ?? hand?.Board) ? (hand.board ?? hand.Board) : [];
       boardEl.innerHTML = '';
       (board || []).forEach(card => boardEl.appendChild(renderCardImg(card)));
 
-      const rawPlayers = (st.players || st.Players || []).slice();
+      // players
+      const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
 
-      // id<->name maps for display names
-      const nameById = new Map();
-      rawPlayers.forEach(p => {
-        const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
-        const name = String(p.name ?? p.Name ?? '').trim();
-        if (id) nameById.set(id, name);
-      });
+      // pick hero = logged-in user name; fallback to first with hole cards; else first player
+      let heroIdx = -1;
+      if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
+      if (heroIdx < 0) {
+        heroIdx = rawPlayers.findIndex(p => {
+          const h = p.hand ?? p.Hand;
+          return Array.isArray(h) && h.length > 0;
+        });
+      }
+      if (heroIdx < 0) heroIdx = 0;
 
-      // rotate so the player with a hand sits at bottom
-      const myIndex = rawPlayers.findIndex(p => {
-        const h = p.hand ?? p.Hand;
-        return Array.isArray(h) && h.length > 0;
-      });
-      let players = rawPlayers;
-      if (myIndex >= 0) players = [...rawPlayers.slice(myIndex), ...rawPlayers.slice(0, myIndex)];
+      const hero = rawPlayers[heroIdx] || null;
+      const orderedOthers = rawPlayers.length
+        ? [...rawPlayers.slice(heroIdx + 1), ...rawPlayers.slice(0, heroIdx)]
+        : [];
 
-      const positions = computeSeatPositions(Math.max(players.length, Math.min(9, Math.max(players.length, 6))));
+      const heroPos = heroPosition();
+      const otherPos = otherPositions(orderedOthers.length);
+
       seatsLayer.innerHTML = '';
 
-      // build seats (smaller footprint)
-      players.forEach((p, i) => {
-        const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
+      // render hero seat (ALWAYS bottom-center)
+      if (hero) {
+        const heroPid = String(hero.id ?? hero.ID ?? hero.playerId ?? hero.PlayerID ?? '').trim();
+        const isSB = (sbId && heroPid === sbId);
+        const isActing = (toActEl.textContent && (String(hero.name ?? hero.Name ?? '') === toActEl.textContent));
+        seatsLayer.appendChild(renderSeatDiv(hero, heroPos, isActing, true, isSB));
+      }
+
+      // render others around, starting from LEFT of hero, going CLOCKWISE
+      orderedOthers.forEach((p, i) => {
+        const pos = otherPos[i] || heroPos;
+        const pid = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
         const name = String(p.name ?? p.Name ?? '').trim();
-        const stack = p.stack ?? p.Stack ?? '';
-        const bet = p.currentBet ?? p.CurrentBet ?? '';
-        const sittingOut = (p.sittingOut ?? p.SittingOut) ? true : false;
+        const isSB = (sbId && pid === sbId);
         const isActing = (toActEl.textContent && (name === toActEl.textContent));
-        const pos = positions[i];
-
-        const seat = document.createElement('div');
-        seat.className = 'seat' + (isActing ? ' acting' : '') + (sittingOut ? ' sittingout' : '');
-        seat.style.left = pos.x + '%';
-        seat.style.top = pos.y + '%';
-
-        const title = document.createElement('div');
-        title.innerHTML = `<strong>${escapeHtml(name || '(player)')}</strong>`;
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.textContent = name ? '' : (id || '');
-        const chips = document.createElement('div');
-        chips.className = 'chips';
-        chips.textContent = `${fmtMoney(stack)}`;
-        const betEl = document.createElement('div');
-        betEl.className = 'bet';
-        betEl.textContent = bet ? `Bet: ${fmtMoney(bet)}` : '';
-        const badge = document.createElement('div');
-        badge.className = 'badge';
-        badge.textContent = sittingOut ? 'Sitting out' : 'Active';
-
-        seat.appendChild(title);
-        if (!name) seat.appendChild(meta);
-        seat.appendChild(chips);
-        if (bet) seat.appendChild(betEl);
-        seat.appendChild(badge);
-
-        seatsLayer.appendChild(seat);
+        seatsLayer.appendChild(renderSeatDiv(p, pos, isActing, false, isSB));
       });
 
-      // showdown list (uses display names)
+      // showdown list
       if (hasShowdown) {
+        const nameById = new Map();
+        rawPlayers.forEach(p => {
+          const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
+          const nm = String(p.name ?? p.Name ?? '').trim();
+          if (id) nameById.set(id, nm);
+        });
+
         showdownList.innerHTML = '';
         (sdHands || []).forEach(hh => {
           const cards = hh.Hand ?? hh.hand ?? null;
@@ -554,27 +664,24 @@
         showdownList.innerHTML = '';
       }
 
-      // my hand dock
+      // my hand dock (below hero seat)
       myHandEl.innerHTML = '';
-      const me = rawPlayers[myIndex];
-      const myCards = me ? (me.hand ?? me.Hand ?? []) : [];
+      const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
       if (Array.isArray(myCards) && myCards.length) {
         myCards.forEach(c => myHandEl.appendChild(renderCardImg(c)));
-        if (actionsBar) actionsBar.style.display = 'inline-flex';
-      } else {
-        if (actionsBar) actionsBar.style.display = 'none';
       }
+      if (actionsBar) actionsBar.style.display = 'inline-flex';
 
       // min-raise suggestion & quick-fill
-      const minAdd = computeMinRaiseAdd(hand, me);
-      raiseAmt.placeholder = fmtMoney(minAdd);
-      raiseAmt.step = String(minAdd);
-      raiseAmt.min = String(minAdd);
-      minBtn.textContent = `Min (+${fmtMoney(minAdd)})`;
-      minBtn.dataset.minAdd = String(minAdd);
-      raiseBtn.title = `Minimum raise add: ${fmtMoney(minAdd)}`;
+      const minAdd = computeMinRaiseAdd(hand, hero);
+      $('raiseAmt').placeholder = fmtMoney(minAdd);
+      $('raiseAmt').step = String(minAdd);
+      $('raiseAmt').min = String(minAdd);
+      $('minBtn').textContent = `Min (+${fmtMoney(minAdd)})`;
+      $('minBtn').dataset.minAdd = String(minAdd);
+      $('raiseBtn').title = `Minimum raise add: ${fmtMoney(minAdd)}`;
 
-      // enable/disable action buttons
+      // enable/disable actions
       const avail = (hand ? getAvailableActionsFromHand(hand) : []);
       enableActionsFrom(avail);
     }
@@ -585,6 +692,7 @@
       try {
         const st = await api.state(roomSel.value);
         renderState(st);
+        setQueuedDisplay('');
       } catch (e) {
         if (e && /401/.test(String(e))) location.href = '/login';
       }

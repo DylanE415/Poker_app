@@ -12,7 +12,7 @@ import (
 
 type Action struct {
 	PlayerID string  `json:"playerId"`
-	Action   string  `json:"action"` // "raise", "call", "fold", "check"
+	Action   string  `json:"action"` // "raise", "call", "fold", "check", "clear"
 	Amount   float64 `json:"amount"`
 }
 
@@ -33,6 +33,7 @@ type Hand struct {
 	currentBet           float64
 	smallBlindIndex      int
 	smallBlindSize       float64
+	smallBlindId         string
 	skipToShowdown       bool
 	showDownHands        []showDownHand
 	showDownMessage      string
@@ -105,6 +106,7 @@ type SidePot struct {
 func buildSidePots(H *Hand) []SidePot {
 	totalPot := H.pot
 	var sidePots []SidePot
+	potCommitmentAccountedFor := 0.0
 	//first sort players by pot commitment
 	players := make([]*Player, len(H.Players))
 	copy(players, H.Players)
@@ -120,9 +122,14 @@ func buildSidePots(H *Hand) []SidePot {
 		for j := i + 1; j < len(players); j++ {
 			newPot.eligiblePlayerIDs = append(newPot.eligiblePlayerIDs, players[j].ID)
 		}
-		newPot.Amount = newPot.Amount * float64(len(newPot.eligiblePlayerIDs))
+		newPot.Amount = (players[i].potCommitment - potCommitmentAccountedFor) * float64(len(newPot.eligiblePlayerIDs))
+		potCommitmentAccountedFor += players[i].potCommitment - potCommitmentAccountedFor
 		//if side pot amount is greater than total pot, reduce to total pot
 		if newPot.Amount > totalPot {
+			newPot.Amount = totalPot
+		}
+		//if its the final pot and total pot is not 0, increase to total pot
+		if len(newPot.eligiblePlayerIDs) == 1 && totalPot != 0 {
 			newPot.Amount = totalPot
 		}
 		totalPot -= newPot.Amount
@@ -173,7 +180,7 @@ func handleAction(H *Hand, action Action) bool {
 			H.raiseAmount = action.Amount - p.currentBet
 			p.Stack = 0
 			p.currentBet = action.Amount
-			H.avaliableActions = []string{"call", "fold", "raise"}
+			H.avaliableActions = []string{"call", "fold", "raise", "clear"}
 			for i := range H.Players {
 				H.Players[i].canAct = true
 			}
@@ -195,7 +202,7 @@ func handleAction(H *Hand, action Action) bool {
 		}
 		p.Stack -= newChips
 		H.pot += newChips
-		H.avaliableActions = []string{"call", "fold", "raise"}
+		H.avaliableActions = []string{"call", "fold", "raise", "clear"}
 
 		H.raiseAmount = action.Amount
 		//pot commitment update(they put x new chips into the pot)
@@ -237,6 +244,10 @@ func handleAction(H *Hand, action Action) bool {
 				return true
 			}
 		}
+		//for players to clear whatever action is in their action queue
+	case "clear":
+		drainPendingActions(H.Players[H.actionPlayerIndex].pendingAction)
+
 	}
 
 	return false
@@ -258,10 +269,11 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) 
 		Players:           players,
 		actionPlayerIndex: smallBlindPosition,
 		smallBlindIndex:   smallBlindPosition,
+		smallBlindId:      players[smallBlindPosition].ID,
 		deck:              deck,
 		currentState:      "pre-flop",
 		pot:               0,
-		avaliableActions:  []string{"raise", "fold", "check"},
+		avaliableActions:  []string{"raise", "fold", "check", "clear"},
 		smallBlindSize:    smallBlindSize,
 		currentBet:        0,
 		raiseAmount:       0,
@@ -271,6 +283,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) 
 
 func streetLoop(h *Hand) {
 	h.actionPlayerIndex = h.smallBlindIndex
+	h.smallBlindId = h.Players[h.smallBlindIndex].ID
 	//if pre flop small blind raises
 	if h.currentState == "pre-flop" {
 		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
@@ -285,7 +298,7 @@ func streetLoop(h *Hand) {
 
 		//check if everyone called the small blind, then set actions to either check/raise/fold for small blind
 		if h.currentBet == 1 && h.actionPlayerIndex == h.smallBlindIndex && h.Players[h.actionPlayerIndex].currentBet == 1 {
-			h.avaliableActions = []string{"check", "raise", "fold"}
+			h.avaliableActions = []string{"check", "raise", "fold", "clear"}
 		}
 		// if only one player left, street over
 		if len(h.Players) == 1 {
@@ -346,7 +359,7 @@ func streetLoop(h *Hand) {
 	}
 	//resert all current bets and actions
 	h.currentActionMessage = ""
-	h.avaliableActions = []string{"raise", "check", "fold"}
+	h.avaliableActions = []string{"raise", "check", "fold", "clear"}
 	h.raiseAmount = 0
 	h.currentBet = 0
 	for i := range h.Players {
@@ -557,7 +570,7 @@ func (h *Hand) run() {
 
 	h.showDownHands = showdownhands
 	h.showDownMessage = showdownmessage
-	time.Sleep(6 * time.Second)
+	time.Sleep(4 * time.Second)
 	h.showDownMessage = ""
 	h.showDownHands = nil
 	// take players with 0 stack out of hand

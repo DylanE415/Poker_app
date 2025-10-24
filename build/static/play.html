@@ -43,17 +43,18 @@
     .sittingout { opacity:.6; }
 
     /* cards */
-    .cardimg { width: 48px; height: 66px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
-    @media (max-width: 520px) { .cardimg { width: 42px; height: 58px; } }
+    .cardimg { width: 90px; height: 120px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
+    @media (max-width: 520px) { .cardimg { width: 52px; height: 88px; } }
 
-    /* HUD & showdown */
+    /* HUD, action banner & showdown */
     .hud { position:absolute; left:50%; top: 16%; transform: translateX(-50%); display:flex; gap:1rem; align-items:center; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.45rem .8rem; font-size:.95rem; z-index: 2; }
+    .actionmsg { position:absolute; left:50%; top: 28%; transform: translateX(-50%); background: rgba(18, 27, 58, .72); border:1px solid #2b3b71; color:#e9efff; border-radius: 12px; padding:.5rem .8rem; font-weight:600; box-shadow: 0 6px 22px rgba(0,0,0,.35); z-index: 3; max-width: 92%; text-align:center; display:none; }
     .showdown { position:absolute; left:50%; top: 7%; transform: translateX(-50%); background: rgba(20, 34, 70, .75); border:1px solid #315; color:#e9efff; border-radius: 10px; padding: .45rem .7rem; font-weight: 600; text-align: center; box-shadow: 0 6px 22px rgba(0,0,0,.35); max-width: 92%; z-index: 2; }
 
-    /* NEW: showdown list directly under the board */
+    /* showdown list directly under the board */
     .showdown-list {
       position:absolute; left:50%;
-      top: calc(43% + 90px); /* board is centered at 43% height; drop ~90px below it */
+      top: calc(43% + 90px);
       transform: translateX(-50%);
       display:flex; gap:.85rem; flex-wrap:wrap; justify-content:center;
       background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.5rem .7rem; max-width: 92%; z-index: 2;
@@ -65,7 +66,6 @@
     /* my hand & actions */
     .myhand { position: relative; width: min(700px, 94vw); margin: 0.25rem auto 0; text-align:center; }
     .myhand .cards { display:flex; gap:.5rem; justify-content:center; align-items:center; }
-    .myhand .label { margin-top:.35rem; font-size:.95rem; color: var(--muted); }
     .actions { margin-top: .6rem; display: inline-flex; gap: .8rem; align-items: flex-start; justify-content: center; flex-wrap: wrap; background: rgba(10,20,40,.55); border: 1px solid #223062; border-radius: 12px; padding: .55rem .6rem; }
     .actions button, .actions input { font: inherit; padding: .55rem .7rem; border-radius: 10px; border: 1px solid #243158; background: #0e1530; color: #e9efff; }
     .raise-group { display:flex; flex-direction:column; gap:.35rem; align-items:center; }
@@ -94,38 +94,33 @@
           <label for="room">Room</label>
           <select id="room">
             <option value="1">Room 1</option>
-            <option value="2">Room 2</option>
           </select>
-          <label for="stack">Stack</label>
-          <input id="stack" type="number" step="0.01" min="0" value="100" />
+          <label for="stack">Buy In For</label>
+          <input id="stack" type="number" step="1" min="0" value="40" />
           <button id="joinBtn">Join</button>
           <button id="leaveBtn">Leave</button>
           <button id="sitToggleBtn" title="Toggle sit in/out">Sit In / Out</button>
         </div>
         <div id="msg" style="margin-top:.6rem;"></div>
       </div>
-      <div class="card">
-        <h3 style="margin-top:0">Tips</h3>
-        <div class="muted" style="font-size:.95rem">
-          Buttons are automatically enabled/disabled based on the table state.
-        </div>
-      </div>
     </section>
 
     <section class="table-wrap">
       <div class="felt" aria-hidden="true"></div>
 
-      <!-- showdown -->
+      <!-- banners -->
       <div id="showdownBanner" class="showdown" style="display:none"></div>
+      <div id="actionMsg" class="actionmsg" style="display:none"></div>
       <div id="showdownList" class="showdown-list" style="display:none"></div>
 
+      <!-- HUD (no room id here) -->
       <div class="hud">
-        <div>Room: <span id="roomId">—</span></div>
         <div>• Pot: <span id="pot">—</span></div>
         <div>• Current Bet: <span id="currentBet">—</span></div>
         <div>• To Act: <span id="toAct">—</span></div>
       </div>
 
+      <!-- board & seats -->
       <div id="board" class="board"></div>
       <div id="seatsLayer"></div>
     </section>
@@ -141,6 +136,7 @@
           <button id="minBtn" title="Fill minimum raise">Min</button>
         </div>
         <button id="foldBtn">Fold</button>
+      </div>
     </section>
   </main>
 
@@ -164,7 +160,7 @@
       } catch {}
     }
 
-    // ---------- showdown helpers ----------
+    // ---------- showdown & action-message helpers ----------
     function getShowdownHands(st) {
       const hands = st?.showDownHands ?? st?.ShowDownHands ?? st?.showdownHands ?? st?.hand?.showDownHands ?? st?.hand?.showdownHands ?? [];
       return (hands || []).filter(h => {
@@ -172,10 +168,16 @@
         return Array.isArray(cards) && cards.length > 0;
       });
     }
-
     function getShowdownMessage(st) {
       const hand = st?.hand ?? st?.Hand;
-      const raw = hand?.showDownMessage ?? hand?.ShowDownMessage ?? st?.showDownMessage ?? st?.ShowDownMessage ?? st?.showdownMessage ?? '';
+      const raw = hand?.showDownMessage ?? hand?.ShowDownMessage ?? st?.showDownMessage ?? st?.ShowDownMessage ?? '';
+      return String(raw || '').trim();
+    }
+    function getCurrentActionMessage(st) {
+      const hand = st?.hand ?? st?.Hand;
+      const raw =
+        hand?.currentActionMessage ?? hand?.CurrentActionMessage ??
+        st?.currentActionMessage ?? st?.CurrentActionMessage ?? '';
       return String(raw || '').trim();
     }
 
@@ -279,10 +281,10 @@
     // ---------- UI wiring ----------
     const roomSel = $('room'), stackInp = $('stack'), joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'), sitBtn = $('sitToggleBtn');
     const checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'), raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn');
-    const roomIdEl = $('roomId'), potEl = $('pot'), currentBetEl = $('currentBet'), toActEl = $('toAct');
+    const potEl = $('pot'), currentBetEl = $('currentBet'), toActEl = $('toAct');
     const boardEl = $('board'), seatsLayer = $('seatsLayer'), myHandEl = $('myHand');
     const actionsBar = document.querySelector('.myhand .actions');
-    const showdownBanner = $('showdownBanner'), showdownList = $('showdownList');
+    const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
 
     $('logoutBtn').addEventListener('click', api.logout);
 
@@ -323,7 +325,6 @@
     raiseBtn.addEventListener('click', async () => doAction('raise', raiseAmt.value));
     foldBtn.addEventListener('click', async () => doAction('fold'));
 
-    // quick-fill the minimum raise suggestion
     minBtn.addEventListener('click', () => {
       if (typeof minBtn.dataset.minAdd !== 'undefined') {
         raiseAmt.value = minBtn.dataset.minAdd;
@@ -401,13 +402,8 @@
       }
       return pts;
     }
-    function escapeHtml(s){
-      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-    }
-    function fmtMoney(v){
-      const n = Number(v);
-      return Number.isFinite(n) ? n.toFixed(2) : (v ?? '');
-    }
+    function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+    function fmtMoney(v){ const n = Number(v); return Number.isFinite(n) ? n.toFixed(2) : (v ?? ''); }
     function computeMinRaiseAdd(hand, me) {
       let v = Number(hand?.raiseAmount ?? hand?.RaiseAmount ?? 0);
       if (!Number.isFinite(v) || v <= 0) {
@@ -421,8 +417,8 @@
 
     // ---------- rendering ----------
     function renderState(st) {
+      // empty / null state
       if (!st || (Object.keys(st).length === 0)) {
-        roomIdEl.textContent = '—';
         potEl.textContent = '—';
         currentBetEl.textContent = '—';
         toActEl.textContent = '—';
@@ -432,16 +428,27 @@
         if (actionsBar) actionsBar.style.display = 'none';
         showdownBanner.style.display = 'none';
         showdownList.style.display = 'none';
+        actionMsgEl.style.display = 'none';
         enableActionsFrom([]);
         return;
       }
 
       const hand = st.hand || st.Hand || null;
-      roomIdEl.textContent = st.room ?? st.Room ?? '—';
       potEl.textContent = fmtMoney(hand?.pot ?? hand?.Pot ?? '');
       currentBetEl.textContent = fmtMoney(hand?.currentBet ?? hand?.CurrentBet ?? '');
       toActEl.textContent = hand?.actionPlayerName ?? hand?.ActionPlayerName ?? '—';
 
+      // current action banner
+      const actionMsg = getCurrentActionMessage(st);
+      if (actionMsg) {
+        actionMsgEl.textContent = actionMsg;
+        actionMsgEl.style.display = 'block';
+      } else {
+        actionMsgEl.style.display = 'none';
+        actionMsgEl.textContent = '';
+      }
+
+      // showdown banner & list
       const sdMsg = getShowdownMessage(st);
       const sdHands = getShowdownHands(st);
       const street = String(hand?.street ?? st?.street ?? st?.Street ?? '').toLowerCase();
@@ -450,31 +457,33 @@
       showdownBanner.style.display = hasShowdown ? 'block' : 'none';
       showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
 
-      const board = hand?.board ?? hand?.Board ?? [];
+      // board (guard against null)
+      const board = Array.isArray(hand?.board ?? hand?.Board) ? (hand.board ?? hand.Board) : [];
       boardEl.innerHTML = '';
       (board || []).forEach(card => boardEl.appendChild(renderCardImg(card)));
 
-      const rawPlayers = (st.players || st.Players || []).slice();
+      // players (guard against null)
+      const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
 
-      // id<->name maps for display names
-      const idByName = new Map();
+      // id -> name map
       const nameById = new Map();
       rawPlayers.forEach(p => {
         const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
         const name = String(p.name ?? p.Name ?? '').trim();
         if (id) nameById.set(id, name);
-        if (name) idByName.set(name, id);
       });
 
-      // rotate so the player with a hand sits at bottom
-      const myIndex = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand) && ((p.hand?.length || 0) > 0 || (p.Hand?.length || 0) > 0));
+      // rotate so the player with visible hand sits at bottom (if any)
+      const myIndex = rawPlayers.findIndex(p => {
+        const h = p.hand ?? p.Hand;
+        return Array.isArray(h) && h.length > 0;
+      });
       let players = rawPlayers;
       if (myIndex >= 0) players = [...rawPlayers.slice(myIndex), ...rawPlayers.slice(0, myIndex)];
 
       const positions = computeSeatPositions(Math.max(players.length, Math.min(9, Math.max(players.length, 6))));
       seatsLayer.innerHTML = '';
 
-      // build seats (smaller footprint)
       players.forEach((p, i) => {
         const id = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
         const name = String(p.name ?? p.Name ?? '').trim();
@@ -482,7 +491,7 @@
         const bet = p.currentBet ?? p.CurrentBet ?? '';
         const sittingOut = (p.sittingOut ?? p.SittingOut) ? true : false;
         const isActing = (toActEl.textContent && (name === toActEl.textContent));
-        const pos = positions[i];
+        const pos = positions[i] || {x:50,y:50};
 
         const seat = document.createElement('div');
         seat.className = 'seat' + (isActing ? ' acting' : '') + (sittingOut ? ' sittingout' : '');
@@ -505,7 +514,7 @@
         badge.textContent = sittingOut ? 'Sitting out' : 'Active';
 
         seat.appendChild(title);
-        if (!name) seat.appendChild(meta); // hide pid if we have a name
+        if (!name) seat.appendChild(meta); // hide pid if we have a display name
         seat.appendChild(chips);
         if (bet) seat.appendChild(betEl);
         seat.appendChild(badge);
@@ -513,7 +522,7 @@
         seatsLayer.appendChild(seat);
       });
 
-      // showdown list (directly under the board, uses display names)
+      // showdown list (uses display names)
       if (hasShowdown) {
         showdownList.innerHTML = '';
         (sdHands || []).forEach(hh => {
@@ -541,7 +550,7 @@
 
       // my hand dock
       myHandEl.innerHTML = '';
-      const me = rawPlayers[myIndex];
+      const me = myIndex >= 0 ? rawPlayers[myIndex] : null;
       const myCards = me ? (me.hand ?? me.Hand ?? []) : [];
       if (Array.isArray(myCards) && myCards.length) {
         myCards.forEach(c => myHandEl.appendChild(renderCardImg(c)));
@@ -559,7 +568,7 @@
       minBtn.dataset.minAdd = String(minAdd);
       raiseBtn.title = `Minimum raise add: ${fmtMoney(minAdd)}`;
 
-      // enable/disable buttons
+      // enable/disable action buttons
       const avail = (hand ? getAvailableActionsFromHand(hand) : []);
       enableActionsFrom(avail);
     }

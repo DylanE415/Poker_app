@@ -6,6 +6,32 @@ import (
 	"strconv"
 )
 
+// for rmaking the latest action the current action in the channel
+func enqueueLatestAction(ch chan Action, a Action) {
+	for {
+		select {
+		case ch <- a:
+			// sent successfully; done
+			return
+		case <-ch:
+			// channel was full; drop the value; and repeat the loop
+		}
+	}
+}
+
+// for clearing a channel
+func drainPendingActions(ch chan Action) {
+
+	for {
+		select {
+		case <-ch:
+
+		default:
+			return
+		}
+	}
+}
+
 func room_request_to_int(s string) (int, error) {
 	if s == "" {
 		return 0, fmt.Errorf("missing required room id")
