@@ -44,7 +44,7 @@ type Hand struct {
 
 // 7 2 off bounty
 func isSevenTwoOff(player *Player) bool {
-	if player.Hand[0].Rank == "2" && player.Hand[1].Rank == "7" && (player.Hand[0].Suit != player.Hand[1].Suit) {
+	if (player.Hand[0].Rank == "2" && player.Hand[1].Rank == "7" && (player.Hand[0].Suit != player.Hand[1].Suit)) || (player.Hand[0].Rank == "7" && player.Hand[1].Rank == "2" && (player.Hand[0].Suit != player.Hand[1].Suit)) {
 		return true
 
 	}
@@ -537,7 +537,7 @@ func (h *Hand) run() {
 				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
 				if isSevenTwoOff(h.Players[tmpIndex]) {
 					collectSevenTwoBounty(h, h.Players[tmpIndex])
-					showdownmessage += h.Players[tmpIndex].Name + " collected bounty"
+					showdownmessage += h.Players[tmpIndex].Name + " collected 7 2 bounty"
 				}
 			}
 		} else {
@@ -573,6 +573,15 @@ func (h *Hand) run() {
 			}
 		}
 
+	}
+
+	//if only 1 player dont show hand unless it is 7 2 off
+	if len(showdownhands) <= 2 {
+		if (showdownhands[1].Hand[0].Rank == "7" && showdownhands[1].Hand[1].Rank == "2") || (showdownhands[1].Hand[1].Rank == "7" && showdownhands[1].Hand[0].Rank == "2") {
+		} else {
+			showdownmessage = showdownhands[1].PlayerName + " wins"
+			showdownhands = nil
+		}
 	}
 
 	h.showDownHands = showdownhands

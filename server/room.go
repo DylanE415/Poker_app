@@ -26,6 +26,7 @@ type Room struct {
 	currentHand        *Hand
 	previousHand       *Hand
 	handDone           chan struct{}
+	sitOutSince        map[string]time.Time
 }
 
 type playerState struct {
@@ -68,6 +69,7 @@ func newRoom(id int, minStack float64, maxStack float64) *Room {
 		maxStack:           maxStack,
 		smallBlindPosition: 0,
 		handDone:           make(chan struct{}, 1),
+		sitOutSince:        make(map[string]time.Time),
 	}
 }
 
@@ -88,6 +90,19 @@ func FindPlayerIndexInRoom(r *Room, id string) int {
 		}
 	}
 	return -1
+}
+
+func (r *Room) leavePlayerByID(id string) {
+	for i, p := range r.players {
+		if p.ID == id {
+			// auto-fold if they’re in a hand
+			enqueueLatestAction(p.pendingAction, Action{PlayerID: p.ID, Action: "fold", Amount: 0})
+			// players = all payers before i + all players after i
+			r.players = append(r.players[:i], r.players[i+1:]...)
+			delete(r.sitOutSince, id)
+			return
+		}
+	}
 }
 
 // assumes: type Room struct { currentHand *Hand; previousHand *Hand; players []Player; smallBlindPosition int }
@@ -170,10 +185,13 @@ func sendStateReply(ch chan roomState, rs roomState) {
 
 // function operates on a pointer receiver to actually change the room in memory, r Room would make a copy
 func (r *Room) run() {
-	ticker := time.NewTicker(400 * time.Millisecond) // every 400ms the room checks for new joins/leaves also checks if a hand is over
-	defer ticker.Stop()                              // stop the ticker when the function returns
+	//time.NewTicker(d) gives you a ticker whose .C is a channel that delivers a time value every d. In a
+	ticker := time.NewTicker(200 * time.Millisecond) // every 400ms the room checks for new joins/leaves also checks if a hand is over
+	sitOutTicker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop() // stop the ticker when the function returns
 
 	for {
+
 		select {
 		case cmd := <-r.commandChan:
 			switch cmd.Kind {
@@ -206,19 +224,10 @@ func (r *Room) run() {
 				id := cmd.PlayerID
 				//if player is in room
 				if r.hasPlayer(id) {
-					//leave room and send good reply to client
-					for i, p := range r.players {
-						if p.ID == id {
-							// send fold action to hand
-							enqueueLatestAction(p.pendingAction, Action{id, "fold", 0})
-							// remove player (appends all elements before i and all elements after i)
-							r.players = append(r.players[:i], r.players[i+1:]...)
-							//send good reply to client
-							print(p.Name, " left room\n")
-							safeReply(cmd.reply, nil)
-							break
-						}
-					}
+					r.leavePlayerByID(id)
+					//send good reply to client
+					print(cmd.PlayerName, " left room\n")
+					safeReply(cmd.reply, nil)
 				} else {
 					//send bad reply to client
 					safeReply(cmd.reply, fmt.Errorf("player not in room"))
@@ -243,6 +252,9 @@ func (r *Room) run() {
 				print(player.Name, " is sitting in\n")
 				safeReply(cmd.reply, nil)
 				player.sittingOut = false
+				//reset sitting out timeout
+				delete(r.sitOutSince, player.ID)
+
 			case "sitOut":
 				player := getPlayerFromID(cmd.PlayerID, r.players)
 				//see if player is in room
@@ -255,6 +267,7 @@ func (r *Room) run() {
 				print(player.Name, " is sitting out\n")
 				safeReply(cmd.reply, nil)
 				player.sittingOut = true
+				r.sitOutSince[player.ID] = time.Now()
 			case "action":
 				player := getPlayerFromID(cmd.PlayerID, r.players)
 				if player == nil {
@@ -361,6 +374,28 @@ func (r *Room) run() {
 		case <-ticker.C:
 			// periodic check keeps things moving even without joins/leaves
 			r.startNextHandIfReady()
-		}
-	}
-}
+		case <-sitOutTicker.C:
+			now := time.Now()
+
+			for _, p := range r.players {
+				if !p.sittingOut {
+					delete(r.sitOutSince, p.ID) //remove from sitoutcounter if they sat back in
+					continue
+				}
+				started, ok := r.sitOutSince[p.ID]
+				if !ok {
+					r.sitOutSince[p.ID] = now
+					continue
+				}
+				//auto kick
+				if now.Sub(started) > 10*time.Minute {
+					r.leavePlayerByID(p.ID)
+					print("auto kick\n")
+
+				}
+
+			}
+
+		} // select bracket
+	} // room loop bracket
+} //room run bracket

@@ -3,6 +3,8 @@ package main
 import (
 	crand "crypto/rand"
 	"encoding/base64"
+	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +19,19 @@ type Server struct {
 	usersByID       map[string]User
 	sessionsMu      sync.RWMutex
 	sessions        map[string]Session // sessionID -> session data
+	loginMu         sync.Mutex
+	loginAttempts   map[string]loginState //ip address -> login attempts
+}
+
+const (
+	maxFailures   = 5
+	lockoutPeriod = 2 * time.Minute
+)
+
+type loginState struct {
+	failures  int
+	lockUntil time.Time
+	lastTouch time.Time
 }
 
 // Session keeps who is logged in and until when.
@@ -103,4 +118,62 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) getIpAddress(request *http.Request) string {
+	//get original ip address from X-Forwarded-For
+	if xff := request.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		return strings.TrimSpace(parts[0])
+	}
+
+	//if there is no X-Forwarded-For, use the real ip
+	if xrip := request.Header.Get("X-Real-IP"); xrip != "" {
+		return strings.TrimSpace(xrip)
+	}
+
+	//if there is no X-Forwarded-For or X-Real-IP, use the remote address
+	host, _, err := net.SplitHostPort(request.RemoteAddr)
+	if err == nil {
+		return host
+	}
+	return request.RemoteAddr
+
+}
+
+func (s *Server) canAttemptLogin(ip string) (ok bool, wait time.Duration) {
+	//locks the loginAttempts map and unlocks when func returns
+	s.loginMu.Lock()
+	defer s.loginMu.Unlock()
+
+	state := s.loginAttempts[ip]
+	now := time.Now()
+	if now.Before(state.lockUntil) {
+		return false, time.Until(state.lockUntil)
+	}
+	// If the lock expired, let them try again; failures remain until success (or you can reset here).
+	return true, 0
+}
+
+func (s *Server) recordLoginFail(ip string) {
+	s.loginMu.Lock()
+	defer s.loginMu.Unlock()
+
+	now := time.Now()
+	state := s.loginAttempts[ip]
+
+	// If their lock expired earlier, we keep counting from current failures;
+	// you can optionally reset st.failures=0 if st.lockUntil.Before(now).
+	state.failures++
+	state.lastTouch = now
+	if state.failures >= maxFailures {
+		state.lockUntil = now.Add(lockoutPeriod)
+	}
+	s.loginAttempts[ip] = state
+}
+
+func (s *Server) recordLoginSuccess(ip string) {
+	s.loginMu.Lock()
+	defer s.loginMu.Unlock()
+	delete(s.loginAttempts, ip)
 }

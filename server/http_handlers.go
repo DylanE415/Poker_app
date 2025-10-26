@@ -44,10 +44,19 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
 		return
 	}
+	// when func returns, close body http req .body is a stream
 	defer r.Body.Close()
+	ip := s.getIpAddress(r)
+	ok, wait := s.canAttemptLogin(ip)
+	if !ok {
+		w.Header().Set("Retry-After", strconv.Itoa(int(wait.Seconds())+1))
+		http.Error(w, "too many login attempts, try again in "+wait.String(), http.StatusTooManyRequests)
+		return
+	}
 
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.recordLoginFail(ip)
 		http.Error(w, "bad json", http.StatusBadRequest)
 		return
 	}
@@ -55,10 +64,12 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	uname := strings.ToLower(strings.TrimSpace(req.Username))
 	u, ok := s.usersByUsername[uname]
 	if !ok || bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)) != nil {
+		s.recordLoginFail(ip)
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
+	s.recordLoginSuccess(ip)
 	// create session + set cookie
 	if err := s.createSessionFor(w, u.ID); err != nil {
 		http.Error(w, "could not create session", http.StatusInternalServerError)

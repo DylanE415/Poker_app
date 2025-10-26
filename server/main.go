@@ -59,6 +59,8 @@ func main() {
 		room2:           newRoom(2, 30.0, 100.0),
 		usersByUsername: uByName,
 		usersByID:       uByID, // <-- you use this in handlers; make sure it’s populated
+		sessions:        make(map[string]Session),
+		loginAttempts:   make(map[string]loginState),
 	}
 	s.initSessions()
 
