@@ -146,7 +146,7 @@
 
       <div class="hud">
         <div>• <img class="chip" src="/static/chips/chips.png" alt="" /> Pot: <span id="pot">—</span></div>
-        <!-- (Removed the global “Acting:” label; the timer on the seat now indicates who is acting) -->
+        <!-- Removed global “Acting:” label; the inline seat timer shows who’s acting -->
       </div>
 
       <div id="board" class="board"></div>
@@ -325,7 +325,7 @@
       clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
       minBtn.addEventListener('click', () => { pulse(minBtn); if (typeof minBtn.dataset.minAdd !== 'undefined') raiseAmt.value = minBtn.dataset.minAdd; });
 
-      // Helpers
+      // Helpers (formatting & cards)
       function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
       function cardURL(card){
         const s = (card.suit||card.Suit||'').toString().toUpperCase();
@@ -363,12 +363,11 @@
         skewMsGlobal = Number(serverNowMs||0) - Date.now();
         if (rafId) cancelAnimationFrame(rafId);
 
-        // If there’s no pill yet (renderSeat creates it), just bail. Next render will call this again.
         const { pill, val } = getTimerEls();
-        if (!deadlineMsGlobal || !pill || !val) return;
+        if (!deadlineMsGlobal || !pill || !val) return; // seat not painted yet
 
         const tick = () => {
-          const els = getTimerEls(); // re-query each frame in case the acting seat changes
+          const els = getTimerEls(); // re-query each frame in case actor seat changes
           if (!els.pill || !els.val) { cancelAnimationFrame(rafId); rafId=0; return; }
           const remaining = Math.max(0, deadlineMsGlobal - (Date.now() + skewMsGlobal));
           const secs = remaining / 1000;
@@ -426,6 +425,12 @@
         return { start, stop, now, soon };
       })();
 
+      // Showdown helpers
+      function getShowdownHandsArray(hand) {
+        const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
+        return Array.isArray(raw) ? raw : [];
+      }
+
       // Rendering
       let prevActionMessage='';
       function renderState(st){
@@ -433,7 +438,8 @@
           potEl.textContent='—';
           stopCountdown();
           boardEl.innerHTML=''; seatsLayer.innerHTML=''; betsLayer.innerHTML=''; myHandEl.innerHTML='';
-          showdownBanner.style.display='none'; showdownList.style.display='none'; actionMsgEl.style.display='none';
+          showdownBanner.style.display='none'; showdownList.style.display='none'; showdownList.innerHTML='';
+          actionMsgEl.style.display='none';
           serverMsgEl.className = 'server-message';
           return;
         }
@@ -444,18 +450,6 @@
 
         // Pot
         potEl.textContent = fmtMoney(hand.pot ?? hand.Pot ?? '');
-
-        // Timer start/stop (read from hand.*)
-        const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
-        const serverNowMs = Number(hand.serverCurrentTimeUnixMs ?? hand.ServerCurrentTimeUnixMs ?? Date.now());
-        if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
-
-        // Action message
-        const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
-        if (actionMsg){ actionMsgEl.textContent=actionMsg; actionMsgEl.style.display='block'; }
-        else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
-        if (actionMsg && actionMsg!==prevActionMessage && /\b(call|called|calls|raise|raised|raises|re-?raise|reraise|bet|bets|check|checked)\b/i.test(actionMsg)) safePlayChip();
-        prevActionMessage = actionMsg;
 
         // Board
         const board = Array.isArray(hand.board ?? hand.Board) ? (hand.board ?? hand.Board) : [];
@@ -474,7 +468,7 @@
         const players = hero ? [hero, ...others] : others.slice();
         const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
-        // Seats
+        // Seats (paint before starting timer so the pill exists)
         seatsLayer.innerHTML='';
         players.forEach((p,i)=>{
           const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
@@ -493,14 +487,72 @@
         const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
         if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
 
-        // Showdown (optional)
+        // Action message
+        const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
+        if (actionMsg){ actionMsgEl.textContent=actionMsg; actionMsgEl.style.display='block'; }
+        else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
+        if (actionMsg && actionMsg!==prevActionMessage && /\b(call|called|calls|raise|raised|raises|re-?raise|reraise|bet|bets|check|checked)\b/i.test(actionMsg)) safePlayChip();
+        prevActionMessage = actionMsg;
+
+        // ⏱ Start/stop countdown AFTER seats render so the inline pill exists
+        const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
+        const serverNowMs = Number(hand.serverCurrentTimeUnixMs ?? hand.ServerCurrentTimeUnixMs ?? Date.now());
+        if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
+
+        // Showdown banner + list (cards)
         const sdMsg = String(hand.showDownMessage ?? hand.ShowDownMessage ?? '').trim();
-        const sdHands = hand.showDownHands ?? hand.ShowDownHands ?? null;
+        const sdHands = getShowdownHandsArray(hand);
         const street = String(hand.street ?? hand.Street ?? '').toLowerCase();
         const hasShowdown = (street==='showdown') && (sdMsg.length > 0 || (Array.isArray(sdHands) && sdHands.length > 0));
         showdownBanner.style.display = hasShowdown ? 'block' : 'none';
         showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
-        showdownList.style.display = 'none'; showdownList.innerHTML = '';
+
+        // Populate detailed showdown list if present
+        showdownList.innerHTML = '';
+        if (hasShowdown && Array.isArray(sdHands) && sdHands.length) {
+          // build name lookup (id or name depending on what server sends)
+          const nameById = new Map();
+          rawPlayers.forEach(p => {
+            const pid = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
+            const nm  = String(p.name ?? p.Name ?? '').trim();
+            if (pid) nameById.set(pid, nm);
+            if (nm && !nameById.has(nm)) nameById.set(nm, nm); // allow name lookup directly
+          });
+
+          sdHands.forEach(entry => {
+            const cards = entry.Hand ?? entry.hand ?? null;
+            if (!Array.isArray(cards) || cards.length === 0) return;
+            const pidOrName = String(entry.PlayerName ?? entry.playerName ?? entry.PlayerID ?? entry.playerId ?? '').trim();
+            const displayName = nameById.get(pidOrName) || pidOrName || 'player';
+
+            const row = document.createElement('div');
+            row.className = 'entry';
+
+            const who = document.createElement('div');
+            who.className = 'who';
+            who.textContent = displayName;
+
+            const cardsWrap = document.createElement('div');
+            cardsWrap.className = 'cards';
+            cards.forEach(c => cardsWrap.appendChild(renderCardImg(c)));
+
+            row.appendChild(who);
+            row.appendChild(cardsWrap);
+            showdownList.appendChild(row);
+          });
+          showdownList.style.display = showdownList.children.length ? 'flex' : 'none';
+        } else {
+          showdownList.style.display = 'none';
+        }
+
+        // Min-raise UI hint
+        const minAdd = computeMinRaiseAdd(hand, hero);
+        $('raiseAmt').placeholder = fmtMoney(minAdd);
+        $('raiseAmt').step = String(minAdd);
+        $('raiseAmt').min = String(minAdd);
+        $('minBtn').textContent = `Min (+${fmtMoney(minAdd)})`;
+        $('minBtn').dataset.minAdd = String(minAdd);
+        $('raiseBtn').title = `Minimum raise add: ${fmtMoney(minAdd)}`;
       }
 
       function renderSeat(p, pos, isActing, isHero, isSB){
@@ -577,7 +629,7 @@
         return v;
       }
 
-      // Initial state fetch (and set min-raise hint after we know state)
+      // Initial state fetch
       (async () => {
         try {
           const res = await api.state($('room').value);
