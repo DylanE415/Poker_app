@@ -134,6 +134,7 @@
         <button id="leaveBtn" type="button">Leave</button>
         <button id="sitInBtn" type="button" title="Sit in">Sit In</button>
         <button id="sitOutBtn" type="button" title="Sit out">Sit Out</button>
+          <button id="ledgerBtn" type="button" title="View ledger">Ledger</button>
       </div>
     </section>
 
@@ -241,7 +242,8 @@
             joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'),
             sitInBtn = $('sitInBtn'), sitOutBtn = $('sitOutBtn'),
             checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'),
-            raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn');
+            raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
+            ledgerBtn = $('ledgerBtn');
       const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
       $('logoutBtn').addEventListener('click', api.logout);
@@ -323,6 +325,8 @@
       raiseBtn.addEventListener('click', () => doActionWithQueued('raise', raiseAmt.value));
       foldBtn.addEventListener('click', () => doActionWithQueued('fold'));
       clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
+      ledgerBtn.addEventListener('click', () => {location.href = '/ledger';   });
+
       minBtn.addEventListener('click', () => { pulse(minBtn); if (typeof minBtn.dataset.minAdd !== 'undefined') raiseAmt.value = minBtn.dataset.minAdd; });
 
       // Helpers (formatting & cards)
