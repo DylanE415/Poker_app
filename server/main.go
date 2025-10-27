@@ -35,6 +35,14 @@ func (s *Server) handleRoutes() http.Handler {
 		http.ServeFile(w, r, "./static/play.html")
 	})))
 
+	mux.Handle("/ledger", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "use GET", http.StatusMethodNotAllowed)
+			return
+		}
+		http.ServeFile(w, r, "./static/ledger.html")
+	})))
+
 	//for any URL starting with /static/, strip that prefix and serve the remaining path from the local ./static/ folder
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 

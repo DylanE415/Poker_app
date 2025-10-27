@@ -62,6 +62,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now poker
 sudo systemctl status poker --no-pager
 
+to diable: sudo systemctl disable --now poker
+
 
 
 

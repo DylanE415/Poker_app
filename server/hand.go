@@ -176,11 +176,12 @@ func handleAction(H *Hand, action Action) bool {
 		if action.Amount >= p.Stack {
 			action.Amount = p.Stack
 			H.pot += p.Stack
-			H.currentBet = action.Amount
+			//current bet in ahdn is cips player had already bet + their current bet(eg player needs to match 3+1)
+			H.currentBet = action.Amount + p.currentBet
 			p.potCommitment += p.Stack
-			H.raiseAmount = action.Amount - p.currentBet
+			H.raiseAmount = action.Amount
 			p.Stack = 0
-			p.currentBet = action.Amount
+			p.currentBet = action.Amount + p.currentBet
 			H.avaliableActions = []string{"call", "fold", "raise", "clear"}
 			for i := range H.Players {
 				H.Players[i].canAct = true

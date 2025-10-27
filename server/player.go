@@ -12,6 +12,7 @@ type Player struct {
 	currentBet    float64
 	potCommitment float64
 	folded        bool
+	buyIn         float64
 }
 
 func newPlayer(id string, name string, stack float64) *Player {
@@ -19,12 +20,14 @@ func newPlayer(id string, name string, stack float64) *Player {
 		ID:            id,
 		Name:          name,
 		Stack:         stack,
-		sittingOut:    true,
+		sittingOut:    false,
 		canAct:        true,
 		timebank:      60,
 		pendingAction: make(chan Action, 1),
 		currentBet:    0,
 		potCommitment: 0,
+		folded:        false,
+		buyIn:         stack,
 	}
 }
 

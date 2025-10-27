@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
+	"os"
 	"time"
 )
 
@@ -94,11 +97,64 @@ func FindPlayerIndexInRoom(r *Room, id string) int {
 	return -1
 }
 
+func updateLedger(playerName string, playerID string, currentStack float64, buyIn float64) {
+	// pick a path that exists
+	path := "./static/ledger.json"
+	if _, err := os.Stat(path); err != nil {
+		if _, err2 := os.Stat("../static/ledger.json"); err2 == nil {
+			path = "../static/ledger.json"
+		}
+	}
+
+	type entry struct {
+		ID        string  `json:"id"`
+		Name      string  `json:"name,omitempty"`
+		NetProfit float64 `json:"net_profit"`
+	}
+	var doc struct {
+		Ledger []entry `json:"ledger"`
+	}
+
+	if b, err := os.ReadFile(path); err == nil && len(b) > 0 {
+		_ = json.Unmarshal(b, &doc)
+	}
+	if doc.Ledger == nil {
+		doc.Ledger = []entry{}
+	}
+
+	// locate by ID
+	idx := -1
+	for i := range doc.Ledger {
+		if doc.Ledger[i].ID == playerID {
+			idx = i
+			break
+		}
+	}
+
+	if idx >= 0 {
+		// round to nearest cent
+		doc.Ledger[idx].NetProfit = (math.Round(currentStack-buyIn) * 100) / 100
+	} else {
+		// new entry: initialize buy_in = currentStack so net starts at 0
+		doc.Ledger = append(doc.Ledger, entry{
+			ID:        playerID,
+			Name:      playerName,
+			NetProfit: 0,
+		})
+	}
+
+	if out, err := json.MarshalIndent(doc, "", "  "); err == nil {
+		_ = os.WriteFile(path, out, 0o644)
+	}
+}
+
 func (r *Room) leavePlayerByID(id string) {
 	for i, p := range r.players {
 		if p.ID == id {
 			// auto-fold if they’re in a hand
 			enqueueLatestAction(p.pendingAction, Action{PlayerID: p.ID, Action: "fold", Amount: 0})
+			//update ledger
+			updateLedger(p.Name, p.ID, p.Stack, p.buyIn)
 			// players = all payers before i + all players after i
 			r.players = append(r.players[:i], r.players[i+1:]...)
 			delete(r.sitOutSince, id)
@@ -189,7 +245,7 @@ func sendStateReply(ch chan roomState, rs roomState) {
 func (r *Room) run() {
 	//time.NewTicker(d) gives you a ticker whose .C is a channel that delivers a time value every d. In a
 	ticker := time.NewTicker(200 * time.Millisecond) // every 400ms the room checks for new joins/leaves also checks if a hand is over
-	sitOutTicker := time.NewTicker(30 * time.Second)
+	autoKickTicker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop() // stop the ticker when the function returns
 
 	for {
@@ -378,7 +434,7 @@ func (r *Room) run() {
 		case <-ticker.C:
 			// periodic check keeps things moving even without joins/leaves
 			r.startNextHandIfReady()
-		case <-sitOutTicker.C:
+		case <-autoKickTicker.C:
 			now := time.Now()
 
 			for _, p := range r.players {
@@ -391,8 +447,8 @@ func (r *Room) run() {
 					r.sitOutSince[p.ID] = now
 					continue
 				}
-				//auto kick
-				if now.Sub(started) > 10*time.Minute {
+				//auto kick if they sat out for 5 minutes
+				if now.Sub(started) > 5*time.Minute {
 					r.leavePlayerByID(p.ID)
 					print("auto kick\n")
 
