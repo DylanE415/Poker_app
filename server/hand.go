@@ -38,6 +38,7 @@ type Hand struct {
 	showDownHands        []showDownHand
 	showDownMessage      string
 	currentActionMessage string
+	actionPlayerDeadline time.Time
 	//for locking hand to prevent race conditions
 	lock sync.Mutex
 }
@@ -185,7 +186,7 @@ func handleAction(H *Hand, action Action) bool {
 				H.Players[i].canAct = true
 			}
 			H.Players[H.actionPlayerIndex].canAct = false
-			H.currentActionMessage = p.Name + " went all in with " + strconv.Itoa(int(action.Amount))
+			H.currentActionMessage = p.Name + " went all in with " + strconv.FormatFloat(action.Amount, 'f', -1, 64)
 			return true
 
 		}
@@ -321,6 +322,7 @@ func streetLoop(h *Hand) {
 		fmt.Printf("can do: %s\n", strings.Join(h.avaliableActions, ", "))
 
 		// Wait on THIS player until valid action or timeout
+		h.actionPlayerDeadline = time.Now().Add(30 * time.Second)
 		timer := time.NewTimer(30 * time.Second)
 		for {
 			var act Action
@@ -525,7 +527,7 @@ func (h *Hand) run() {
 					amountCanWin := currentPot.Amount / float64(len(winningHands))
 					h.Players[tmpIndex].Stack += amountCanWin
 					h.pot -= amountCanWin
-					showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
+					showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.FormatFloat(amountCanWin, 'f', -1, 64) + " with " + string(winningHands[i].hand.Type)
 
 				}
 			} else {
@@ -534,7 +536,7 @@ func (h *Hand) run() {
 				amountCanWin := currentPot.Amount
 				h.Players[tmpIndex].Stack += amountCanWin
 				h.pot -= amountCanWin
-				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.Itoa(int(amountCanWin)) + " with " + string(winningHands[i].hand.Type)
+				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.FormatFloat(amountCanWin, 'f', -1, 64) + " with " + string(winningHands[i].hand.Type)
 				if isSevenTwoOff(h.Players[tmpIndex]) {
 					collectSevenTwoBounty(h, h.Players[tmpIndex])
 					showdownmessage += h.Players[tmpIndex].Name + " collected 7 2 bounty"

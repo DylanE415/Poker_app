@@ -41,6 +41,12 @@
       "username": "owen",
       "password_hash": "$2a$10$nQP.ml/Mwzq3eqxuqV1C4OiyfH4sP2fR3TDCCaihBDyft/yHdM2U2",
       "display_name": "owen"
+    },
+    {
+      "id": "08",
+      "username": "zernell",
+      "password_hash": "$2a$10$bhxfn.RNnGMeKCJbfrEBdOu4iVojB9iwNBXad6kwg40TUmgXJWVdm",
+      "display_name": "zernell"
     }
     
   ]

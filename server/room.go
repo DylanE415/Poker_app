@@ -41,17 +41,19 @@ type playerState struct {
 }
 
 type handState struct {
-	Board                []Card         `json:"board"`
-	Pot                  float64        `json:"pot"`
-	AvaliableActions     []string       `json:"avaliableActions"`
-	RaiseAmount          float64        `json:"raiseAmount"`
-	CurrentBet           float64        `json:"currentBet"`
-	ActionPlayerName     string         `json:"actionPlayerName"`
-	Street               string         `json:"street"`
-	ShowDownMessage      string         `json:"showDownMessage"`
-	ShowDownHands        []showDownHand `json:"showDownHands"`
-	CurrentActionMessage string         `json:"currentActionMessage"`
-	SmallBlindName       string         `json:"smallBlindName"`
+	Board                   []Card         `json:"board"`
+	Pot                     float64        `json:"pot"`
+	AvaliableActions        []string       `json:"avaliableActions"`
+	RaiseAmount             float64        `json:"raiseAmount"`
+	CurrentBet              float64        `json:"currentBet"`
+	ActionPlayerName        string         `json:"actionPlayerName"`
+	Street                  string         `json:"street"`
+	ShowDownMessage         string         `json:"showDownMessage"`
+	ShowDownHands           []showDownHand `json:"showDownHands"`
+	CurrentActionMessage    string         `json:"currentActionMessage"`
+	SmallBlindName          string         `json:"smallBlindName"`
+	ActionDeadlineUnixMs    int64          `json:"actionDeadlineUnixMs"`
+	ServerCurrentTimeUnixMs int64          `json:"serverCurrentTimeUnixMs"`
 }
 
 type roomState struct {
@@ -340,17 +342,19 @@ func (r *Room) run() {
 				if h != nil {
 					h.lock.Lock()
 					state.Hand = handState{
-						Board:                h.board,
-						Pot:                  h.pot,
-						AvaliableActions:     h.avaliableActions,
-						RaiseAmount:          h.raiseAmount,
-						CurrentBet:           h.currentBet,
-						ActionPlayerName:     h.Players[h.actionPlayerIndex].Name,
-						Street:               h.currentState,
-						ShowDownMessage:      h.showDownMessage,
-						ShowDownHands:        h.showDownHands,
-						CurrentActionMessage: h.currentActionMessage,
-						SmallBlindName:       h.smallBlindName,
+						Board:                   h.board,
+						Pot:                     h.pot,
+						AvaliableActions:        h.avaliableActions,
+						RaiseAmount:             h.raiseAmount,
+						CurrentBet:              h.currentBet,
+						ActionPlayerName:        h.Players[h.actionPlayerIndex].Name,
+						Street:                  h.currentState,
+						ShowDownMessage:         h.showDownMessage,
+						ShowDownHands:           h.showDownHands,
+						CurrentActionMessage:    h.currentActionMessage,
+						SmallBlindName:          h.smallBlindName,
+						ActionDeadlineUnixMs:    h.actionPlayerDeadline.UnixMilli(),
+						ServerCurrentTimeUnixMs: time.Now().UnixMilli(),
 					}
 					h.lock.Unlock()
 				}

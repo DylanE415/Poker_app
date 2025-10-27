@@ -37,6 +37,34 @@ chmod +x server/server
 
 
 
+
+TO HAVE PROCESS RUNNING ALL THE TIME MAKE A UNIT FILE:
+
+sudo tee /etc/systemd/system/poker.service >/dev/null <<'UNIT'
+[Unit]
+Description=Poker Go Server
+After=network.target
+
+[Service]
+User=ec2-user
+WorkingDirectory=/home/ec2-user/app
+ExecStart=/home/ec2-user/app/server/server
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+/////
+THEN: 
+sudo systemctl daemon-reload
+sudo systemctl enable --now poker
+sudo systemctl status poker --no-pager
+
+
+
+
 *important notes*
 - card ranks are 2-14
 - suits are "H", "C", "S", "D"
@@ -48,4 +76,6 @@ Vector Playing Cards 3.2
 https://totalnonsense.com/open-source-vector-playing-cards/
 Copyright 2011,2021 – Chris Aguilar – conjurenation@gmail.com
 Licensed under: LGPL 3.0 - https://www.gnu.org/licenses/lgpl-3.0.html
+
+
 
