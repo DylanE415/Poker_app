@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"time"
 )
@@ -133,7 +132,7 @@ func updateLedger(playerName string, playerID string, currentStack float64, buyI
 
 	if idx >= 0 {
 		// round to nearest cent
-		doc.Ledger[idx].NetProfit = (math.Round(currentStack-buyIn) * 100) / 100
+		doc.Ledger[idx].NetProfit = currentStack - buyIn
 	} else {
 		// new entry: initialize buy_in = currentStack so net starts at 0
 		doc.Ledger = append(doc.Ledger, entry{

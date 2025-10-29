@@ -8,12 +8,13 @@
     {
       "id": "02",
       "name": "Dylan",
-      "net_profit": -40
+      "net_profit": -1,
+      "vpip": 0
     },
     {
       "id": "03",
       "name": "alec",
-      "net_profit": 40
+      "net_profit": -1
     },
     {
       "id": "04",

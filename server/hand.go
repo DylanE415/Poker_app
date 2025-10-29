@@ -43,6 +43,11 @@ type Hand struct {
 	lock sync.Mutex
 }
 
+const (
+	timeLimit = 45 //seconds
+
+)
+
 // 7 2 off bounty
 func isSevenTwoOff(player *Player) bool {
 	if (player.Hand[0].Rank == "2" && player.Hand[1].Rank == "7" && (player.Hand[0].Suit != player.Hand[1].Suit)) || (player.Hand[0].Rank == "7" && player.Hand[1].Rank == "2" && (player.Hand[0].Suit != player.Hand[1].Suit)) {
@@ -323,8 +328,8 @@ func streetLoop(h *Hand) {
 		fmt.Printf("can do: %s\n", strings.Join(h.avaliableActions, ", "))
 
 		// Wait on THIS player until valid action or timeout
-		h.actionPlayerDeadline = time.Now().Add(30 * time.Second)
-		timer := time.NewTimer(30 * time.Second)
+		h.actionPlayerDeadline = time.Now().Add(timeLimit * time.Second)
+		timer := time.NewTimer(timeLimit * time.Second)
 		for {
 			var act Action
 

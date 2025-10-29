@@ -41,7 +41,7 @@
     .acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
     .sittingout, .folded { opacity:.6; }
 
-    /* Small Blind Indicator */
+    /* SB indicator */
     .sb-indicator {
       display: inline-block;
       background: #3a2a0f;
@@ -53,7 +53,7 @@
       font-weight: bold;
     }
 
-    /* ⏱ Acting timer shown inline next to the acting player's name */
+    /* ⏱ Acting timer next to name */
     .act-timer-seat {
       display:inline-flex; align-items:center; gap:.35rem;
       border:1px solid #2b3b71; border-radius:999px; padding:.06rem .4rem; font-weight:600;
@@ -83,25 +83,34 @@
     .showdown-list .who { font-size:.9rem; color:#cfe0ff; margin-right:.15rem; }
     .showdown-list .cards { display:flex; gap:.35rem; }
 
-    .myhand { position: relative; width: min(680px, 94vw); margin: 0.25rem auto 0; text-align:center; z-index:10; }
-    .myhand .cards { display:flex; gap:.45rem; justify-content:center; align-items:center; }
+    /* ===== Hole cards centered under table; controls to the right ===== */
+    .myhand { position: relative; width: min(300px, 20vw); margin: 0.25rem auto 0; z-index:10;
+      display:grid; grid-template-columns: 1fr 320px; gap:1rem; align-items:start; }
+    .myhand .cards { display:flex; gap:.45rem; justify-content:center; }
+
+    .controls-right { background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.6rem .7rem; display:flex; flex-direction:column; gap:.55rem; }
+    .sliderRow { display:flex; align-items:center; gap:.6rem; }
+    .sliderRow input[type="range"] { flex:1; }
+    .amountBox { width:7.5rem; text-align:center; }
+
+    .btnRow { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:.6rem; }
+    .btnRow.single { grid-template-columns: 1fr; }
+    .btnBig { padding: .9rem .7rem; font-weight: 700; font-size: 1.05rem; }
+    .btnFold { background:#7d2b2b; border-color:#9a3b3b; }
+    .btnCall { background:#184d2f; border-color:#256845; }
+    .btnRaise { background:#60451f; border-color:#7a5a2b; }
 
     .server-message { min-height: 1.4rem; margin: 0.4rem 0; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.9rem; display: none; }
     .server-message.show { display: block; }
     .server-message.ok { background: rgba(62, 207, 142, 0.2); border: 1px solid var(--good); color: var(--good); }
     .server-message.err { background: rgba(242, 95, 92, 0.2); border: 1px solid var(--bad); color: var(--bad); }
 
-    .actions { margin-top: 0.2rem; display:inline-flex; gap:.7rem; align-items:center; justify-content:center; flex-wrap:wrap; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.55rem .6rem; }
-    .actions button, .actions input { font:inherit; padding:.5rem .65rem; border-radius:10px; border:1px solid #243158; background:#0e1530; color:#e9efff; }
-    .raise-group { display:flex; flex-direction:column; gap:.3rem; align-items:center; }
-    #raiseAmt { width:7.5rem; text-align:center; }
-    #raiseAmt[disabled] { opacity:.45; filter: grayscale(60%); }
     .queued { font-size:.9rem; color: var(--muted); margin-left:.25rem; }
     
-    @media (max-width: 768px) {
-      .control-rail { flex-direction: column; align-items: stretch; }
-      .control-item { flex-direction: row; justify-content: space-between; }
-      .control-actions { justify-content: center; }
+    @media (max-width: 900px) {
+      .myhand { grid-template-columns: 1fr; }
+      .controls-right { order: 2; }
+      .myhand .cards { order: 1; }
     }
   </style>
 </head>
@@ -126,7 +135,7 @@
         </select>
       </div>
       <div class="control-item">
-        <span class="control-label">Buy In For</span>
+        <span class="control-label">Buy In(20-40)</span>
         <input id="stack" type="number" step="1" min="0" value="40" class="control-input" />
       </div>
       <div class="control-actions">
@@ -134,7 +143,7 @@
         <button id="leaveBtn" type="button">Leave</button>
         <button id="sitInBtn" type="button" title="Sit in">Sit In</button>
         <button id="sitOutBtn" type="button" title="Sit out">Sit Out</button>
-          <button id="ledgerBtn" type="button" title="View ledger">Ledger</button>
+        <button id="ledgerBtn" type="button" title="View ledger">Ledger</button>
       </div>
     </section>
 
@@ -147,7 +156,6 @@
 
       <div class="hud">
         <div>• <img class="chip" src="/static/chips/chips.png" alt="" /> Pot: <span id="pot">—</span></div>
-        <!-- Removed global “Acting:” label; the inline seat timer shows who’s acting -->
       </div>
 
       <div id="board" class="board"></div>
@@ -157,20 +165,32 @@
       <audio id="chipSound" src="/static/chips/poker_chip_drop.mp3" preload="auto"></audio>
     </section>
 
+    <!-- Hole cards centered; control panel on the right -->
     <section class="myhand">
       <div class="cards" id="myHand"></div>
-      <div id="serverMsg" class="server-message"></div>
-      <div class="actions">
-        <button id="checkBtn" type="button">Check</button>
-        <button id="callBtn" type="button">Call</button>
-        <div class="raise-group">
-          <button id="raiseBtn" type="button" title="Raise by this amount">raise by:</button>
-          <input id="raiseAmt" type="number" step="0.5" min="0" value="1" />
-          <button id="minBtn" type="button" title="Fill minimum raise">Min</button>
+
+      <div class="controls-right">
+        <div class="sliderRow">
+          <input id="raiseSlider" type="range" min="0" max="100" step="0.25" value="0" />
+          <input id="raiseAmt" class="amountBox" type="number" step="0.25" min="0" value="0" />
         </div>
-        <button id="foldBtn" type="button">Fold</button>
-        <button id="clearBtn" type="button" title="Clear your queued action">Clear</button>
-        <span id="queuedLabel" class="queued">Queued: <strong id="queuedValue">—</strong></span>
+
+        <div class="btnRow">
+          <button id="foldBtn" type="button" class="btnFold">Fold</button>
+          <button id="callBtn" type="button" class="btnCall">Call <span id="callAmt">0.00</span></button>
+          <button id="raiseBtn" type="button" class="btnRaise">Raise <span id="raiseAmtLabel">0.00</span></button>
+        </div>
+
+        <div class="btnRow single">
+          <button id="checkBtn" type="button" class="btnBig">Check</button>
+        </div>
+
+        <div class="btnRow">
+          <button id="clearBtn" type="button" title="Clear your queued action">Clear</button>
+          <span id="queuedLabel" class="queued" style="align-self:center;">Queued: <strong id="queuedValue">—</strong></span>
+        </div>
+
+        <div id="serverMsg" class="server-message"></div>
       </div>
     </section>
   </main>
@@ -242,15 +262,16 @@
             joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'),
             sitInBtn = $('sitInBtn'), sitOutBtn = $('sitOutBtn'),
             checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'),
-            raiseAmt = $('raiseAmt'), minBtn = $('minBtn'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
-            ledgerBtn = $('ledgerBtn');
+            raiseAmt = $('raiseAmt'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
+            ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
+            raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt');
       const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
       $('logoutBtn').addEventListener('click', api.logout);
       function pulse(el){ if(!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 180); }
       function setQueuedDisplay(text){ queuedValue.textContent = text || '—'; queuedLabel.style.display='inline'; }
 
-      // JOIN
+      // JOIN/LEAVE/SIT
       joinBtn.addEventListener('click', async () => {
         pulse(joinBtn);
         const room = roomSel.value, stack = stackInp.value;
@@ -264,7 +285,6 @@
         } catch (e) { showMsg(`Join error: ${e.message}`, 'err'); }
       });
 
-      // LEAVE
       leaveBtn.addEventListener('click', async () => {
         pulse(leaveBtn);
         const room = roomSel.value;
@@ -278,7 +298,6 @@
         } catch (e) { showMsg(`Leave error: ${e.message}`, 'err'); }
       });
 
-      // SIT IN / SIT OUT
       sitInBtn.addEventListener('click', async () => {
         pulse(sitInBtn);
         const room = roomSel.value;
@@ -304,7 +323,7 @@
       // ACTIONS
       async function doActionWithQueued(act, amt=0) {
         const room = roomSel.value;
-        const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn, min: minBtn };
+        const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn };
         pulse(btnMap[act]);
         try {
           const res = await api.action(room, act, amt);
@@ -321,13 +340,14 @@
         } catch (e) { showMsg(`Action error: ${e.message}`, 'err'); }
       }
       checkBtn.addEventListener('click', () => doActionWithQueued('check'));
-      callBtn.addEventListener('click', () => doActionWithQueued('call'));
+      callBtn.addEventListener('click', () => {
+        const amt = Number(callAmtEl.dataset.val)||0;
+        doActionWithQueued('call', amt);
+      });
       raiseBtn.addEventListener('click', () => doActionWithQueued('raise', raiseAmt.value));
       foldBtn.addEventListener('click', () => doActionWithQueued('fold'));
       clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
-      ledgerBtn.addEventListener('click', () => {location.href = '/ledger';   });
-
-      minBtn.addEventListener('click', () => { pulse(minBtn); if (typeof minBtn.dataset.minAdd !== 'undefined') raiseAmt.value = minBtn.dataset.minAdd; });
+      ledgerBtn.addEventListener('click', () => {location.href = '/ledger';});
 
       // Helpers (formatting & cards)
       function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
@@ -382,6 +402,25 @@
         tick();
       }
       function stopCountdown(){ if (rafId) cancelAnimationFrame(rafId); rafId = 0; }
+
+      // ===== Slider stickiness while interacting =====
+      let isAdjusting = false;
+      raiseSlider.addEventListener('pointerdown', () => { isAdjusting = true; });
+      document.addEventListener('pointerup', () => { isAdjusting = false; });
+      raiseAmt.addEventListener('focus', () => { isAdjusting = true; });
+      raiseAmt.addEventListener('blur',  () => { isAdjusting = false; });
+
+      // Context key to know when we should reset slider/value
+      let lastSliderCtx = '';
+      function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
+        return [
+          String(street||'').toLowerCase(),
+          Number(tableBet||0).toFixed(2),
+          Number(myBet||0).toFixed(2),
+          Number(minAdd||0).toFixed(2),
+          String(actorName||'')
+        ].join('|');
+      }
 
       // Geometry
       const SEAT_RX = 46, SEAT_RY = 38, BET_RX=31, BET_RY=26;
@@ -503,7 +542,7 @@
         const serverNowMs = Number(hand.serverCurrentTimeUnixMs ?? hand.ServerCurrentTimeUnixMs ?? Date.now());
         if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
 
-        // Showdown banner + list (cards)
+        // Showdown
         const sdMsg = String(hand.showDownMessage ?? hand.ShowDownMessage ?? '').trim();
         const sdHands = getShowdownHandsArray(hand);
         const street = String(hand.street ?? hand.Street ?? '').toLowerCase();
@@ -511,18 +550,15 @@
         showdownBanner.style.display = hasShowdown ? 'block' : 'none';
         showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
 
-        // Populate detailed showdown list if present
         showdownList.innerHTML = '';
         if (hasShowdown && Array.isArray(sdHands) && sdHands.length) {
-          // build name lookup (id or name depending on what server sends)
           const nameById = new Map();
           rawPlayers.forEach(p => {
             const pid = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
             const nm  = String(p.name ?? p.Name ?? '').trim();
             if (pid) nameById.set(pid, nm);
-            if (nm && !nameById.has(nm)) nameById.set(nm, nm); // allow name lookup directly
+            if (nm && !nameById.has(nm)) nameById.set(nm, nm);
           });
-
           sdHands.forEach(entry => {
             const cards = entry.Hand ?? entry.hand ?? null;
             if (!Array.isArray(cards) || cards.length === 0) return;
@@ -531,17 +567,10 @@
 
             const row = document.createElement('div');
             row.className = 'entry';
-
-            const who = document.createElement('div');
-            who.className = 'who';
-            who.textContent = displayName;
-
-            const cardsWrap = document.createElement('div');
-            cardsWrap.className = 'cards';
+            const who = document.createElement('div'); who.className = 'who'; who.textContent = displayName;
+            const cardsWrap = document.createElement('div'); cardsWrap.className = 'cards';
             cards.forEach(c => cardsWrap.appendChild(renderCardImg(c)));
-
-            row.appendChild(who);
-            row.appendChild(cardsWrap);
+            row.appendChild(who); row.appendChild(cardsWrap);
             showdownList.appendChild(row);
           });
           showdownList.style.display = showdownList.children.length ? 'flex' : 'none';
@@ -549,14 +578,66 @@
           showdownList.style.display = 'none';
         }
 
-        // Min-raise UI hint
-        const minAdd = computeMinRaiseAdd(hand, hero);
-        $('raiseAmt').placeholder = fmtMoney(minAdd);
-        $('raiseAmt').step = String(minAdd);
-        $('raiseAmt').min = String(minAdd);
-        $('minBtn').textContent = `Min (+${fmtMoney(minAdd)})`;
-        $('minBtn').dataset.minAdd = String(minAdd);
-        $('raiseBtn').title = `Minimum raise add: ${fmtMoney(minAdd)}`;
+        // ---------- Right panel dynamic values ----------
+        const avail = new Set(hand.avaliableActions || hand.availableActions || []);
+        const myBet   = Number((hero && (hero.currentBet ?? hero.CurrentBet)) ?? 0) || 0;
+        const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
+        const callAmt = Math.max(0, tableBet - myBet);
+        callAmtEl.textContent = fmtMoney(callAmt);
+        callAmtEl.dataset.val = String(callAmt);
+
+        // Min raise calc: if new street (tableBet <= myBet) -> 1 BB = 0.25
+        const ONE_BB = 0.25;
+        let minAdd = Number(hand.raiseAmount ?? hand.RaiseAmount ?? 0);
+        if (!Number.isFinite(minAdd) || minAdd <= 0) {
+          if (tableBet <= myBet) {
+            minAdd = ONE_BB;
+          } else {
+            minAdd = Math.max(ONE_BB, tableBet - myBet);
+          }
+        }
+
+        const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
+        const sliderMin = Math.max(0, Math.round(minAdd * 100) / 100);
+        const sliderMax = Math.max(sliderMin, Math.round(myStack * 100) / 100);
+
+        const actorNm = actorName;
+        const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: sliderMin, actorName: actorNm });
+        const contextChanged = (ctx !== lastSliderCtx);
+
+        // Always update bounds
+        raiseSlider.min = String(sliderMin);
+        raiseSlider.max = String(sliderMax);
+        raiseSlider.step = "0.25";
+        raiseAmt.min     = String(sliderMin);
+        raiseAmt.max     = String(sliderMax);
+        raiseAmt.step    = "0.25";
+
+        const currentSliderVal = Number(raiseSlider.value || NaN);
+        const outOfBounds = !Number.isFinite(currentSliderVal) ||
+                            currentSliderVal < sliderMin - 1e-9 ||
+                            currentSliderVal > sliderMax + 1e-9;
+
+        if ((!isAdjusting && contextChanged) || outOfBounds) {
+          raiseSlider.value = String(sliderMin);
+          raiseAmt.value = sliderMin.toFixed(2);
+          raiseAmtLabel.textContent = sliderMin.toFixed(2);
+        } else {
+          const kept = Math.min(sliderMax, Math.max(sliderMin, Number.isFinite(currentSliderVal) ? currentSliderVal : sliderMin));
+          raiseSlider.value = String(kept);
+          raiseAmt.value = kept.toFixed(2);
+          raiseAmtLabel.textContent = kept.toFixed(2);
+        }
+
+        // Buttons enablement
+        const myTurn = actorName && String(hero?.name||hero?.Name||'').trim() === actorName;
+        foldBtn.disabled  = !myTurn;
+        checkBtn.disabled = !myTurn || !avail.has('check');
+        callBtn.disabled  = !myTurn || !avail.has('call') || callAmt <= 0.0001;
+        raiseBtn.disabled = !myTurn || !avail.has('raise');
+
+        // Update context after applying UI
+        lastSliderCtx = ctx;
       }
 
       function renderSeat(p, pos, isActing, isHero, isSB){
@@ -569,7 +650,6 @@
         seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'')+(folded?' folded':'');
         seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
 
-        // Name row with badges
         const nameWrap = document.createElement('div');
         const nameSpan = document.createElement('strong'); nameSpan.textContent = name;
         nameWrap.appendChild(nameSpan);
@@ -581,7 +661,6 @@
           nameWrap.appendChild(sbSpan);
         }
 
-        // ⏱ Inline timer next to acting player
         if (isActing) {
           const timer = document.createElement('span');
           timer.className = 'act-timer-seat timer-ok';
@@ -593,7 +672,6 @@
           nameWrap.appendChild(timer);
         }
 
-        // Chips / status
         const chips=document.createElement('div'); chips.className='chips';
         const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
         const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(stack);
@@ -622,16 +700,19 @@
         });
       }
 
-      function computeMinRaiseAdd(hand, me) {
-        let v = Number(hand?.raiseAmount ?? hand?.RaiseAmount ?? 0);
-        if (!Number.isFinite(v) || v <= 0) {
-          const tableBet = Number(hand?.currentBet ?? hand?.CurrentBet ?? 0);
-          const myBet = Number(me?.currentBet ?? me?.CurrentBet ?? 0);
-          v = tableBet - myBet;
-        }
-        if (!Number.isFinite(v) || v <= 0) v = 1;
-        return v;
+      // Slider <-> number sync
+      function syncFromSlider(){
+        const v=Number(raiseSlider.value)||0;
+        raiseAmt.value=v.toFixed(2);
+        raiseAmtLabel.textContent=v.toFixed(2);
       }
+      function syncFromBox(){
+        const v=Number(raiseAmt.value)||0;
+        raiseSlider.value=String(v);
+        raiseAmtLabel.textContent=v.toFixed(2);
+      }
+      raiseSlider.addEventListener('input', syncFromSlider);
+      raiseAmt.addEventListener('input',    syncFromBox);
 
       // Initial state fetch
       (async () => {
