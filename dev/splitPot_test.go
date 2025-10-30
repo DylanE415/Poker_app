@@ -18,7 +18,7 @@ func Test_AllInPreflop_SplitPot_withThreePlayers(t *testing.T) {
 	const sbIndex = 2
 	const sbSize = 0.0 // avoid auto-bet interfering
 
-	h := newHand(players, sbIndex, sbSize)
+	h := newHand(players, sbIndex, sbSize, nil)
 
 	// Everyone can act initially so nextEligible picks them.
 	for _, p := range h.Players {
@@ -115,7 +115,7 @@ func Test_AllInPreflop_splitPot_with2Players(t *testing.T) {
 	sbIndex := 0
 	sbSize := 0.0
 
-	h := newHand(players, sbIndex, sbSize)
+	h := newHand(players, sbIndex, sbSize, nil)
 
 	// Everyone can act initially so nextEligible picks them.
 	for _, p := range h.Players {

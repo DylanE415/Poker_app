@@ -32,6 +32,39 @@ func drainPendingActions(ch chan Action) {
 	}
 }
 
+func drainCallsAndRaises(ch chan Action) {
+	var keep []Action
+
+	for {
+		select {
+		case act, ok := <-ch:
+			if !ok {
+				return
+			}
+
+			if act.Action == "call" || act.Action == "raise" {
+				// drop stale bet
+				continue
+			}
+
+			keep = append(keep, act)
+
+		default:
+			goto RESEND
+		}
+	}
+
+RESEND:
+	for _, act := range keep {
+		select {
+		case ch <- act:
+			// restored
+		default:
+			// channel full, skip to avoid blocking
+		}
+	}
+}
+
 func room_request_to_int(s string) (int, error) {
 	if s == "" {
 		return 0, fmt.Errorf("missing required room id")

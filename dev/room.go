@@ -199,7 +199,7 @@ func (r *Room) startNextHandIfReady() {
 	r.smallBlindPosition %= len(eligible)
 
 	// create the new hand (newHand returns *Hand)
-	r.currentHand = newHand(eligible, r.smallBlindPosition, 0.25)
+	r.currentHand = newHand(eligible, r.smallBlindPosition, 0.25, r)
 	// advance blinds for the NEXT hand
 	r.smallBlindPosition = (r.smallBlindPosition + 1) % len(eligible)
 
@@ -416,6 +416,7 @@ func (r *Room) run() {
 				//send reply and statereply
 				safeReply(cmd.reply, nil)
 				sendStateReply(cmd.stateReply, state)
+
 			default:
 				panic("unknown command kind")
 			}

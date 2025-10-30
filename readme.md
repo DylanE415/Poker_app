@@ -28,7 +28,8 @@ build/
 
 
 # to auto deploy onto your ec2 instance:
-    docker buildx build --platform linux/amd64 -t poker:latest .
+    docker image inspect poker:latest >/dev/null 2>&1 && docker rmi poker:latest; docker buildx build --platform linux/amd64 -t poker:latest .
+
 
 # ssh into your ec2 to install and run docker:
     ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220

@@ -32,11 +32,10 @@
     .felt { position: absolute; inset: 0; margin: auto; background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%); border: 10px solid #3a240f; border-radius: 999px; box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35); pointer-events:none; }
     .board { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); display:flex; gap:.45rem; align-items:center; padding:.55rem .75rem; border-radius:12px; background: rgba(0,0,0,.25); border:1px solid #1f2a4d; z-index: 3; pointer-events:none; }
 
-    .seat { position: absolute; transform: translate(-50%, -50%); width: 150px; max-width: 36vw; display:flex; flex-direction:column; align-items:center; gap:.28rem;
-            padding:.38rem .5rem; border-radius:12px; background: rgba(10,20,40,.55); border:1px solid #223062; box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center; z-index: 2; pointer-events:none; }
-    .seat .chips { font-weight:600; font-size:.92rem; display:flex; gap:.35rem; align-items:center; justify-content:center; }
-    .seat .chips img { width:16px; height:16px; display:block; }
-    .seat .badge { font-size:.72rem; padding:.12rem .4rem; border-radius:999px; border:1px solid #2b3b71; }
+    .seat { position: absolute; transform: translate(-50%, -50%); width: 135px; max-width: 34vw; display:flex; flex-direction:column; align-items:center; gap:.22rem;
+            padding:.35rem .45rem; border-radius:12px; background: rgba(10,20,40,.55); border:1px solid #223062; box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center; z-index: 2; pointer-events:none; }
+    .seat .chips { font-weight:600; font-size:.88rem; display:flex; gap:.35rem; align-items:center; justify-content:center; }
+    .seat .chips img { width:15px; height:15px; display:block; }
     .seat.hero { z-index: 2; }
     .acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
     .sittingout, .folded { opacity:.6; }
@@ -46,20 +45,39 @@
       display: inline-block;
       background: #3a2a0f;
       color: #ffcc00;
-      font-size: 0.75rem;
-      padding: 0 0.3rem;
+      font-size: 0.7rem;
+      padding: 0 0.25rem;
       border-radius: 4px;
-      margin-left: 0.3rem;
+      margin-left: 0.26rem;
       font-weight: bold;
     }
 
+    /* seat cards smaller + overlapped */
+    .seat-holes {
+      position: relative;
+      width: 58px;
+      height: 50px;
+      margin-top: 0.08rem;
+    }
+    .seat-holes img {
+      position: absolute;
+      width: 36px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 2px 10px rgba(0,0,0,.45);
+    }
+    .seat-holes img:nth-child(1) { left: 0; top: 0; }
+    .seat-holes img:nth-child(2) { left: 15px; top: 2px; }
+
     /* ⏱ Acting timer next to name */
     .act-timer-seat {
-      display:inline-flex; align-items:center; gap:.35rem;
-      border:1px solid #2b3b71; border-radius:999px; padding:.06rem .4rem; font-weight:600;
-      background: rgba(10,20,40,.55); margin-left:.35rem;
+      display:inline-flex; align-items:center; gap:.28rem;
+      border:1px solid #2b3b71; border-radius:999px; padding:.02rem .3rem; font-weight:600;
+      background: rgba(10,20,40,.55); margin-left:.28rem; font-size:.72rem;
     }
-    .act-timer-seat .tval { min-width: 3.8ch; text-align:right; }
+    .act-timer-seat .tval { min-width: 3.5ch; text-align:right; }
     .timer-ok  { color: var(--good); border-color: rgba(62,207,142,.6); }
     .timer-warn{ color: #ffd166;  border-color: rgba(255,209,102,.6); }
     .timer-bad { color: var(--bad);  border-color: rgba(242,95,92,.7); }
@@ -67,7 +85,7 @@
     #betsLayer { position:absolute; inset:0; pointer-events:none; z-index: 4; }
     .bet-chip { position:absolute; transform: translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; gap:.15rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,.45)); }
     .bet-chip img { width:22px; height:22px; display:block; }
-    .bet-chip .amt { font-size:.84rem; font-weight:600; color:#e5f0ff; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:8px; padding:.12rem .35rem; }
+    .bet-chip .amt { font-size:.8rem; font-weight:600; color:#e5f0ff; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:8px; padding:.1rem .32rem; }
 
     .cardimg { width:84px; height:112px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
     @media (max-width:520px){ .cardimg{ width:50px; height:84px; } }
@@ -91,7 +109,32 @@
     .controls-right { background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.6rem .7rem; display:flex; flex-direction:column; gap:.55rem; }
     .sliderRow { display:flex; align-items:center; gap:.6rem; }
     .sliderRow input[type="range"] { flex:1; }
-    .amountBox { width:7.5rem; text-align:center; }
+    /* numeric box + custom arrows */
+    .amountBoxWrap {
+      display:flex;
+      gap:0.35rem;
+      align-items:center;
+    }
+    .amountBox { width:6.6rem; text-align:center; }
+    .spinnerButtons {
+      display:flex;
+      flex-direction:column;
+      gap:0.35rem;
+    }
+    .spinBtn {
+      width:1.55rem;
+      height:1.3rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:0.7rem;
+      background:#182a5c;
+      border:1px solid #2b3b71;
+      border-radius:6px;
+      line-height:1;
+      cursor:pointer;
+      user-select:none;
+    }
 
     .btnRow { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:.6rem; }
     .btnRow.single { grid-template-columns: 1fr; }
@@ -108,7 +151,7 @@
     .queued { font-size:.9rem; color: var(--muted); margin-left:.25rem; }
     
     @media (max-width: 900px) {
-      .myhand { grid-template-columns: 1fr; }
+      .myhand { grid-template-columns: 1fr 280px; }
       .controls-right { order: 2; }
       .myhand .cards { order: 1; }
     }
@@ -162,7 +205,8 @@
       <div id="seatsLayer"></div>
       <div id="betsLayer"></div>
 
-      <audio id="chipSound" src="/static/chips/poker_chip_drop.mp3" preload="auto"></audio>
+      <audio id="chipSound" src="/static/sounds/poker_chip_drop.mp3" preload="auto"></audio>
+      <audio id="checkSound" src="/static/sounds/check.mp3" preload="auto"></audio>
     </section>
 
     <!-- Hole cards centered; control panel on the right -->
@@ -172,13 +216,20 @@
       <div class="controls-right">
         <div class="sliderRow">
           <input id="raiseSlider" type="range" min="0" max="100" step="0.25" value="0" />
-          <input id="raiseAmt" class="amountBox" type="number" step="0.25" min="0" value="0" />
+          <div class="amountBoxWrap">
+            <input id="raiseAmt" class="amountBox" type="number" step="0.25" min="0" value="0" />
+            <div class="spinnerButtons">
+              <button type="button" id="raiseUp" class="spinBtn">▲</button>
+              <button type="button" id="raiseDown" class="spinBtn">▼</button>
+            </div>
+          </div>
         </div>
 
+        <!-- swapped order here -->
         <div class="btnRow">
-          <button id="foldBtn" type="button" class="btnFold">Fold</button>
+          <button id="raiseBtn" type="button" class="btnRaise">Raise to <span id="raiseAmtLabel">0.00</span></button>
           <button id="callBtn" type="button" class="btnCall">Call <span id="callAmt">0.00</span></button>
-          <button id="raiseBtn" type="button" class="btnRaise">Raise <span id="raiseAmtLabel">0.00</span></button>
+          <button id="foldBtn" type="button" class="btnFold">Fold</button>
         </div>
 
         <div class="btnRow single">
@@ -201,6 +252,9 @@
       const statusEl = $('status'), whoEl = $('who');
       const serverMsgEl = $('serverMsg');
 
+      // track queued
+      let currentQueued = '';
+
       function showMsg(text, type = '') {
         serverMsgEl.textContent = text;
         serverMsgEl.className = 'server-message' + (type ? ' ' + type : '') + (text ? ' show' : '');
@@ -208,13 +262,20 @@
 
       // AUDIO
       const chipSound = $('chipSound');
+      const checkSound = $('checkSound');
       let audioUnlocked = false;
       function unlockAudioOnce() {
         if (audioUnlocked) return; audioUnlocked = true;
-        try { const p = chipSound.play(); if (p?.then) p.then(()=>{ chipSound.pause(); chipSound.currentTime = 0; }).catch(()=>{}); } catch {}
+        try {
+          const p1 = chipSound.play();
+          if (p1?.then) p1.then(()=>{ chipSound.pause(); chipSound.currentTime = 0; }).catch(()=>{});
+          const p2 = checkSound.play();
+          if (p2?.then) p2.then(()=>{ checkSound.pause(); checkSound.currentTime = 0; }).catch(()=>{});
+        } catch {}
       }
       ['click','touchstart','keydown'].forEach(ev => document.addEventListener(ev, unlockAudioOnce, { once:true, passive:true }));
       function safePlayChip(){ try{ chipSound.currentTime=0; chipSound.play().catch(()=>{});}catch{} }
+      function safePlayCheck(){ try{ checkSound.currentTime=0; checkSound.play().catch(()=>{});}catch{} }
 
       // ME
       let myName = '';
@@ -264,12 +325,17 @@
             checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'),
             raiseAmt = $('raiseAmt'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
             ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
-            raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt');
+            raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
+            raiseUp = $('raiseUp'), raiseDown = $('raiseDown');
       const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
       $('logoutBtn').addEventListener('click', api.logout);
       function pulse(el){ if(!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 180); }
-      function setQueuedDisplay(text){ queuedValue.textContent = text || '—'; queuedLabel.style.display='inline'; }
+      function setQueuedDisplay(text){
+        currentQueued = text || '';
+        queuedValue.textContent = text || '—';
+        queuedLabel.style.display='inline';
+      }
 
       // JOIN/LEAVE/SIT
       joinBtn.addEventListener('click', async () => {
@@ -330,9 +396,14 @@
           if (res.status === 401) { location.href='/login'; return; }
           if (!res.ok) { showMsg(`Action failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
 
-          if (act === 'raise') { const v = Number(amt)||0; setQueuedDisplay(`Raise +${v.toFixed(2)}`); showMsg(`Action: raise ${v.toFixed(2)}`, 'ok'); safePlayChip(); }
+          if (act === 'raise') {
+            const v = Number(amt)||0;
+            setQueuedDisplay(`Raise to ${v.toFixed(2)}`);
+            showMsg(`Action: raise to ${v.toFixed(2)}`, 'ok');
+            safePlayChip();
+          }
           else if (act === 'call') { setQueuedDisplay('Call'); showMsg('Action: call', 'ok'); safePlayChip(); }
-          else if (act === 'check') { setQueuedDisplay('Check'); showMsg('Action: check', 'ok'); }
+          else if (act === 'check') { setQueuedDisplay('Check'); showMsg('Action: check', 'ok'); safePlayCheck(); }
           else if (act === 'fold') { setQueuedDisplay('Fold'); showMsg('Action: fold', 'ok'); }
           else if (act === 'clear') { setQueuedDisplay(''); showMsg('Cleared action', 'ok'); }
 
@@ -349,12 +420,12 @@
       clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
       ledgerBtn.addEventListener('click', () => {location.href = '/ledger';});
 
-      // Helpers (formatting & cards)
+      // Helpers
       function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
       function cardURL(card){
         const s = (card.suit||card.Suit||'').toString().toUpperCase();
         const r = (card.rank||card.Rank||'');
-        const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
+        const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':''; 
         let rt = ''; const n=Number(r);
         if(Number.isFinite(n)){ rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':''; }
         else { const up=String(r).toUpperCase(); rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':''; }
@@ -366,9 +437,8 @@
         return img;
       }
 
-      // ---------- COUNTDOWN (seat-local) ----------
+      // ---------- COUNTDOWN ----------
       let rafId = 0, deadlineMsGlobal = 0, skewMsGlobal = 0;
-
       function getTimerEls(){
         const pill = document.querySelector('.act-timer-seat');
         const val  = pill ? pill.querySelector('.tval') : null;
@@ -388,10 +458,10 @@
         if (rafId) cancelAnimationFrame(rafId);
 
         const { pill, val } = getTimerEls();
-        if (!deadlineMsGlobal || !pill || !val) return; // seat not painted yet
+        if (!deadlineMsGlobal || !pill || !val) return;
 
         const tick = () => {
-          const els = getTimerEls(); // re-query each frame in case actor seat changes
+          const els = getTimerEls();
           if (!els.pill || !els.val) { cancelAnimationFrame(rafId); rafId=0; return; }
           const remaining = Math.max(0, deadlineMsGlobal - (Date.now() + skewMsGlobal));
           const secs = remaining / 1000;
@@ -410,7 +480,21 @@
       raiseAmt.addEventListener('focus', () => { isAdjusting = true; });
       raiseAmt.addEventListener('blur',  () => { isAdjusting = false; });
 
-      // Context key to know when we should reset slider/value
+      // manual big up/down
+      function bumpRaise(delta) {
+        const min = Number(raiseAmt.min || '0') || 0;
+        const max = Number(raiseAmt.max || '999999') || 999999;
+        let v = Number(raiseAmt.value || '0') || 0;
+        v = v + delta;
+        v = Math.max(min, Math.min(max, Math.round(v * 100) / 100));
+        raiseAmt.value = v.toFixed(2);
+        raiseSlider.value = String(v);
+        raiseAmtLabel.textContent = v.toFixed(2);
+      }
+      raiseUp.addEventListener('click', () => bumpRaise(0.25));
+      raiseDown.addEventListener('click', () => bumpRaise(-0.25));
+
+      // Context key
       let lastSliderCtx = '';
       function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
         return [
@@ -474,7 +558,6 @@
         return Array.isArray(raw) ? raw : [];
       }
 
-      // Rendering
       let prevActionMessage='';
       function renderState(st){
         if (!st || (Object.keys(st).length===0)){
@@ -511,7 +594,7 @@
         const players = hero ? [hero, ...others] : others.slice();
         const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
-        // Seats (paint before starting timer so the pill exists)
+        // Seats
         seatsLayer.innerHTML='';
         players.forEach((p,i)=>{
           const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
@@ -532,12 +615,26 @@
 
         // Action message
         const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
-        if (actionMsg){ actionMsgEl.textContent=actionMsg; actionMsgEl.style.display='block'; }
+        if (actionMsg){ 
+          actionMsgEl.textContent=actionMsg; 
+          actionMsgEl.style.display='block'; 
+          if (actionMsg !== prevActionMessage) {
+            if (/\b(check|checked)\b/i.test(actionMsg)) {
+              safePlayCheck();
+            } else if (/\b(call|called|calls|raise|raised|raises|re-?raise|reraise|bet|bets)\b/i.test(actionMsg)) {
+              safePlayChip();
+              // someone else raised/bet -> clear queued unless Fold
+              if (!/^\s*fold/i.test(currentQueued)) {
+                setQueuedDisplay('');
+                showMsg('Your queued action was cleared (opponent raised)', 'ok');
+              }
+            }
+          }
+        }
         else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
-        if (actionMsg && actionMsg!==prevActionMessage && /\b(call|called|calls|raise|raised|raises|re-?raise|reraise|bet|bets|check|checked)\b/i.test(actionMsg)) safePlayChip();
         prevActionMessage = actionMsg;
 
-        // ⏱ Start/stop countdown AFTER seats render so the inline pill exists
+        // ⏱
         const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
         const serverNowMs = Number(hand.serverCurrentTimeUnixMs ?? hand.ServerCurrentTimeUnixMs ?? Date.now());
         if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
@@ -578,7 +675,8 @@
           showdownList.style.display = 'none';
         }
 
-        // ---------- Right panel dynamic values ----------
+        // Right panel dynamic
+        
         const avail = new Set(hand.avaliableActions || hand.availableActions || []);
         const myBet   = Number((hero && (hero.currentBet ?? hero.CurrentBet)) ?? 0) || 0;
         const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
@@ -586,7 +684,6 @@
         callAmtEl.textContent = fmtMoney(callAmt);
         callAmtEl.dataset.val = String(callAmt);
 
-        // Min raise calc: if new street (tableBet <= myBet) -> 1 BB = 0.25
         const ONE_BB = 0.25;
         let minAdd = Number(hand.raiseAmount ?? hand.RaiseAmount ?? 0);
         if (!Number.isFinite(minAdd) || minAdd <= 0) {
@@ -598,14 +695,15 @@
         }
 
         const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
-        const sliderMin = Math.max(0, Math.round(minAdd * 100) / 100);
+        const baseRaiseTo = tableBet + minAdd;
+
+        const sliderMin = Math.max(0, Math.round(baseRaiseTo * 100) / 100);
         const sliderMax = Math.max(sliderMin, Math.round(myStack * 100) / 100);
 
         const actorNm = actorName;
-        const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: sliderMin, actorName: actorNm });
+        const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorNm });
         const contextChanged = (ctx !== lastSliderCtx);
 
-        // Always update bounds
         raiseSlider.min = String(sliderMin);
         raiseSlider.max = String(sliderMax);
         raiseSlider.step = "0.25";
@@ -629,14 +727,21 @@
           raiseAmtLabel.textContent = kept.toFixed(2);
         }
 
-        // Buttons enablement
-        const myTurn = actorName && String(hero?.name||hero?.Name||'').trim() === actorName;
-        foldBtn.disabled  = !myTurn;
-        checkBtn.disabled = !myTurn || !avail.has('check');
-        callBtn.disabled  = !myTurn || !avail.has('call') || callAmt <= 0.0001;
-        raiseBtn.disabled = !myTurn || !avail.has('raise');
+        // === this is the change: allow out-of-turn actions ===
+        // we don't disable just because it's not our turn
+        // we only disable if server says that action is not an option
+        if (avail.has('check')) {
+          foldBtn.disabled = true;
+        } else {
+          foldBtn.disabled = false;
+        }
 
-        // Update context after applying UI
+        checkBtn.disabled = !avail.has('check');
+        // call only if there's something to call and server allows it
+        callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001;
+        // raise only if server says 'raise' is valid in this street
+        raiseBtn.disabled = !avail.has('raise');
+
         lastSliderCtx = ctx;
       }
 
@@ -677,13 +782,24 @@
         const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(stack);
         chips.appendChild(chipImg); chips.appendChild(chipsText);
 
-        const badge=document.createElement('div'); 
-        badge.className='badge'; 
-        badge.textContent = sittingOut ? 'Sitting out' : folded ? 'Folded' : 'Active';
-
         seat.appendChild(nameWrap);
         seat.appendChild(chips);
-        seat.appendChild(badge);
+
+        // card backs if active
+        if (!sittingOut && !folded) {
+          const holes = document.createElement('div');
+          holes.className = 'seat-holes';
+          const card1 = document.createElement('img');
+          card1.src = '/static/card_svgs/Card_back.webp';
+          card1.alt = 'card back';
+          const card2 = document.createElement('img');
+          card2.src = '/static/card_svgs/Card_back.webp';
+          card2.alt = 'card back';
+          holes.appendChild(card1);
+          holes.appendChild(card2);
+          seat.appendChild(holes);
+        }
+
         return seat;
       }
 
@@ -700,7 +816,7 @@
         });
       }
 
-      // Slider <-> number sync
+      // slider <-> number sync
       function syncFromSlider(){
         const v=Number(raiseSlider.value)||0;
         raiseAmt.value=v.toFixed(2);
@@ -714,7 +830,7 @@
       raiseSlider.addEventListener('input', syncFromSlider);
       raiseAmt.addEventListener('input',    syncFromBox);
 
-      // Initial state fetch
+      // initial
       (async () => {
         try {
           const res = await api.state($('room').value);

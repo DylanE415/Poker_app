@@ -22,6 +22,7 @@ type showDownHand struct {
 }
 type Hand struct {
 	//all pointers to players
+	Room                 *Room
 	Players              []*Player
 	actionPlayerIndex    int
 	deck                 []Card
@@ -56,16 +57,16 @@ func isSevenTwoOff(player *Player) bool {
 	}
 	return false
 }
-func collectSevenTwoBounty(h *Hand, p *Player) {
-	for i := range h.Players {
-		if h.Players[i].ID == p.ID {
+func (h *Hand) collectSevenTwoBounty(r *Room, p *Player) {
+	for i := range r.players {
+		if r.players[i].ID == p.ID {
 			continue
-		} else if h.Players[i].Stack < h.smallBlindSize {
-			p.Stack += h.Players[i].Stack
-			h.Players[i].Stack = 0
+		} else if r.players[i].Stack < h.smallBlindSize*2 {
+			p.Stack += r.players[i].Stack
+			r.players[i].Stack = 0
 		} else {
-			p.Stack += h.smallBlindSize
-			h.Players[i].Stack -= h.smallBlindSize
+			p.Stack += h.smallBlindSize * 2
+			r.players[i].Stack -= h.smallBlindSize * 2
 		}
 	}
 
@@ -219,9 +220,10 @@ func handleAction(H *Hand, action Action) bool {
 		//total chips in front of player on this street
 		p.currentBet = newBet
 
-		// everyone still in hand can act again execpt raiser
+		// everyone still in hand can act again execpt raiser, and clear all queued actions besides folds
 		for i := range H.Players {
 			H.Players[i].canAct = true
+			drainCallsAndRaises(H.Players[i].pendingAction)
 		}
 		H.Players[H.actionPlayerIndex].canAct = false
 		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(action.Amount, 'f', -1, 64)
@@ -261,7 +263,7 @@ func handleAction(H *Hand, action Action) bool {
 	return false
 }
 
-func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) *Hand {
+func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64, r *Room) *Hand {
 	suits := []string{"S", "H", "D", "C"}
 	ranks := []string{"14", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}
 	deck := make([]Card, 0, 52)
@@ -286,6 +288,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64) 
 		currentBet:        0,
 		raiseAmount:       0,
 		skipToShowdown:    false,
+		Room:              r,
 	}
 }
 
@@ -371,13 +374,13 @@ func streetLoop(h *Hand) {
 		h.actionPlayerIndex = (h.actionPlayerIndex + 1) % len(h.Players)
 	}
 	//resert all current bets and actions
-	h.currentActionMessage = ""
 	h.avaliableActions = []string{"raise", "check", "fold", "clear"}
 	h.raiseAmount = 0
 	h.currentBet = 0
 	for i := range h.Players {
 		h.Players[i].canAct = true
 		h.Players[i].currentBet = 0
+		drainPendingActions(h.Players[i].pendingAction)
 	}
 
 }
@@ -390,6 +393,7 @@ func (h *Hand) run() {
 		h.Players[i].Hand = []Card{}
 		h.Players[i].potCommitment = 0
 		h.Players[i].folded = false
+		h.Players[i].currentBet = 0
 		playerCount++
 
 	}
@@ -544,7 +548,7 @@ func (h *Hand) run() {
 				h.pot -= amountCanWin
 				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.FormatFloat(amountCanWin, 'f', -1, 64) + " with " + string(winningHands[i].hand.Type)
 				if isSevenTwoOff(h.Players[tmpIndex]) {
-					collectSevenTwoBounty(h, h.Players[tmpIndex])
+					h.collectSevenTwoBounty(h.Room, h.Players[tmpIndex])
 					showdownmessage += h.Players[tmpIndex].Name + " collected 7 2 bounty"
 				}
 			}
@@ -576,7 +580,7 @@ func (h *Hand) run() {
 				h.Players[tmpIndex].Stack += amountCanWin
 				h.pot -= amountCanWin
 				if isSevenTwoOff(h.Players[tmpIndex]) {
-					collectSevenTwoBounty(h, h.Players[tmpIndex])
+					h.collectSevenTwoBounty(h.Room, h.Players[tmpIndex])
 				}
 			}
 		}
@@ -592,6 +596,7 @@ func (h *Hand) run() {
 		}
 	}
 
+	h.currentActionMessage = ""
 	h.showDownHands = showdownhands
 	h.showDownMessage = showdownmessage
 	time.Sleep(5 * time.Second)
