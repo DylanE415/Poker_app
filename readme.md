@@ -20,7 +20,20 @@ to register a new user
 to make build folder run build.sh(builds a binary for linux x86)
 ./build.sh
 
-FOR SETTING APP ON AN EC2:
+to auto deploy onto your ec2 instance run build.py(flags):
+python3 deploy_poker.py \
+  --ip 54.183.19.220 \
+  --user ec2-user \
+  --service poker \
+  --name server \
+  --arch amd64 --os linux
+# (Optional) --key poker_key.pem  # if you want to force a specific key in ~/.ssh
+
+
+
+
+
+FOR SETTING APP ON AN EC2(make sure aws key.pem is inside your ~/.ssh folder):
 - to ssh into ec2 instance
 ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220
 - to copy build folder into ec2 into an app folder (from inside /poker_app)
@@ -31,8 +44,8 @@ sudo setcap 'cap_net_bind_service=+ep' /home/ec2-user/app/server/server
 ln -s /home/ec2-user/app/users /home/ec2-user/users
 
  -run binary
-chmod +x server/server
-./server/server
+chmod +x app/server/server
+./app/server/server
 
 
 
