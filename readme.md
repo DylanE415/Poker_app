@@ -23,17 +23,35 @@ build/
   static/...
   users/...
 
+- then run chmod +x build/server/server BEFORE BUILDING DOCKER IMAGE
 
 
-to auto deploy onto your ec2 instance:
-docker build -t poker:latest .
 
+# to auto deploy onto your ec2 instance:
+    docker buildx build --platform linux/amd64 -t poker:latest .
+
+# ssh into your ec2 to install and run docker:
+    ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220
+    sudo dnf install -y docker 
+    sudo systemctl start docker
+    sudo systemctl enable docker
+
+# Load image into ec2
 docker save poker:latest | bzip2 | \
-  ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220 'bunzip2 | docker load'
+  ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220 \
+  'sudo docker rmi -f poker:latest 2>/dev/null || true && bunzip2 | sudo docker load'
 
 
+# run image
 ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220 \
-  'docker rm -f poker 2>/dev/null || true && docker run -d --name poker --restart=always -p 80:8080 poker:latest'
+  'sudo docker rm -f poker 2>/dev/null || true && sudo docker run -d --name poker --restart=always -p 80:8080 poker:latest'
+
+
+# See if it is working 
+
+ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220
+sudo docker ps
+
 
 
 

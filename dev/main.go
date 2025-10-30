@@ -57,9 +57,13 @@ func (s *Server) handleRoutes() http.Handler {
 /* === main === */
 func main() {
 	// load users
-	uByName, uByID, err := loadUsersJSON("../users/users.json")
+	uByName, uByID, err := loadUsersJSON("users/users.json")
 	if err != nil {
-		log.Fatal(err)
+		log.Println("users/users.json not found, trying ../users/users.json")
+		uByName, uByID, err = loadUsersJSON("../users/users.json")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	s := &Server{
