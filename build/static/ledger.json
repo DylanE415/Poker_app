@@ -3,43 +3,50 @@
     {
       "id": "01",
       "name": "Nick",
-      "net_profit": 0
+      "net_profit": 0,
+      "total_hands": 0
     },
     {
       "id": "02",
       "name": "Dylan",
-      "net_profit": -1,
-      "vpip": 0
+      "net_profit": 0,
+      "total_hands": 0
     },
     {
       "id": "03",
       "name": "alec",
-      "net_profit": -1
+      "net_profit": 0,
+      "total_hands": 0
     },
     {
       "id": "04",
       "name": "max",
-      "net_profit": 0
+      "net_profit": 0,
+      "total_hands": 0
     },
     {
       "id": "05",
       "name": "greg",
-      "net_profit": 0
+      "net_profit": 0,
+      "total_hands": 0
     },
     {
       "id": "06",
       "name": "zio",
-      "net_profit": 0
+      "net_profit": 0,
+      "total_hands": 0
     },
     {
       "id": "07",
       "name": "owen",
-      "net_profit": 0
+      "net_profit": 0,
+      "total_hands": 0
     },
     {
       "id": "08",
       "name": "zernell",
-      "net_profit": 0
+      "net_profit": 0,
+      "total_hands": 0
     }
   ]
 }

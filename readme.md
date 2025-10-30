@@ -17,65 +17,24 @@ to register a new user
 - copy the hash and put it into the users.json file
 
 
-to make build folder run build.sh(builds a binary for linux x86)
-./build.sh
-
-to auto deploy onto your ec2 instance run build.py(flags):
-python3 deploy_poker.py \
-  --ip 54.183.19.220 \
-  --user ec2-user \
-  --service poker \
-  --name server \
-  --arch amd64 --os linux
-# (Optional) --key poker_key.pem  # if you want to force a specific key in ~/.ssh
+- to make a new build folder run build.py(builds a binary for linux x86):
+build/
+  server/server   # linux go binary
+  static/...
+  users/...
 
 
 
+to auto deploy onto your ec2 instance:
+docker build -t poker:latest .
+
+docker save poker:latest | bzip2 | \
+  ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220 'bunzip2 | docker load'
 
 
-FOR SETTING APP ON AN EC2(make sure aws key.pem is inside your ~/.ssh folder):
-- to ssh into ec2 instance
-ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220
-- to copy build folder into ec2 into an app folder (from inside /poker_app)
-scp -i ~/.ssh/my-ec2-key.pem -r build/* ec2-user@54.183.19.220:/home/ec2-user/app/
-- allow binary to bind to port 80
-sudo setcap 'cap_net_bind_service=+ep' /home/ec2-user/app/server/server
-- make symlink for users folder
-ln -s /home/ec2-user/app/users /home/ec2-user/users
+ssh -i ~/.ssh/poker_key.pem ec2-user@54.183.19.220 \
+  'docker rm -f poker 2>/dev/null || true && docker run -d --name poker --restart=always -p 80:8080 poker:latest'
 
- -run binary
-chmod +x app/server/server
-./app/server/server
-
-
-
-
-
-TO HAVE PROCESS RUNNING ALL THE TIME MAKE A UNIT FILE:
-
-sudo tee /etc/systemd/system/poker.service >/dev/null <<'UNIT'
-[Unit]
-Description=Poker Go Server
-After=network.target
-
-[Service]
-User=ec2-user
-WorkingDirectory=/home/ec2-user/app
-ExecStart=/home/ec2-user/app/server/server
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-
-/////
-THEN: 
-sudo systemctl daemon-reload
-sudo systemctl enable --now poker
-sudo systemctl status poker --no-pager
-
-to diable: sudo systemctl disable --now poker
 
 
 
