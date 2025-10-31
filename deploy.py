@@ -15,37 +15,38 @@ def run(cmd: str):
 
 
 def main():
-    # 1) run your local build.py first
+    # 1) build your app locally
     run(f"{sys.executable} build.py")
 
-    # 2) make sure your built server binary is executable
-    # adjust the path if yours is different
+    # 2) make server binary executable
     run("chmod +x build/server/server")
 
-    # 3) build docker image locally — delete old poker:latest if it exists
+    # 3) build docker image locally — delete old local poker:latest if present
     run(
         f"docker image inspect {IMAGE_NAME} >/dev/null 2>&1 && docker rmi {IMAGE_NAME}; "
         f"docker buildx build --platform linux/amd64 -t {IMAGE_NAME} ."
     )
 
-    # 4) ssh into EC2 to install and run docker
+    # 4) make sure docker is installed & running on EC2
     run(
         f"ssh -i {SSH_KEY} {EC2_HOST} "
         "'sudo dnf install -y docker && sudo systemctl start docker && sudo systemctl enable docker'"
     )
 
-    # 5) load image into EC2 (remove remote poker:latest first, then load stream)
+    # 5) send image to EC2 (remove remote image first, then load)
     run(
         f"docker save {IMAGE_NAME} | bzip2 | "
         f"ssh -i {SSH_KEY} {EC2_HOST} "
         "'sudo docker rmi -f poker:latest 2>/dev/null || true && bunzip2 | sudo docker load'"
     )
 
-    # 6) run image on EC2
+    # 6) stop old container (named 'poker') and run new one
+    remote_cmd = (
+        f"sudo docker rm -f {CONTAINER_NAME} 2>/dev/null || true && "
+        f"sudo docker run -d --name {CONTAINER_NAME} --restart=always -p 80:8080 {IMAGE_NAME}"
+    )
     run(
-        f"ssh -i {SSH_KEY} {EC2_HOST} "
-        "'sudo docker rm -f {c} 2>/dev/null || true && "
-        f"sudo docker run -d --name {CONTAINER_NAME} --restart=always -p 80:8080 {IMAGE_NAME}'"
+        f"ssh -i {SSH_KEY} {EC2_HOST} '{remote_cmd}'"
     )
 
     print("\n✅ Deploy complete.")

@@ -10,6 +10,8 @@ func TestCollectSevenTwoBounty(t *testing.T) {
 	// type Card struct { Suit, Rank string }
 	// type Player struct { ID, Name string; Stack float64; Hand []Card }
 
+	r := newRoom(1, 0, 150)
+
 	// Helper to make a player with a stack
 	mk := func(id string, stack float64) *Player {
 		return &Player{ID: id, Name: id, Stack: stack}
@@ -29,6 +31,7 @@ func TestCollectSevenTwoBounty(t *testing.T) {
 		Players:        []*Player{winner, p2, p3, p4},
 		smallBlindSize: sb,
 	}
+	r.players = []*Player{winner, p2, p3, p4}
 
 	// Sanity: winner is indeed 7-2 offsuit
 	if !isSevenTwoOff(winner) {
@@ -41,7 +44,7 @@ func TestCollectSevenTwoBounty(t *testing.T) {
 	startP3 := p3.Stack
 	startP4 := p4.Stack
 
-	collectSevenTwoBounty(h, winner)
+	h.collectSevenTwoBounty(r, winner)
 
 	// Expected transfers (excluding the winner themselves):
 	expFromP2 := min(sb, startP2) // 5

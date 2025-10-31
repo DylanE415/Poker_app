@@ -22,7 +22,7 @@ func TestShuffleDistribution(t *testing.T) {
 		counts := make(map[string]int, positions)
 
 		for i := 0; i < runs; i++ {
-			h := newHand(players, 0, 1)
+			h := newHand(players, 0, 1, nil)
 			card := h.deck[0] // position 0
 			counts[card.Suit+card.Rank]++
 		}
