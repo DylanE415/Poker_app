@@ -33,6 +33,7 @@ type Hand struct {
 	raiseAmount          float64
 	currentBet           float64
 	smallBlindIndex      int
+	bigBlindIndex        int
 	smallBlindSize       float64
 	smallBlindName       string
 	skipToShowdown       bool
@@ -91,6 +92,45 @@ func FindPlayerIndexInHand(H *Hand, id string) int {
 		}
 	}
 	return -1
+}
+
+func removeFoldedPlayers(h *Hand) {
+	// old -> new index map
+	oldToNew := make(map[int]int, len(h.Players))
+
+	newPlayers := h.Players[:0] // reuse backing array
+	for oldIdx, p := range h.Players {
+		if p.folded {
+			continue
+		}
+		newIdx := len(newPlayers)
+		newPlayers = append(newPlayers, p)
+		oldToNew[oldIdx] = newIdx
+	}
+	h.Players = newPlayers
+
+	// helper: turn an old index into the new one
+	remap := func(idx int) int {
+		if idx < 0 {
+			return idx
+		}
+		if v, ok := oldToNew[idx]; ok {
+			return v
+		}
+		// if the seat got folded, just clamp to 0
+		if len(h.Players) == 0 {
+			return -1
+		}
+		return 0
+	}
+
+	h.smallBlindIndex = remap(h.smallBlindIndex)
+	h.bigBlindIndex = remap(h.bigBlindIndex)
+	h.actionPlayerIndex = remap(h.actionPlayerIndex)
+
+	if len(h.Players) > 0 && h.smallBlindIndex >= 0 {
+		h.smallBlindName = h.Players[h.smallBlindIndex].Name
+	}
 }
 
 func nextEligible(H *Hand, start int) int {
@@ -246,14 +286,15 @@ func handleAction(H *Hand, action Action) bool {
 		return true
 
 	case "fold":
-		for i, p := range H.Players {
-			if p.ID == action.PlayerID {
-				H.Players = append(H.Players[:i], H.Players[i+1:]...)
-				H.currentActionMessage = p.Name + " folded"
-				p.folded = true
-				return true
-			}
+		idx := FindPlayerIndexInHand(H, H.Players[H.actionPlayerIndex].ID)
+		if idx == -1 {
+			return false
 		}
+		p := H.Players[idx]
+		p.canAct = false
+		p.folded = true
+		H.currentActionMessage = p.Name + " folded"
+		return true
 		//for players to clear whatever action is in their action queue
 	case "clear":
 		drainPendingActions(H.Players[H.actionPlayerIndex].pendingAction)
@@ -279,6 +320,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64, 
 		Players:           players,
 		actionPlayerIndex: smallBlindPosition,
 		smallBlindIndex:   smallBlindPosition,
+		bigBlindIndex:     (smallBlindPosition + 1) % len(players),
 		smallBlindName:    players[smallBlindPosition].Name,
 		deck:              deck,
 		currentState:      "pre-flop",
@@ -312,7 +354,7 @@ func streetLoop(h *Hand) {
 	for {
 
 		//check if everyone called the blind, then set actions to either check/raise/fold for big blind
-		if h.currentBet == (h.smallBlindSize*2) && h.actionPlayerIndex == ((h.smallBlindIndex+1)%len(h.Players)) && h.Players[h.actionPlayerIndex].currentBet == h.smallBlindSize*2 {
+		if h.currentBet == (h.smallBlindSize*2) && h.actionPlayerIndex == (h.bigBlindIndex) && h.Players[h.actionPlayerIndex].currentBet == h.smallBlindSize*2 && !h.Players[h.actionPlayerIndex].folded {
 			h.avaliableActions = []string{"check", "raise", "fold", "clear"}
 		}
 		// if only one player left, street over
@@ -382,6 +424,9 @@ func streetLoop(h *Hand) {
 		h.Players[i].currentBet = 0
 		drainPendingActions(h.Players[i].pendingAction)
 	}
+	h.lock.Lock()
+	removeFoldedPlayers(h)
+	h.lock.Unlock()
 
 }
 
