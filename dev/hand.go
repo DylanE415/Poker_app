@@ -100,7 +100,7 @@ func removePlayerAt(h *Hand, idx int) {
 		return
 	}
 
-	// 1) delete the player
+	// delete
 	h.Players = append(h.Players[:idx], h.Players[idx+1:]...)
 	n-- // new length
 
@@ -111,30 +111,27 @@ func removePlayerAt(h *Hand, idx int) {
 		return
 	}
 
-	// 2) fix small blind
+	// fix small blind
 	if h.smallBlindIndex == idx {
-		// SB folded → make whoever slid into that spot the SB
+		// SB folded → seat that slid in becomes SB
 		h.smallBlindIndex = idx
 		if h.smallBlindIndex >= n {
 			h.smallBlindIndex = 0
 		}
 	} else if h.smallBlindIndex > idx {
-		// SB was after the removed seat → shift left
 		h.smallBlindIndex--
 	}
 
-	// refresh the name so frontend SB badge is right
+	// refresh SB name
 	if h.smallBlindIndex >= 0 && h.smallBlindIndex < n {
 		h.smallBlindName = h.Players[h.smallBlindIndex].Name
 	}
 
-	// 3) fix action player
+	// fix action player
 	if h.actionPlayerIndex == idx {
-		// action was on the folder → move to whoever is now at that seat
-		h.actionPlayerIndex = idx
-		if h.actionPlayerIndex >= n {
-			h.actionPlayerIndex = 0
-		}
+		// actor folded
+		// put action on the LAST seat so the loop's "+1" hops to seat 0 (SB)
+		h.actionPlayerIndex = n - 1
 	} else if h.actionPlayerIndex > idx {
 		h.actionPlayerIndex--
 	}
