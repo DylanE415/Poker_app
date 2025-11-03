@@ -219,58 +219,75 @@ func handleAction(H *Hand, action Action) bool {
 		H.currentActionMessage = H.Players[H.actionPlayerIndex].Name + " checked"
 		return true
 	case "raise":
-		//must raise by double the previous raise
 		p := H.Players[H.actionPlayerIndex]
 
-		// can raise by less than min raise if player has less than min raise
-		if action.Amount >= p.Stack {
-			action.Amount = p.Stack
-			H.pot += p.Stack
-			//current bet in ahdn is cips player had already bet + their current bet(eg player needs to match 3+1)
-			H.currentBet = action.Amount + p.currentBet
-			p.potCommitment += p.Stack
-			H.raiseAmount = action.Amount
+		// how much do I have to put in just to call right now?
+		toCall := H.currentBet - p.currentBet
+		if toCall < 0 {
+			toCall = 0
+		}
+
+		//  if can't even call, this is just an all-in call, line does NOT move
+		if p.Stack <= toCall {
+			contrib := p.Stack
 			p.Stack = 0
-			p.currentBet = action.Amount + p.currentBet
-			H.avaliableActions = []string{"call", "fold", "raise", "clear"}
-			for i := range H.Players {
-				H.Players[i].canAct = true
-			}
-			H.Players[H.actionPlayerIndex].canAct = false
-			H.currentActionMessage = p.Name + " went all in with " + strconv.FormatFloat(action.Amount, 'f', -1, 64)
+			p.currentBet += contrib
+			p.potCommitment += contrib
+			H.pot += contrib
+
+			p.canAct = false
+			H.currentActionMessage = p.Name + " called all in for " + strconv.FormatFloat(contrib, 'f', -1, 64)
 			return true
+		}
 
+		// player is asking to "raise BY" this amount
+		desiredRaise := action.Amount
+
+		// how many chips I have LEFT AFTER calling
+		canRaiseWith := p.Stack - toCall
+
+		// if I can't afford the raise I'm asking for -> short all-in
+		//    in real NLHE this does NOT change currentBet or reopen
+		if desiredRaise > canRaiseWith {
+			// just put everything in, but do NOT move table line
+			totalPut := p.Stack
+			p.potCommitment += totalPut
+			p.Stack = 0
+			p.currentBet += totalPut
+			p.potCommitment += totalPut
+			H.pot += totalPut
+
+			p.canAct = false
+			H.currentActionMessage = p.Name + " went all in for " + strconv.FormatFloat(totalPut, 'f', -1, 64)
+			// NOTE: we do NOT change:
+			//   H.currentBet
+			//   H.raiseAmount
+			//   other players' canAct flags
+			return true
 		}
-		if action.Amount < (H.raiseAmount) {
-			print("cannot raise by less than current raise amount\n")
-			return false
-		}
-		//current bet(if raised 2 to a current hand bet of 1 the new bet is 3)
-		newBet := action.Amount + H.currentBet
-		//if player had already had 1 chip in front of them and they raised a raise of 2 by 1 then they would only need to bet 2 more chips
-		newChips := newBet - p.currentBet
-		if newChips >= p.Stack {
-			newChips = p.Stack
-		}
-		p.Stack -= newChips
-		H.pot += newChips
+
+		// normal full raise
+		totalToPut := toCall + desiredRaise
+		finalPlayerBet := p.currentBet + totalToPut
+
+		p.Stack -= totalToPut
+		p.currentBet = finalPlayerBet
+		p.potCommitment += totalToPut
+		H.pot += totalToPut
+
+		// move the table line to this bet
+		H.currentBet = finalPlayerBet
+		H.raiseAmount = desiredRaise
+
+		// everyone can act again, except the raiser
 		H.avaliableActions = []string{"call", "fold", "raise", "clear"}
-
-		H.raiseAmount = action.Amount
-		//pot commitment update(they put x new chips into the pot)
-		p.potCommitment += newChips
-		//new current bet everyone has to match
-		H.currentBet = newBet
-		//total chips in front of player on this street
-		p.currentBet = newBet
-
-		// everyone still in hand can act again execpt raiser, and clear all queued actions besides folds
 		for i := range H.Players {
 			H.Players[i].canAct = true
 			drainCallsAndRaises(H.Players[i].pendingAction)
 		}
-		H.Players[H.actionPlayerIndex].canAct = false
-		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(action.Amount, 'f', -1, 64)
+		p.canAct = false
+
+		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(desiredRaise, 'f', -1, 64)
 		return true
 
 	case "call":
