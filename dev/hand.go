@@ -660,7 +660,7 @@ func (h *Hand) run() {
 
 	//if only 1 player dont show hand unless it is 7 2 off
 	if len(showdownhands) <= 2 {
-		if (showdownhands[1].Hand[0].Rank == "7" && showdownhands[1].Hand[1].Rank == "2") || (showdownhands[1].Hand[1].Rank == "7" && showdownhands[1].Hand[0].Rank == "2") {
+		if ((showdownhands[1].Hand[0].Rank == "7" && showdownhands[1].Hand[1].Rank == "2") && showdownhands[1].Hand[0].Suit != showdownhands[1].Hand[1].Suit) || ((showdownhands[1].Hand[1].Rank == "7" && showdownhands[1].Hand[0].Rank == "2") && showdownhands[1].Hand[0].Suit != showdownhands[1].Hand[1].Suit) {
 		} else {
 			showdownmessage = showdownhands[1].PlayerName + " wins"
 			showdownhands = nil
