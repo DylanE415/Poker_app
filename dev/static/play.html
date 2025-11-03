@@ -5,24 +5,24 @@
   <title>Poker — Table</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    /* hide scrollbar in the action panel */
-    .controls-right {
-      overflow-y: auto;             /* still scrollable */
-      scrollbar-width: none;        /* Firefox */
-      -ms-overflow-style: none;     /* old Edge/IE */
-    }
-    .controls-right::-webkit-scrollbar {
-      display: none;                /* Chrome / Safari / iOS */
-    }
 
-    /* optional: on very small screens give it a little more bottom padding
-       so your thumb doesn't hit the edge */
-    @media (max-width: 780px) {
-      .controls-right {
-        padding-bottom: 1.25rem;
-      }
-    }
+        /* hide scrollbar in the action panel */
+.controls-right {
+  overflow-y: auto;             /* still scrollable */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* old Edge/IE */
+}
+.controls-right::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari / iOS */
+}
 
+/* optional: on very small screens give it a little more bottom padding
+   so your thumb doesn't hit the edge */
+@media (max-width: 780px) {
+  .controls-right {
+    padding-bottom: 1.25rem;
+  }
+}
     :root { --bg:#0b1020; --panel:#121a33; --muted:#aab3cc; --accent:#4da3ff; --bad:#f25f5c; --good:#3ecf8e; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff; }
@@ -247,8 +247,7 @@
     <section class="myhand">
       <div class="cards" id="myHand"></div>
 
-      <!-- normal action panel -->
-      <div class="controls-right" id="actionPanel">
+      <div class="controls-right">
         <div class="sliderRow">
           <!-- NOTE: slider now always 0..100, we map it in JS -->
           <input id="raiseSlider" type="range" min="0" max="100" step="1" value="0" />
@@ -277,12 +276,6 @@
         </div>
 
         <div id="serverMsg" class="server-message"></div>
-      </div>
-
-      <!-- shown when hero is sitting out -->
-      <div class="controls-right" id="sitInPanel" style="display:none; gap:.75rem;">
-        <div class="muted">You&apos;re sitting out right now.</div>
-        <button id="quickSitInBtn" type="button">Sit back in</button>
       </div>
     </section>
   </main>
@@ -386,11 +379,6 @@
             raiseUp = $('raiseUp'), raiseDown = $('raiseDown');
       const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
-      // NEW: panels for sitting in/out
-      const actionPanel = $('actionPanel');
-      const sitInPanel  = $('sitInPanel');
-      const quickSitInBtn = $('quickSitInBtn');
-
       $('logoutBtn').addEventListener('click', api.logout);
       function pulse(el){ if(!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 180); }
       function setQueuedDisplay(text){
@@ -447,25 +435,6 @@
           showMsg('Sat out', 'ok'); pollState.soon();
         } catch (e) { showMsg(`Sit out error: ${e.message}`, 'err'); }
       });
-
-      // quick sit in from panel
-      if (quickSitInBtn) {
-        quickSitInBtn.addEventListener('click', async () => {
-          const room = roomSel.value;
-          try {
-            const res = await api.sit(room, true);
-            if (res.status === 401) { location.href='/login'; return; }
-            if (!res.ok) {
-              showMsg(`Sit in failed: ${res.status} ${(await res.text())||''}`, 'err');
-              return;
-            }
-            showMsg('Sat in', 'ok');
-            pollState.soon();
-          } catch (e) {
-            showMsg(`Sit in error: ${e.message}`, 'err');
-          }
-        });
-      }
 
       // non-linear mapping helpers
       function sliderToAmount(sliderVal) {
@@ -681,16 +650,12 @@
           serverMsgEl.className = 'server-message';
           lastHeroWas67 = false;
           lastBoardLen = 0;
-
-          // default to "no actions" if we have no state
-          if (actionPanel) actionPanel.style.display = 'none';
-          if (sitInPanel)  sitInPanel.style.display  = 'flex';
           return;
         }
 
         const hand = st.hand || st.Hand || {};
         const actorName = String(hand.actionPlayerName ?? hand.ActionPlayerName ?? '').trim();
-        const sbName    = String(hand.smallBlindName   ?? hand.SmallBlindName   ?? '').trim();
+        const sbName = String(hand.smallBlindName   ?? hand.SmallBlindName   ?? '').trim();
 
         // Pot
         potEl.textContent = fmtMoney(hand.pot ?? hand.Pot ?? '');
@@ -707,35 +672,16 @@
         }
         lastBoardLen = currentBoardLen;
 
-        // ===== identify hero =====
+        // Players
         const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
         let heroIdx = -1;
-
-        if (myName) {
-          heroIdx = rawPlayers.findIndex(p => String(p.name ?? p.Name ?? '').trim() === myName);
-        }
-        // if still not found, fallback to first player
+        if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
+        if (heroIdx < 0) heroIdx = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand));
         if (heroIdx < 0) heroIdx = 0;
 
         const hero = rawPlayers[heroIdx] || null;
-        const heroSittingOut = !!(hero && (hero.sittingOut ?? hero.SittingOut));
-
-        // 👉 this is the important part 👇
-        if (!hero || heroSittingOut) {
-          // hide *all* action controls, show sit-in panel
-          if (actionPanel) actionPanel.style.display = 'none';
-          if (sitInPanel)  sitInPanel.style.display  = 'flex';
-        } else {
-          // normal playing view
-          if (actionPanel) actionPanel.style.display = 'flex';
-          if (sitInPanel)  sitInPanel.style.display  = 'none';
-        }
-        // 👆 end important part
-
-        // now continue with seat layout as before
         const others = rawPlayers.length ? [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)] : [];
-        const heroTheta = heroPolar(); 
-        const othersTheta = otherPolars(others.length);
+        const heroTheta = heroPolar(); const othersTheta = otherPolars(others.length);
         const players = hero ? [hero, ...others] : others.slice();
         const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
@@ -744,8 +690,8 @@
           const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
           const name = String(p.name ?? p.Name ?? '').trim();
           const isActing = !!(actorName && name === actorName);
-          const isHero   = (i===0);
-          const isSB     = (name === sbName);
+          const isHero = (i===0);
+          const isSB = (name === sbName);
           seatsLayer.appendChild( renderSeat(p, pos, isActing, isHero, isSB) );
         });
 
@@ -852,13 +798,13 @@
         lastMinRaiseAdd = minAdd;
 
         const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
-        // max raise-to = current table bet + whatever *you* can add
-        // but raise-to is capped by "my stack + myBet" (all-in to front)
-        const maxRaiseTo = Math.max(tableBet + minAdd, myBet + myStack);
-        // we don't want slider max to go *below* min
         const baseRaiseTo = tableBet + minAdd;
+
+        // how much I can ever show in the box/slider:
+        const maxRaiseTo = myBet + myStack;
+
         const sliderMin = Math.max(0, Math.round(baseRaiseTo * 100) / 100);
-        const sliderMax = Math.max(sliderMin, Math.round((myBet + myStack) * 100) / 100);
+        const sliderMax = Math.max(sliderMin, Math.round(maxRaiseTo * 100) / 100);
 
         currentRaiseMin = sliderMin;
         currentRaiseMax = sliderMax;
@@ -883,7 +829,6 @@
           raiseSlider.value = amountToSlider(kept);
         }
 
-        // disable fold when check is available (optional UX rule)
         if (avail.has('check')) {
           foldBtn.disabled = true;
         } else {
@@ -892,7 +837,7 @@
 
         checkBtn.disabled = !avail.has('check');
         callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001;
-        raiseBtn.disabled = !avail.has('raise') || heroSittingOut;
+        raiseBtn.disabled = !avail.has('raise');
 
         lastSliderCtx = ctx;
       }
@@ -992,6 +937,9 @@
         } catch {}
       })();
 
+      // expose for console testing
+      window.__renderState = renderState;
+      window.__setMyName = (n) => { myName = n; };
     });
   </script>
 </body>
