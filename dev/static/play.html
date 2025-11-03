@@ -5,6 +5,24 @@
   <title>Poker — Table</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
+
+        /* hide scrollbar in the action panel */
+.controls-right {
+  overflow-y: auto;             /* still scrollable */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* old Edge/IE */
+}
+.controls-right::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari / iOS */
+}
+
+/* optional: on very small screens give it a little more bottom padding
+   so your thumb doesn't hit the edge */
+@media (max-width: 780px) {
+  .controls-right {
+    padding-bottom: 1.25rem;
+  }
+}
     :root { --bg:#0b1020; --panel:#121a33; --muted:#aab3cc; --accent:#4da3ff; --bad:#f25f5c; --good:#3ecf8e; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff; }
@@ -40,7 +58,6 @@
     .acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
     .sittingout, .folded { opacity:.6; }
 
-    /* SB indicator */
     .sb-indicator {
       display: inline-block;
       background: #3a2a0f;
@@ -52,7 +69,6 @@
       font-weight: bold;
     }
 
-    /* seat cards smaller + overlapped */
     .seat-holes {
       position: relative;
       width: 58px;
@@ -71,7 +87,6 @@
     .seat-holes img:nth-child(1) { left: 0; top: 0; }
     .seat-holes img:nth-child(2) { left: 15px; top: 2px; }
 
-    /* ⏱ Acting timer next to name */
     .act-timer-seat {
       display:inline-flex; align-items:center; gap:.28rem;
       border:1px solid #2b3b71; border-radius:999px; padding:.02rem .3rem; font-weight:600;
@@ -101,29 +116,47 @@
     .showdown-list .who { font-size:.9rem; color:#cfe0ff; margin-right:.15rem; }
     .showdown-list .cards { display:flex; gap:.35rem; }
 
-    /* ===== Hole cards centered under table; controls to the right ===== */
-    .myhand { position: relative; width: min(300px, 20vw); margin: 0.25rem auto 0; z-index:10;
-      display:grid; grid-template-columns: 1fr 320px; gap:1rem; align-items:start; }
+    .myhand {
+      position: relative;
+      width: min(300px, 20vw);
+      margin: 0.25rem auto 0;
+      z-index:10;
+      display:grid;
+      grid-template-columns: 1fr 320px;
+      gap:1rem;
+      align-items:start;
+    }
     .myhand .cards { display:flex; gap:.45rem; justify-content:center; }
 
-    .controls-right { background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.6rem .7rem; display:flex; flex-direction:column; gap:.55rem; }
-    .sliderRow { display:flex; align-items:center; gap:.6rem; }
-    .sliderRow input[type="range"] { flex:1; }
-    /* numeric box + custom arrows */
-    .amountBoxWrap {
-      display:flex;
-      gap:0.35rem;
-      align-items:center;
-    }
-    .amountBox { width:6.6rem; text-align:center; }
-    .spinnerButtons {
+    .controls-right {
+      background: rgba(10,20,40,.55);
+      border:1px solid #223062;
+      border-radius:12px;
+      padding:.6rem .7rem;
       display:flex;
       flex-direction:column;
-      gap:0.35rem;
+      gap:.55rem;
     }
+    .sliderRow { display:flex; align-items:center; gap:.6rem; }
+    .sliderRow input[type="range"] { flex:1; }
+
+    .amountBoxWrap { display:flex; gap:0.35rem; align-items:center; }
+
+    /* hide native number spinners – we have custom ▲ ▼ */
+    input.amountBox[type="number"]::-webkit-outer-spin-button,
+    input.amountBox[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input.amountBox[type="number"] {
+      -moz-appearance: textfield;
+    }
+
+    .amountBox { width:6.6rem; text-align:center; }
+    .spinnerButtons { display:flex; flex-direction:column; gap:0.35rem; }
     .spinBtn {
-      width:1.55rem;
-      height:1.3rem;
+      width:1.8rem;
+      height:1.6rem;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -141,7 +174,7 @@
     .btnBig { padding: .9rem .7rem; font-weight: 700; font-size: 1.05rem; }
     .btnFold { background:#7d2b2b; border-color:#9a3b3b; }
     .btnCall { background:#184d2f; border-color:#256845; }
-    .btnRaise { background:#60451f; border-color:#7a5a2b; }
+    .btnRaise { background:#60451f; border-color:#7a3b2b; }
 
     .server-message { min-height: 1.4rem; margin: 0.4rem 0; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.9rem; display: none; }
     .server-message.show { display: block; }
@@ -207,15 +240,17 @@
 
       <audio id="chipSound" src="/static/sounds/poker_chip_drop.mp3" preload="auto"></audio>
       <audio id="checkSound" src="/static/sounds/check.mp3" preload="auto"></audio>
+      <audio id="audio67" src="/static/sounds/67.mp3" preload="auto"></audio>
+      <audio id="dealSound" src="/static/sounds/deal_card.mp3" preload="auto"></audio>
     </section>
 
-    <!-- Hole cards centered; control panel on the right -->
     <section class="myhand">
       <div class="cards" id="myHand"></div>
 
       <div class="controls-right">
         <div class="sliderRow">
-          <input id="raiseSlider" type="range" min="0" max="100" step="0.25" value="0" />
+          <!-- NOTE: slider now always 0..100, we map it in JS -->
+          <input id="raiseSlider" type="range" min="0" max="100" step="1" value="0" />
           <div class="amountBoxWrap">
             <input id="raiseAmt" class="amountBox" type="number" step="0.25" min="0" value="0" />
             <div class="spinnerButtons">
@@ -225,7 +260,6 @@
           </div>
         </div>
 
-        <!-- swapped order here -->
         <div class="btnRow">
           <button id="raiseBtn" type="button" class="btnRaise">Raise to <span id="raiseAmtLabel">0.00</span></button>
           <button id="callBtn" type="button" class="btnCall">Call <span id="callAmt">0.00</span></button>
@@ -252,8 +286,15 @@
       const statusEl = $('status'), whoEl = $('who');
       const serverMsgEl = $('serverMsg');
 
-      // track queued
       let currentQueued = '';
+      let lastHandCurrentBet = 0;
+      let lastMinRaiseAdd    = 0;
+      let lastHeroWas67 = false;
+      let lastBoardLen = 0;
+
+      // NEW: current raise bounds for non-linear slider
+      let currentRaiseMin = 0;
+      let currentRaiseMax = 100;
 
       function showMsg(text, type = '') {
         serverMsgEl.textContent = text;
@@ -263,6 +304,9 @@
       // AUDIO
       const chipSound = $('chipSound');
       const checkSound = $('checkSound');
+      const audio67 = $('audio67');
+      const dealSound = $('dealSound');
+
       let audioUnlocked = false;
       function unlockAudioOnce() {
         if (audioUnlocked) return; audioUnlocked = true;
@@ -271,11 +315,17 @@
           if (p1?.then) p1.then(()=>{ chipSound.pause(); chipSound.currentTime = 0; }).catch(()=>{});
           const p2 = checkSound.play();
           if (p2?.then) p2.then(()=>{ checkSound.pause(); checkSound.currentTime = 0; }).catch(()=>{});
+          const p3 = audio67.play();
+          if (p3?.then) p3.then(()=>{ audio67.pause(); audio67.currentTime = 0; }).catch(()=>{});
+          const p4 = dealSound.play();
+          if (p4?.then) p4.then(()=>{ dealSound.pause(); dealSound.currentTime = 0; }).catch(()=>{});
         } catch {}
       }
       ['click','touchstart','keydown'].forEach(ev => document.addEventListener(ev, unlockAudioOnce, { once:true, passive:true }));
       function safePlayChip(){ try{ chipSound.currentTime=0; chipSound.play().catch(()=>{});}catch{} }
       function safePlayCheck(){ try{ checkSound.currentTime=0; checkSound.play().catch(()=>{});}catch{} }
+      function safePlay67(){ try{ audio67.currentTime=0; audio67.play().catch(()=>{});}catch{} }
+      function safePlayDeal(){ try{ dealSound.currentTime=0; dealSound.play().catch(()=>{});}catch{} }
 
       // ME
       let myName = '';
@@ -386,8 +436,22 @@
         } catch (e) { showMsg(`Sit out error: ${e.message}`, 'err'); }
       });
 
+      // non-linear mapping helpers
+      function sliderToAmount(sliderVal) {
+        const t = Math.min(1, Math.max(0, sliderVal / 100));
+        const eased = t * t; // quadratic: more precision at start
+        return currentRaiseMin + (currentRaiseMax - currentRaiseMin) * eased;
+      }
+      function amountToSlider(amount) {
+        if (currentRaiseMax <= currentRaiseMin) return 0;
+        const norm = (amount - currentRaiseMin) / (currentRaiseMax - currentRaiseMin);
+        const clamped = Math.min(1, Math.max(0, norm));
+        const t = Math.sqrt(clamped); // inverse of t^2
+        return t * 100;
+      }
+
       // ACTIONS
-      async function doActionWithQueued(act, amt=0) {
+      async function doActionWithQueued(act, amt=0, displayAmt=null) {
         const room = roomSel.value;
         const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn };
         pulse(btnMap[act]);
@@ -397,9 +461,9 @@
           if (!res.ok) { showMsg(`Action failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
 
           if (act === 'raise') {
-            const v = Number(amt)||0;
-            setQueuedDisplay(`Raise to ${v.toFixed(2)}`);
-            showMsg(`Action: raise to ${v.toFixed(2)}`, 'ok');
+            const shown = displayAmt != null ? displayAmt : amt;
+            setQueuedDisplay(`Raise to ${shown.toFixed(2)}`);
+            showMsg(`Action: raise to ${shown.toFixed(2)}`, 'ok');
             safePlayChip();
           }
           else if (act === 'call') { setQueuedDisplay('Call'); showMsg('Action: call', 'ok'); safePlayChip(); }
@@ -410,12 +474,32 @@
           pollState.soon();
         } catch (e) { showMsg(`Action error: ${e.message}`, 'err'); }
       }
+
       checkBtn.addEventListener('click', () => doActionWithQueued('check'));
       callBtn.addEventListener('click', () => {
         const amt = Number(callAmtEl.dataset.val)||0;
         doActionWithQueued('call', amt);
       });
-      raiseBtn.addEventListener('click', () => doActionWithQueued('raise', raiseAmt.value));
+
+      // raise: send (raiseTo - handCurrentBet)
+      raiseBtn.addEventListener('click', () => {
+        const raiseTo = Number(raiseAmt.value) || 0;
+        let handBet = Number(lastHandCurrentBet) || 0;
+
+        if (handBet === 0) {
+          const minAdd = Number(lastMinRaiseAdd) || 0;
+          if (currentRaiseMin > 0) {
+            const inferred = currentRaiseMin - minAdd;
+            if (inferred >= 0) handBet = inferred;
+          }
+        }
+
+        let sendAmt = raiseTo - handBet;
+        if (sendAmt < 0) sendAmt = 0;
+
+        doActionWithQueued('raise', sendAmt, raiseTo);
+      });
+
       foldBtn.addEventListener('click', () => doActionWithQueued('fold'));
       clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
       ledgerBtn.addEventListener('click', () => {location.href = '/ledger';});
@@ -437,7 +521,7 @@
         return img;
       }
 
-      // ---------- COUNTDOWN ----------
+      // Countdown
       let rafId = 0, deadlineMsGlobal = 0, skewMsGlobal = 0;
       function getTimerEls(){
         const pill = document.querySelector('.act-timer-seat');
@@ -473,28 +557,27 @@
       }
       function stopCountdown(){ if (rafId) cancelAnimationFrame(rafId); rafId = 0; }
 
-      // ===== Slider stickiness while interacting =====
+      // slider stickiness
       let isAdjusting = false;
       raiseSlider.addEventListener('pointerdown', () => { isAdjusting = true; });
       document.addEventListener('pointerup', () => { isAdjusting = false; });
       raiseAmt.addEventListener('focus', () => { isAdjusting = true; });
       raiseAmt.addEventListener('blur',  () => { isAdjusting = false; });
 
-      // manual big up/down
       function bumpRaise(delta) {
-        const min = Number(raiseAmt.min || '0') || 0;
-        const max = Number(raiseAmt.max || '999999') || 999999;
+        const min = Number(currentRaiseMin) || 0;
+        const max = Number(currentRaiseMax) || 0;
         let v = Number(raiseAmt.value || '0') || 0;
         v = v + delta;
         v = Math.max(min, Math.min(max, Math.round(v * 100) / 100));
         raiseAmt.value = v.toFixed(2);
-        raiseSlider.value = String(v);
         raiseAmtLabel.textContent = v.toFixed(2);
+        raiseSlider.value = amountToSlider(v);
       }
       raiseUp.addEventListener('click', () => bumpRaise(0.25));
       raiseDown.addEventListener('click', () => bumpRaise(-0.25));
 
-      // Context key
+      // context key for betting
       let lastSliderCtx = '';
       function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
         return [
@@ -506,7 +589,6 @@
         ].join('|');
       }
 
-      // Geometry
       const SEAT_RX = 46, SEAT_RY = 38, BET_RX=31, BET_RY=26;
       function heroPolar(){ return Math.PI/2; }
       function otherPolars(n){ if(!n) return []; const step=2*Math.PI/(n+1); return Array.from({length:n},(_,k)=>Math.PI/2+(k+1)*step); }
@@ -552,7 +634,6 @@
         return { start, stop, now, soon };
       })();
 
-      // Showdown helpers
       function getShowdownHandsArray(hand) {
         const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
         return Array.isArray(raw) ? raw : [];
@@ -567,6 +648,8 @@
           showdownBanner.style.display='none'; showdownList.style.display='none'; showdownList.innerHTML='';
           actionMsgEl.style.display='none';
           serverMsgEl.className = 'server-message';
+          lastHeroWas67 = false;
+          lastBoardLen = 0;
           return;
         }
 
@@ -579,9 +662,17 @@
 
         // Board
         const board = Array.isArray(hand.board ?? hand.Board) ? (hand.board ?? hand.Board) : [];
-        boardEl.innerHTML=''; board.forEach(c=>boardEl.appendChild(renderCardImg(c)));
+        const currentBoardLen = board.length;
+        boardEl.innerHTML='';
+        board.forEach(c=>boardEl.appendChild(renderCardImg(c)));
+        if (currentBoardLen > lastBoardLen) {
+          for (let i = lastBoardLen; i < currentBoardLen; i++) {
+            setTimeout(() => safePlayDeal(), (i - lastBoardLen) * 120);
+          }
+        }
+        lastBoardLen = currentBoardLen;
 
-        // Players -> hero first
+        // Players
         const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
         let heroIdx = -1;
         if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
@@ -594,7 +685,6 @@
         const players = hero ? [hero, ...others] : others.slice();
         const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
-        // Seats
         seatsLayer.innerHTML='';
         players.forEach((p,i)=>{
           const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
@@ -605,13 +695,27 @@
           seatsLayer.appendChild( renderSeat(p, pos, isActing, isHero, isSB) );
         });
 
-        // Bets
         renderBets(players, angles);
 
         // My hand
         myHandEl.innerHTML='';
         const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
         if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
+
+        // 67 easter egg
+        if (Array.isArray(myCards) && myCards.length === 2) {
+          const r1 = parseInt(myCards[0].rank ?? myCards[0].Rank ?? 0, 10);
+          const r2 = parseInt(myCards[1].rank ?? myCards[1].Rank ?? 0, 10);
+          const is67 = ( (r1 === 6 && r2 === 7) || (r1 === 7 && r2 === 6) );
+          if (is67 && !lastHeroWas67) {
+            safePlay67();
+            lastHeroWas67 = true;
+          } else if (!is67) {
+            lastHeroWas67 = false;
+          }
+        } else {
+          lastHeroWas67 = false;
+        }
 
         // Action message
         const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
@@ -623,7 +727,6 @@
               safePlayCheck();
             } else if (/\b(call|called|calls|raise|raised|raises|re-?raise|reraise|bet|bets)\b/i.test(actionMsg)) {
               safePlayChip();
-              // someone else raised/bet -> clear queued unless Fold
               if (!/^\s*fold/i.test(currentQueued)) {
                 setQueuedDisplay('');
                 showMsg('Your queued action was cleared (opponent raised)', 'ok');
@@ -634,19 +737,18 @@
         else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
         prevActionMessage = actionMsg;
 
-        // ⏱
+        // timer
         const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
         const serverNowMs = Number(hand.serverCurrentTimeUnixMs ?? hand.ServerCurrentTimeUnixMs ?? Date.now());
         if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
 
-        // Showdown
+        // showdown
         const sdMsg = String(hand.showDownMessage ?? hand.ShowDownMessage ?? '').trim();
         const sdHands = getShowdownHandsArray(hand);
         const street = String(hand.street ?? hand.Street ?? '').toLowerCase();
         const hasShowdown = (street==='showdown') && (sdMsg.length > 0 || (Array.isArray(sdHands) && sdHands.length > 0));
         showdownBanner.style.display = hasShowdown ? 'block' : 'none';
         showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
-
         showdownList.innerHTML = '';
         if (hasShowdown && Array.isArray(sdHands) && sdHands.length) {
           const nameById = new Map();
@@ -661,7 +763,6 @@
             if (!Array.isArray(cards) || cards.length === 0) return;
             const pidOrName = String(entry.PlayerName ?? entry.playerName ?? entry.PlayerID ?? entry.playerId ?? '').trim();
             const displayName = nameById.get(pidOrName) || pidOrName || 'player';
-
             const row = document.createElement('div');
             row.className = 'entry';
             const who = document.createElement('div'); who.className = 'who'; who.textContent = displayName;
@@ -676,10 +777,11 @@
         }
 
         // Right panel dynamic
-        
         const avail = new Set(hand.avaliableActions || hand.availableActions || []);
         const myBet   = Number((hero && (hero.currentBet ?? hero.CurrentBet)) ?? 0) || 0;
         const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
+        lastHandCurrentBet = tableBet;
+
         const callAmt = Math.max(0, tableBet - myBet);
         callAmtEl.textContent = fmtMoney(callAmt);
         callAmtEl.dataset.val = String(callAmt);
@@ -693,6 +795,7 @@
             minAdd = Math.max(ONE_BB, tableBet - myBet);
           }
         }
+        lastMinRaiseAdd = minAdd;
 
         const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
         const baseRaiseTo = tableBet + minAdd;
@@ -700,36 +803,29 @@
         const sliderMin = Math.max(0, Math.round(baseRaiseTo * 100) / 100);
         const sliderMax = Math.max(sliderMin, Math.round(myStack * 100) / 100);
 
+        currentRaiseMin = sliderMin;
+        currentRaiseMax = sliderMax;
+
         const actorNm = actorName;
         const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorNm });
         const contextChanged = (ctx !== lastSliderCtx);
 
-        raiseSlider.min = String(sliderMin);
-        raiseSlider.max = String(sliderMax);
-        raiseSlider.step = "0.25";
-        raiseAmt.min     = String(sliderMin);
-        raiseAmt.max     = String(sliderMax);
-        raiseAmt.step    = "0.25";
-
-        const currentSliderVal = Number(raiseSlider.value || NaN);
-        const outOfBounds = !Number.isFinite(currentSliderVal) ||
-                            currentSliderVal < sliderMin - 1e-9 ||
-                            currentSliderVal > sliderMax + 1e-9;
+        const currentInputVal = Number(raiseAmt.value || NaN);
+        const outOfBounds = !Number.isFinite(currentInputVal) ||
+                            currentInputVal < sliderMin - 1e-9 ||
+                            currentInputVal > sliderMax + 1e-9;
 
         if ((!isAdjusting && contextChanged) || outOfBounds) {
-          raiseSlider.value = String(sliderMin);
           raiseAmt.value = sliderMin.toFixed(2);
           raiseAmtLabel.textContent = sliderMin.toFixed(2);
+          raiseSlider.value = amountToSlider(sliderMin);
         } else {
-          const kept = Math.min(sliderMax, Math.max(sliderMin, Number.isFinite(currentSliderVal) ? currentSliderVal : sliderMin));
-          raiseSlider.value = String(kept);
+          const kept = Math.min(sliderMax, Math.max(sliderMin, currentInputVal));
           raiseAmt.value = kept.toFixed(2);
           raiseAmtLabel.textContent = kept.toFixed(2);
+          raiseSlider.value = amountToSlider(kept);
         }
 
-        // === this is the change: allow out-of-turn actions ===
-        // we don't disable just because it's not our turn
-        // we only disable if server says that action is not an option
         if (avail.has('check')) {
           foldBtn.disabled = true;
         } else {
@@ -737,9 +833,7 @@
         }
 
         checkBtn.disabled = !avail.has('check');
-        // call only if there's something to call and server allows it
         callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001;
-        // raise only if server says 'raise' is valid in this street
         raiseBtn.disabled = !avail.has('raise');
 
         lastSliderCtx = ctx;
@@ -785,15 +879,14 @@
         seat.appendChild(nameWrap);
         seat.appendChild(chips);
 
-        // card backs if active
         if (!sittingOut && !folded) {
           const holes = document.createElement('div');
           holes.className = 'seat-holes';
           const card1 = document.createElement('img');
-          card1.src = '/static/card_svgs/Card_back.webp';
+          card1.src = '/static/card_svgs/card_back.png';
           card1.alt = 'card back';
           const card2 = document.createElement('img');
-          card2.src = '/static/card_svgs/Card_back.webp';
+          card2.src = '/static/card_svgs/card_back.png';
           card2.alt = 'card back';
           holes.appendChild(card1);
           holes.appendChild(card2);
@@ -818,14 +911,17 @@
 
       // slider <-> number sync
       function syncFromSlider(){
-        const v=Number(raiseSlider.value)||0;
-        raiseAmt.value=v.toFixed(2);
-        raiseAmtLabel.textContent=v.toFixed(2);
+        const sliderVal = Number(raiseSlider.value)||0;
+        const amt = sliderToAmount(sliderVal);
+        raiseAmt.value = amt.toFixed(2);
+        raiseAmtLabel.textContent = amt.toFixed(2);
       }
       function syncFromBox(){
         const v=Number(raiseAmt.value)||0;
-        raiseSlider.value=String(v);
-        raiseAmtLabel.textContent=v.toFixed(2);
+        const clamped = Math.max(currentRaiseMin, Math.min(currentRaiseMax, v));
+        raiseAmt.value = clamped.toFixed(2);
+        raiseAmtLabel.textContent = clamped.toFixed(2);
+        raiseSlider.value = amountToSlider(clamped);
       }
       raiseSlider.addEventListener('input', syncFromSlider);
       raiseAmt.addEventListener('input',    syncFromBox);
@@ -837,6 +933,10 @@
           if (res.ok) renderState(JSON.parse(await res.text()));
         } catch {}
       })();
+
+      // expose for console testing
+      window.__renderState = renderState;
+      window.__setMyName = (n) => { myName = n; };
     });
   </script>
 </body>

@@ -320,6 +320,10 @@ func (r *Room) run() {
 					safeReply(cmd.reply, fmt.Errorf("player not in room"))
 					break
 				}
+				//if there is a current hand fold player
+				if r.currentHand != nil {
+					enqueueLatestAction(player.pendingAction, Action{PlayerID: player.ID, Action: "fold", Amount: 0})
+				}
 				//send good reply to client
 				print(player.Name, " is sitting out\n")
 				safeReply(cmd.reply, nil)

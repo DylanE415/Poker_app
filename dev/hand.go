@@ -226,7 +226,7 @@ func handleAction(H *Hand, action Action) bool {
 			drainCallsAndRaises(H.Players[i].pendingAction)
 		}
 		H.Players[H.actionPlayerIndex].canAct = false
-		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(action.Amount, 'f', -1, 64)
+		H.currentActionMessage = p.Name + " raised to " + strconv.FormatFloat(H.currentBet, 'f', -1, 64)
 		return true
 
 	case "call":
