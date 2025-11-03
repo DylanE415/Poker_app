@@ -419,7 +419,11 @@ func streetLoop(h *Hand) {
 				// invalid -> keep waiting; timer continues
 
 			case <-timer.C:
-				// Timeout -> default move for THIS player
+				// Timeout -> default move for THIS
+				//if they are sitting out fold to timeout
+				if cur.sittingOut {
+					handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
+				}
 				if contains(h.avaliableActions, "check") {
 					handleAction(h, Action{PlayerID: cur.ID, Action: "check"})
 				} else {
