@@ -7,14 +7,16 @@
   <style>
     /* hide scrollbar in the action panel */
     .controls-right {
-      overflow-y: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
+      overflow-y: auto;             /* still scrollable */
+      scrollbar-width: none;        /* Firefox */
+      -ms-overflow-style: none;     /* old Edge/IE */
     }
     .controls-right::-webkit-scrollbar {
-      display: none;
+      display: none;                /* Chrome / Safari / iOS */
     }
 
+    /* optional: on very small screens give it a little more bottom padding
+       so your thumb doesn't hit the edge */
     @media (max-width: 780px) {
       .controls-right {
         padding-bottom: 1.25rem;
@@ -140,6 +142,7 @@
 
     .amountBoxWrap { display:flex; gap:0.35rem; align-items:center; }
 
+    /* hide native number spinners – we have custom ▲ ▼ */
     input.amountBox[type="number"]::-webkit-outer-spin-button,
     input.amountBox[type="number"]::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -245,8 +248,9 @@
       <div class="cards" id="myHand"></div>
 
       <!-- normal action panel -->
-      <div class="controls-right" id="actionPanel" style="display:none">
+      <div class="controls-right" id="actionPanel">
         <div class="sliderRow">
+          <!-- NOTE: slider now always 0..100, we map it in JS -->
           <input id="raiseSlider" type="range" min="0" max="100" step="1" value="0" />
           <div class="amountBoxWrap">
             <input id="raiseAmt" class="amountBox" type="number" step="0.25" min="0" value="0" />
@@ -275,8 +279,8 @@
         <div id="serverMsg" class="server-message"></div>
       </div>
 
-      <!-- shown when hero is sitting out or unknown -->
-      <div class="controls-right" id="sitInPanel" style="display:flex; gap:.75rem;">
+      <!-- shown when hero is sitting out -->
+      <div class="controls-right" id="sitInPanel" style="display:none; gap:.75rem;">
         <div class="muted">You&apos;re sitting out right now.</div>
         <button id="quickSitInBtn" type="button">Sit back in</button>
       </div>
@@ -295,6 +299,7 @@
       let lastHeroWas67 = false;
       let lastBoardLen = 0;
 
+      // NEW: current raise bounds for non-linear slider
       let currentRaiseMin = 0;
       let currentRaiseMax = 100;
 
@@ -303,6 +308,7 @@
         serverMsgEl.className = 'server-message' + (type ? ' ' + type : '') + (text ? ' show' : '');
       }
 
+      // AUDIO
       const chipSound = $('chipSound');
       const checkSound = $('checkSound');
       const audio67 = $('audio67');
@@ -341,6 +347,7 @@
         } catch {}
       })();
 
+      // API
       async function doFetch(url, opts) { return await fetch(url, Object.assign({ credentials:'include' }, opts||{})); }
       const api = {
         async join(room, stack) {
@@ -368,6 +375,7 @@
         async logout(){ location.href='/login'; }
       };
 
+      // ELEMENTS
       const roomSel = $('room'), stackInp = $('stack'),
             joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'),
             sitInBtn = $('sitInBtn'), sitOutBtn = $('sitOutBtn'),
@@ -378,6 +386,7 @@
             raiseUp = $('raiseUp'), raiseDown = $('raiseDown');
       const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
+      // NEW: panels for sitting in/out
       const actionPanel = $('actionPanel');
       const sitInPanel  = $('sitInPanel');
       const quickSitInBtn = $('quickSitInBtn');
@@ -390,6 +399,7 @@
         queuedLabel.style.display='inline';
       }
 
+      // JOIN/LEAVE/SIT
       joinBtn.addEventListener('click', async () => {
         pulse(joinBtn);
         const room = roomSel.value, stack = stackInp.value;
@@ -438,6 +448,7 @@
         } catch (e) { showMsg(`Sit out error: ${e.message}`, 'err'); }
       });
 
+      // quick sit in from panel
       if (quickSitInBtn) {
         quickSitInBtn.addEventListener('click', async () => {
           const room = roomSel.value;
@@ -456,19 +467,21 @@
         });
       }
 
+      // non-linear mapping helpers
       function sliderToAmount(sliderVal) {
         const t = Math.min(1, Math.max(0, sliderVal / 100));
-        const eased = t * t;
+        const eased = t * t; // quadratic: more precision at start
         return currentRaiseMin + (currentRaiseMax - currentRaiseMin) * eased;
       }
       function amountToSlider(amount) {
         if (currentRaiseMax <= currentRaiseMin) return 0;
         const norm = (amount - currentRaiseMin) / (currentRaiseMax - currentRaiseMin);
         const clamped = Math.min(1, Math.max(0, norm));
-        const t = Math.sqrt(clamped);
+        const t = Math.sqrt(clamped); // inverse of t^2
         return t * 100;
       }
 
+      // ACTIONS
       async function doActionWithQueued(act, amt=0, displayAmt=null) {
         const room = roomSel.value;
         const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn };
@@ -499,6 +512,7 @@
         doActionWithQueued('call', amt);
       });
 
+      // raise: send (raiseTo - handCurrentBet)
       raiseBtn.addEventListener('click', () => {
         const raiseTo = Number(raiseAmt.value) || 0;
         let handBet = Number(lastHandCurrentBet) || 0;
@@ -521,6 +535,7 @@
       clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
       ledgerBtn.addEventListener('click', () => {location.href = '/ledger';});
 
+      // Helpers
       function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
       function cardURL(card){
         const s = (card.suit||card.Suit||'').toString().toUpperCase();
@@ -537,6 +552,7 @@
         return img;
       }
 
+      // Countdown
       let rafId = 0, deadlineMsGlobal = 0, skewMsGlobal = 0;
       function getTimerEls(){
         const pill = document.querySelector('.act-timer-seat');
@@ -572,6 +588,7 @@
       }
       function stopCountdown(){ if (rafId) cancelAnimationFrame(rafId); rafId = 0; }
 
+      // slider stickiness
       let isAdjusting = false;
       raiseSlider.addEventListener('pointerdown', () => { isAdjusting = true; });
       document.addEventListener('pointerup', () => { isAdjusting = false; });
@@ -591,6 +608,7 @@
       raiseUp.addEventListener('click', () => bumpRaise(0.25));
       raiseDown.addEventListener('click', () => bumpRaise(-0.25));
 
+      // context key for betting
       let lastSliderCtx = '';
       function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
         return [
@@ -610,6 +628,7 @@
       const potEl = $('pot'), boardEl = $('board'), seatsLayer = $('seatsLayer'), betsLayer = $('betsLayer'), myHandEl = $('myHand');
       const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
 
+      // Polling
       const pollState = (() => {
         let timer=null;
         async function tick(){
@@ -652,7 +671,6 @@
       }
 
       let prevActionMessage='';
-
       function renderState(st){
         if (!st || (Object.keys(st).length===0)){
           potEl.textContent='—';
@@ -664,6 +682,7 @@
           lastHeroWas67 = false;
           lastBoardLen = 0;
 
+          // default to "no actions" if we have no state
           if (actionPanel) actionPanel.style.display = 'none';
           if (sitInPanel)  sitInPanel.style.display  = 'flex';
           return;
@@ -673,8 +692,10 @@
         const actorName = String(hand.actionPlayerName ?? hand.ActionPlayerName ?? '').trim();
         const sbName    = String(hand.smallBlindName   ?? hand.SmallBlindName   ?? '').trim();
 
+        // Pot
         potEl.textContent = fmtMoney(hand.pot ?? hand.Pot ?? '');
 
+        // Board
         const board = Array.isArray(hand.board ?? hand.Board) ? (hand.board ?? hand.Board) : [];
         const currentBoardLen = board.length;
         boardEl.innerHTML='';
@@ -686,96 +707,71 @@
         }
         lastBoardLen = currentBoardLen;
 
+        // ===== identify hero =====
         const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
-
-        // ==== HERO DETECTION (fixed) ====
         let heroIdx = -1;
-        let hero = null;
-        let heroSittingOut = true;
 
         if (myName) {
-          const meLower = myName.toLowerCase();
-          heroIdx = rawPlayers.findIndex(p => {
-            const pname = String(p.name ?? p.Name ?? '').trim().toLowerCase();
-            return pname === meLower;
-          });
+          heroIdx = rawPlayers.findIndex(p => String(p.name ?? p.Name ?? '').trim() === myName);
         }
+        // if still not found, fallback to first player
+        if (heroIdx < 0) heroIdx = 0;
 
-        if (heroIdx >= 0) {
-          hero = rawPlayers[heroIdx];
-          heroSittingOut = !!(hero.sittingOut ?? hero.SittingOut);
-        } else {
-          // we did NOT find ourselves → hide actions
-          hero = null;
-          heroSittingOut = true;
-        }
+        const hero = rawPlayers[heroIdx] || null;
+        const heroSittingOut = !!(hero && (hero.sittingOut ?? hero.SittingOut));
 
-        // show/hide panels ONLY based on THIS hero
+        // 👉 this is the important part 👇
         if (!hero || heroSittingOut) {
+          // hide *all* action controls, show sit-in panel
           if (actionPanel) actionPanel.style.display = 'none';
           if (sitInPanel)  sitInPanel.style.display  = 'flex';
         } else {
+          // normal playing view
           if (actionPanel) actionPanel.style.display = 'flex';
           if (sitInPanel)  sitInPanel.style.display  = 'none';
         }
+        // 👆 end important part
 
-        // seat layout (keep hero first if present)
-        let others = [];
-        let angles = [];
-        if (hero) {
-          others = [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)];
-          const heroTheta = heroPolar();
-          const othersTheta = otherPolars(others.length);
-          const players = [hero, ...others];
-          angles = [heroTheta, ...othersTheta];
+        // now continue with seat layout as before
+        const others = rawPlayers.length ? [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)] : [];
+        const heroTheta = heroPolar(); 
+        const othersTheta = otherPolars(others.length);
+        const players = hero ? [hero, ...others] : others.slice();
+        const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
-          seatsLayer.innerHTML='';
-          players.forEach((p,i)=>{
-            const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
-            const name = String(p.name ?? p.Name ?? '').trim();
-            const isActing = !!(actorName && name === actorName);
-            const isHero   = (i===0);
-            const isSB     = (name === sbName);
-            seatsLayer.appendChild( renderSeat(p, pos, isActing, isHero, isSB) );
-          });
-          renderBets(players, angles);
+        seatsLayer.innerHTML='';
+        players.forEach((p,i)=>{
+          const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
+          const name = String(p.name ?? p.Name ?? '').trim();
+          const isActing = !!(actorName && name === actorName);
+          const isHero   = (i===0);
+          const isSB     = (name === sbName);
+          seatsLayer.appendChild( renderSeat(p, pos, isActing, isHero, isSB) );
+        });
 
-          // my hand
-          myHandEl.innerHTML='';
-          const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
-          if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
+        renderBets(players, angles);
 
-          // 67 easter egg
-          if (Array.isArray(myCards) && myCards.length === 2) {
-            const r1 = parseInt(myCards[0].rank ?? myCards[0].Rank ?? 0, 10);
-            const r2 = parseInt(myCards[1].rank ?? myCards[1].Rank ?? 0, 10);
-            const is67 = ( (r1 === 6 && r2 === 7) || (r1 === 7 && r2 === 6) );
-            if (is67 && !lastHeroWas67) {
-              safePlay67();
-              lastHeroWas67 = true;
-            } else if (!is67) {
-              lastHeroWas67 = false;
-            }
-          } else {
+        // My hand
+        myHandEl.innerHTML='';
+        const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
+        if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
+
+        // 67 easter egg
+        if (Array.isArray(myCards) && myCards.length === 2) {
+          const r1 = parseInt(myCards[0].rank ?? myCards[0].Rank ?? 0, 10);
+          const r2 = parseInt(myCards[1].rank ?? myCards[1].Rank ?? 0, 10);
+          const is67 = ( (r1 === 6 && r2 === 7) || (r1 === 7 && r2 === 6) );
+          if (is67 && !lastHeroWas67) {
+            safePlay67();
+            lastHeroWas67 = true;
+          } else if (!is67) {
             lastHeroWas67 = false;
           }
         } else {
-          // no hero found → render seats as-is but no actions
-          seatsLayer.innerHTML='';
-          rawPlayers.forEach((p,i) => {
-            const pos = ellipseXY(heroPolar() + i*0.35, SEAT_RX, SEAT_RY);
-            const name = String(p.name ?? p.Name ?? '').trim();
-            const isActing = false;
-            const isHero = false;
-            const isSB = (name === sbName);
-            seatsLayer.appendChild( renderSeat(p, pos, isActing, isHero, isSB) );
-          });
-          betsLayer.innerHTML='';
-          myHandEl.innerHTML='';
           lastHeroWas67 = false;
         }
 
-        // action message
+        // Action message
         const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
         if (actionMsg){ 
           actionMsgEl.textContent=actionMsg; 
@@ -834,9 +830,9 @@
           showdownList.style.display = 'none';
         }
 
-        // right panel dynamic (only matters if hero exists)
+        // Right panel dynamic
         const avail = new Set(hand.avaliableActions || hand.availableActions || []);
-        const myBet   = hero ? (Number((hero.currentBet ?? hero.CurrentBet)) || 0) : 0;
+        const myBet   = Number((hero && (hero.currentBet ?? hero.CurrentBet)) ?? 0) || 0;
         const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
         lastHandCurrentBet = tableBet;
 
@@ -855,14 +851,20 @@
         }
         lastMinRaiseAdd = minAdd;
 
-        const myStack = hero ? (Number((hero.stack ?? hero.Stack)) || 0) : 0;
-        const sliderMin = Math.max(0, Math.round((tableBet + minAdd) * 100) / 100);
+        const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
+        // max raise-to = current table bet + whatever *you* can add
+        // but raise-to is capped by "my stack + myBet" (all-in to front)
+        const maxRaiseTo = Math.max(tableBet + minAdd, myBet + myStack);
+        // we don't want slider max to go *below* min
+        const baseRaiseTo = tableBet + minAdd;
+        const sliderMin = Math.max(0, Math.round(baseRaiseTo * 100) / 100);
         const sliderMax = Math.max(sliderMin, Math.round((myBet + myStack) * 100) / 100);
 
         currentRaiseMin = sliderMin;
         currentRaiseMax = sliderMax;
 
-        const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorName });
+        const actorNm = actorName;
+        const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorNm });
         const contextChanged = (ctx !== lastSliderCtx);
 
         const currentInputVal = Number(raiseAmt.value || NaN);
@@ -881,14 +883,15 @@
           raiseSlider.value = amountToSlider(kept);
         }
 
+        // disable fold when check is available (optional UX rule)
         if (avail.has('check')) {
           foldBtn.disabled = true;
         } else {
           foldBtn.disabled = false;
         }
 
-        checkBtn.disabled = !avail.has('check') || heroSittingOut;
-        callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001 || heroSittingOut;
+        checkBtn.disabled = !avail.has('check');
+        callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001;
         raiseBtn.disabled = !avail.has('raise') || heroSittingOut;
 
         lastSliderCtx = ctx;
@@ -964,6 +967,7 @@
         });
       }
 
+      // slider <-> number sync
       function syncFromSlider(){
         const sliderVal = Number(raiseSlider.value)||0;
         const amt = sliderToAmount(sliderVal);
@@ -980,6 +984,7 @@
       raiseSlider.addEventListener('input', syncFromSlider);
       raiseAmt.addEventListener('input',    syncFromBox);
 
+      // initial
       (async () => {
         try {
           const res = await api.state($('room').value);
@@ -987,9 +992,6 @@
         } catch {}
       })();
 
-      // expose for debugging
-      window.__setMyName = (n) => { myName = String(n||'').trim(); };
-      window.__renderState = renderState;
     });
   </script>
 </body>
