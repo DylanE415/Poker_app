@@ -22,9 +22,9 @@ func TestCollectSevenTwoBounty(t *testing.T) {
 	winner := mk("P1", 100)
 	winner.Hand = []Card{{Rank: "2", Suit: "H"}, {Rank: "7", Suit: "S"}}
 
-	// others: one deep, one exactly SB, one short-stacked
-	p2 := mk("P2", 100) // pays 5
-	p3 := mk("P3", 5)   // pays 5
+	// others: one deep, one exactly 2*SB, one short-stacked
+	p2 := mk("P2", 100) // pays 10
+	p3 := mk("P3", 10)  // pays 10 (exactly 2*SB)
 	p4 := mk("P4", 3)   // pays 3 (short)
 
 	h := &Hand{
@@ -46,10 +46,11 @@ func TestCollectSevenTwoBounty(t *testing.T) {
 
 	h.collectSevenTwoBounty(r, winner)
 
-	// Expected transfers (excluding the winner themselves):
-	expFromP2 := min(sb, startP2) // 5
-	expFromP3 := min(sb, startP3) // 5
-	expFromP4 := min(sb, startP4) // 3
+	// NEW: each other player owes up to 2 * small blind
+	bounty := 2 * sb
+	expFromP2 := min(bounty, startP2) // 10
+	expFromP3 := min(bounty, startP3) // 10
+	expFromP4 := min(bounty, startP4) // 3
 	expectedGain := expFromP2 + expFromP3 + expFromP4
 
 	// Winner: should only gain from others; must NOT pay themselves.
@@ -57,11 +58,11 @@ func TestCollectSevenTwoBounty(t *testing.T) {
 		t.Errorf("winner stack = %.2f, want %.2f", got, want)
 	}
 
-	// P2: -5
+	// P2: -10
 	if got, want := p2.Stack, startP2-expFromP2; got != want {
 		t.Errorf("P2 stack = %.2f, want %.2f", got, want)
 	}
-	// P3: -5
+	// P3: -10
 	if got, want := p3.Stack, startP3-expFromP3; got != want {
 		t.Errorf("P3 stack = %.2f, want %.2f", got, want)
 	}

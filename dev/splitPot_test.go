@@ -2,40 +2,29 @@ package main
 
 import (
 	"testing"
+	"time"
 )
 
 func Test_AllInPreflop_SplitPot_withThreePlayers(t *testing.T) {
-	// Initial stacks before hand:
-	p1 := &Player{ID: "P1", Name: "Player 1", Stack: 1800, pendingAction: make(chan Action, 2)}
-	p2 := &Player{ID: "P2", Name: "Player 2", Stack: 4400, pendingAction: make(chan Action, 2)}
-	p3 := &Player{ID: "P3", Name: "Player 3", Stack: 10000, pendingAction: make(chan Action, 2)}
+	// Stacks:
+	p1 := &Player{ID: "P1", Name: "Player 1", Stack: 1800, pendingAction: make(chan Action, 1)}  // BB (per engine log)
+	p2 := &Player{ID: "P2", Name: "Player 2", Stack: 4400, pendingAction: make(chan Action, 1)}  // UTG (acts first preflop)
+	p3 := &Player{ID: "P3", Name: "Player 3", Stack: 10000, pendingAction: make(chan Action, 1)} // SB (acts second preflop)
 
 	players := []*Player{p1, p2, p3}
 
-	// We want actor order preflop to start at P1.
-	// streetLoop sets actionPlayerIndex = smallBlindIndex, then does an initial SB "raise" of smallBlindSize
-	// and advances to (smallBlindIndex+1) next. So pick SB = P3 (index 2) so next is P1.
+	// Choose SB index so engine ends up with SB=P3, BB=P1 (as your log shows).
+	// Using sbIndex=2 with sbSize=0 keeps blinds from auto-posting and produces:
+	// preflop order: P2 → P3 → P1
 	const sbIndex = 2
-	const sbSize = 0.0 // avoid auto-bet interfering
+	const sbSize = 0.0
 
 	h := newHand(players, sbIndex, sbSize, nil)
-
-	// Everyone can act initially so nextEligible picks them.
 	for _, p := range h.Players {
 		p.canAct = true
 	}
 
-	// Build a deterministic deck so your evaluator gets:
-	// Board: K♣ K♦ Q♣ Q♦ 2♠
-	// P1: K♥ A♠   -> Full House KKKQQ
-	// P2: Q♥ 9♣   -> Full House QQQKK
-	// P3: K♠ J♠   -> Full House KKKQQ
-	//
-	// Dealing order in run():
-	//  - 2 rounds of hole cards: P1, P2, P3, then P1, P2, P3 (taking deck[0] each time)
-	//  - Flop: burn(1), 3 cards
-	//  - Turn: burn(1), 1 card
-	//  - River: burn(1), 1 card
+	// Deterministic deck:
 	deck := []Card{
 		// hole 1 (P1,P2,P3), hole 2 (P1,P2,P3)
 		C("H", 13), // P1: K♥
@@ -44,55 +33,69 @@ func Test_AllInPreflop_SplitPot_withThreePlayers(t *testing.T) {
 		C("S", 14), // P1: A♠
 		C("C", 9),  // P2: 9♣
 		C("S", 11), // P3: J♠
-
-		// burn for flop
+		// burn
 		C("C", 3),
-
 		// flop
 		C("C", 13), // K♣
 		C("D", 13), // K♦
 		C("C", 12), // Q♣
-
-		// burn for turn
+		// burn
 		C("D", 4),
-
 		// turn
 		C("D", 12), // Q♦
-
-		// burn for river
+		// burn
 		C("H", 5),
-
 		// river
 		C("S", 2), // 2♠
 	}
-
-	// Pad deck with junk to reach 52 if your code ever expects it
 	for len(deck) < 52 {
 		deck = append(deck, C("C", 2))
 	}
 	h.deck = deck
 
-	// Preflop betting we want:
-	// 1) P1 raises to 1800 total (all-in)        -> amount=1800 since currentBet=0
-	// 2) P2 re-raises so currentBet becomes 4400 -> amount=(4400-1800)=2600
-	// 3) P3 calls to 4400                        -> Action "call" (your code computes amount)
-	//
-	// streetLoop will read from the acting player's pendingAction channel.
-	// We enqueue exactly one action for each in turn.
+	done := make(chan struct{})
+	go func() { h.run(); close(done) }()
+
+	// PRE-FLOP (actor order: P2 → P3 → P1, then continues around)
+	// We follow the engine’s order but still realize the intended all-in line:
+	// P2 "call" (checks, since currentBet=0),
+	// P3 "call" (checks),
+	// P1 RAISE to 1800 (shove),
+	// P2 RERAISE to 4400 total (amount = 2600),
+	// P3 CALL to 4400.
+	time.Sleep(20 * time.Millisecond) // let dealing finish
+
+	// P2 first (UTG after BB)
+	p2.pendingAction <- Action{PlayerID: "P2", Action: "call"} // equivalent to check at 0
+
+	time.Sleep(120 * time.Millisecond)
+	// P3 second (SB)
+	p3.pendingAction <- Action{PlayerID: "P3", Action: "call"} // check
+
+	time.Sleep(120 * time.Millisecond)
+	// P1 third (BB) — now shove to 1800 total
 	p1.pendingAction <- Action{PlayerID: "P1", Action: "raise", Amount: 1800}
+
+	time.Sleep(140 * time.Millisecond)
+	// Next around: P2 acts again — reraise to 4400 total (delta = 2600)
 	p2.pendingAction <- Action{PlayerID: "P2", Action: "raise", Amount: 2600}
+
+	time.Sleep(140 * time.Millisecond)
+	// P3 calls to match 4400
 	p3.pendingAction <- Action{PlayerID: "P3", Action: "call"}
 
-	// Now run the full hand with your real logic, including side pots you built.
-	h.run()
+	// Optional: tiny nudge to close if your loop re-opens action
+	time.Sleep(80 * time.Millisecond)
 
-	// With correct side-pot logic, expected results:
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("hand.run did not finish in time")
+	}
+
+	// Expected results:
 	// - Main pot: 1800*3 = 5400 -> split P1 & P3 => 2700 each
 	// - Side pot: (4400-1800)*2 = 5200 -> P3 wins
-	// Final stacks:
-	// P1: 1800 - 1800 + 2700       = 2700
-	// P2: 4400 - 4400 + 0          = 0
-	// P3: 10000 - 4400 + 2700+5200 = 13500
 	if p1.Stack != 2700 {
 		t.Fatalf("P1 stack = %.0f, want 2700", p1.Stack)
 	}
@@ -108,83 +111,61 @@ func Test_AllInPreflop_SplitPot_withThreePlayers(t *testing.T) {
 }
 
 func Test_AllInPreflop_splitPot_with2Players(t *testing.T) {
-	p1 := Player{ID: "P1", Name: "P1", Stack: 1000, pendingAction: make(chan Action, 2)}
-	p2 := Player{ID: "P2", Name: "P2", Stack: 1000, pendingAction: make(chan Action, 2)}
+	p1 := &Player{ID: "P1", Name: "P1", Stack: 1000, pendingAction: make(chan Action, 1)}
+	p2 := &Player{ID: "P2", Name: "P2", Stack: 1000, pendingAction: make(chan Action, 1)}
+	players := []*Player{p1, p2}
 
-	players := []*Player{&p1, &p2}
-	sbIndex := 0
-	sbSize := 0.0
+	const sbIndex = 0
+	const sbSize = 0.0
 
 	h := newHand(players, sbIndex, sbSize, nil)
-
-	// Everyone can act initially so nextEligible picks them.
 	for _, p := range h.Players {
 		p.canAct = true
 	}
 
-	// Build a deterministic deck so your evaluator gets:
-	// Board: 8♣ 8♦ 10♣ 10♦ 2♠
-	// P1: K♥ 8♠   -> Full House 1010888
-	// P2: 8♥ 3♣   -> Full House 1010888
-	//
-	// Dealing order in run():
-	//  - 2 rounds of hole cards: P1, P2, P3, then P1, P2, P3 (taking deck[0] each time)
-	//  - Flop: burn(1), 3 cards
-	//  - Turn: burn(1), 1 card
-	//  - River: burn(1), 1 card
 	deck := []Card{
-		C("H", 13), // P1
-		C("H", 8),  // P2
-		C("S", 8),  // P1
-		C("C", 3),  // P2
-
-		// burn for flop
+		C("H", 13), C("H", 8),
+		C("S", 8), C("C", 3),
 		C("C", 3),
-
-		// flop
-		C("C", 8),  // 8♣
-		C("D", 8),  // 8♦
-		C("S", 10), // 10♣
-
-		// burn for turn
-		C("D", 4), //
-
-		// turn
-		C("D", 10), // 10♦
-
-		// burn for river
+		C("C", 8), C("D", 8), C("S", 10),
+		C("D", 4),
+		C("D", 10),
 		C("H", 5),
-
-		// river
-		C("S", 2), // 2♠
+		C("S", 2),
 	}
-
-	// Pad deck with junk to reach 52 if your code ever expects it
 	for len(deck) < 52 {
 		deck = append(deck, C("C", 2))
 	}
 	h.deck = deck
 
-	// Preflop betting we want:
-	// streetLoop will read from the acting player's pendingAction channel.
-	// We enqueue exactly one action for each in turn.
+	done := make(chan struct{})
+	go func() { h.run(); close(done) }()
+
+	time.Sleep(20 * time.Millisecond)
 	p1.pendingAction <- Action{PlayerID: "P1", Action: "raise", Amount: 1000}
-	p2.pendingAction <- Action{PlayerID: "P2", Action: "raise", Amount: 1000}
 
-	// Now run the full hand with your real logic, including side pots you built.
-	h.run()
+	time.Sleep(140 * time.Millisecond)
+	p2.pendingAction <- Action{PlayerID: "P2", Action: "call"}
 
-	// With correct side-pot logic, expected results:
-	// Final stacks:
-	//split pot so 1000 each
+	// Optional safety clear (usually unnecessary in heads-up all-in)
+	select {
+	case p1.pendingAction <- Action{PlayerID: "P1", Action: "clear"}:
+	default:
+	}
+
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("hand.run did not finish in time")
+	}
+
 	if p1.Stack != 1000 {
-		t.Fatalf("P1 stack = %.0f, want 2700", p1.Stack)
+		t.Fatalf("P1 stack = %.0f, want 1000", p1.Stack)
 	}
 	if p2.Stack != 1000 {
-		t.Fatalf("P2 stack = %.0f, want 0", p2.Stack)
+		t.Fatalf("P2 stack = %.0f, want 1000", p2.Stack)
 	}
 	if h.pot != 0 {
 		t.Fatalf("remaining pot = %.0f, want 0", h.pot)
 	}
-
 }

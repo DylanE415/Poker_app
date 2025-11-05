@@ -244,6 +244,7 @@ func handleAction(H *Hand, action Action) bool {
 	case "check":
 		H.Players[H.actionPlayerIndex].canAct = false
 		H.currentActionMessage = H.Players[H.actionPlayerIndex].Name + " checked"
+		time.Sleep(200 * time.Millisecond)
 		return true
 	case "raise":
 		p := H.Players[H.actionPlayerIndex]
@@ -264,6 +265,7 @@ func handleAction(H *Hand, action Action) bool {
 
 			p.canAct = false
 			H.currentActionMessage = p.Name + " called all in for " + strconv.FormatFloat(contrib, 'f', -1, 64)
+			time.Sleep(200 * time.Millisecond)
 			return true
 		}
 
@@ -289,6 +291,7 @@ func handleAction(H *Hand, action Action) bool {
 			//   H.currentBet
 			//   H.raiseAmount
 			//   other players' canAct flags
+			time.Sleep(200 * time.Millisecond)
 			return true
 		}
 
@@ -314,6 +317,7 @@ func handleAction(H *Hand, action Action) bool {
 		p.canAct = false
 
 		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(desiredRaise, 'f', -1, 64)
+		time.Sleep(200 * time.Millisecond)
 		return true
 
 	case "call":
@@ -330,6 +334,7 @@ func handleAction(H *Hand, action Action) bool {
 		H.Players[H.actionPlayerIndex].canAct = false
 
 		H.currentActionMessage = H.Players[H.actionPlayerIndex].Name + " called"
+		time.Sleep(200 * time.Millisecond)
 		return true
 
 	case "fold":
@@ -345,6 +350,7 @@ func handleAction(H *Hand, action Action) bool {
 			}
 		}
 		H.lock.Unlock()
+		time.Sleep(200 * time.Millisecond)
 		return found
 
 		//for players to clear whatever action is in their action queue
