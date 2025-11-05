@@ -5,6 +5,7 @@
   <title>Poker — Table</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
+
         /* hide scrollbar in the action panel */
 .controls-right {
   overflow-y: auto;             /* still scrollable */
@@ -449,7 +450,7 @@
         return t * 100;
       }
 
-      // ACTIONS (no sounds here)
+      // ACTIONS
       async function doActionWithQueued(act, amt=0, displayAmt=null) {
         const room = roomSel.value;
         const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn };
@@ -463,9 +464,10 @@
             const shown = displayAmt != null ? displayAmt : amt;
             setQueuedDisplay(`Raise to ${shown.toFixed(2)}`);
             showMsg(`Action: raise to ${shown.toFixed(2)}`, 'ok');
+            safePlayChip();
           }
-          else if (act === 'call') { setQueuedDisplay('Call'); showMsg('Action: call', 'ok'); }
-          else if (act === 'check') { setQueuedDisplay('Check'); showMsg('Action: check', 'ok'); }
+          else if (act === 'call') { setQueuedDisplay('Call'); showMsg('Action: call', 'ok'); safePlayChip(); }
+          else if (act === 'check') { setQueuedDisplay('Check'); showMsg('Action: check', 'ok'); safePlayCheck(); }
           else if (act === 'fold') { setQueuedDisplay('Fold'); showMsg('Action: fold', 'ok'); }
           else if (act === 'clear') { setQueuedDisplay(''); showMsg('Cleared action', 'ok'); }
 
@@ -715,7 +717,7 @@
           lastHeroWas67 = false;
         }
 
-        // Action message (sounds only here)
+        // Action message
         const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
         if (actionMsg){ 
           actionMsgEl.textContent=actionMsg; 
