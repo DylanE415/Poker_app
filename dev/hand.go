@@ -191,15 +191,40 @@ func buildSidePots(H *Hand) []SidePot {
 
 }
 
-// if only 1 or 0 players can act, skip to showdown
+func shouldEndHand(H *Hand) bool {
+	return len(H.Players) == 1 || H.pot == 0
+}
+
+// if hand ended before showdown(1 player left), award pot to winning player, send message
+func endHandEarly(H *Hand) {
+	winningPlayer := H.Players[0]
+	if isSevenTwoOff(winningPlayer) {
+		//change state to showdown because frontend needs that to display the message
+		H.currentState = "showdown"
+		H.showDownMessage = fmt.Sprintf("%s wins %s and gets 7 2 bounty", winningPlayer.Name, strconv.FormatFloat(H.pot, 'f', 2, 64))
+		time.Sleep(4 * time.Second)
+		H.collectSevenTwoBounty(H.Room, winningPlayer)
+		winningPlayer.Stack += H.pot
+		H.pot = 0
+	}
+	H.currentState = "showdown"
+	H.showDownMessage = fmt.Sprintf("%s wins %s", winningPlayer.Name, strconv.FormatFloat(H.pot, 'f', 2, 64))
+	time.Sleep(4 * time.Second)
+	winningPlayer.Stack += H.pot
+	H.pot = 0
+}
+
+// if there are 2 or more players and they is only 1 or 0 players with anything left in stack
+// we skip to showdown as they cannot act and are all in
 func skipToShowdown(H *Hand) bool {
-	playersLeft := 0
+	playersCanAct := 0
+	totalPlayers := len(H.Players)
 	for i := range H.Players {
 		if checkPlayerCanAct(H.Players[i]) {
-			playersLeft++
+			playersCanAct++
 		}
 	}
-	if playersLeft <= 1 {
+	if totalPlayers >= 2 && playersCanAct <= 1 {
 		return true
 	}
 	return false
@@ -212,6 +237,8 @@ func handleAction(H *Hand, action Action) bool {
 		print("invalid action\n")
 		return false
 	}
+	//round float to nearest cent
+	action.Amount = roundToNearestCent(action.Amount)
 
 	switch action.Action {
 	case "check":
@@ -494,6 +521,9 @@ func (h *Hand) run() {
 		if skipToShowdown(h) {
 			h.skipToShowdown = true
 			h.actionPlayerIndex = 0
+		} else if shouldEndHand(h) {
+			endHandEarly(h)
+			return
 		}
 		h.currentState = "flop"
 	}
@@ -513,13 +543,15 @@ func (h *Hand) run() {
 
 		if !h.skipToShowdown {
 			streetLoop(h)
-		} else {
-			h.actionPlayerIndex = 0
 		}
-		//check if we should skip to showdown
+
+		//check if we should skip to showdown/end
 		if skipToShowdown(h) {
 			h.skipToShowdown = true
 			h.actionPlayerIndex = 0
+		} else if shouldEndHand(h) {
+			endHandEarly(h)
+			return
 		}
 		//wait 1 sec to display board
 		time.Sleep(1 * time.Second)
@@ -540,13 +572,14 @@ func (h *Hand) run() {
 		}
 		if !h.skipToShowdown {
 			streetLoop(h)
-		} else {
-			h.actionPlayerIndex = 0
 		}
 
 		if skipToShowdown(h) {
 			h.skipToShowdown = true
 			h.actionPlayerIndex = 0
+		} else if shouldEndHand(h) {
+			endHandEarly(h)
+			return
 		}
 		time.Sleep(1 * time.Second)
 		h.currentState = "river"
@@ -566,9 +599,13 @@ func (h *Hand) run() {
 		}
 		if !h.skipToShowdown {
 			streetLoop(h)
-		} else {
-			h.actionPlayerIndex = 0
 		}
+		//no need to check for a skip to showdown since it is next street,but still check end
+		if shouldEndHand(h) {
+			endHandEarly(h)
+			return
+		}
+
 		time.Sleep(1 * time.Second)
 
 	}
@@ -671,18 +708,12 @@ func (h *Hand) run() {
 	h.showDownMessage = showdownmessage
 	time.Sleep(5 * time.Second)
 	h.showDownMessage = ""
-	h.showDownHands = nil
-	// take players with 0 stack out of hand
-	tmp := h.Players[:0] // reuse capacity
-	for _, p := range h.Players {
-		if p.Stack > 0 { // consider <= 0 if using floats
-			tmp = append(tmp, p)
-		}
-		if p.Stack <= 0 {
-			p.sittingOut = true
+
+	//make all players with 0 stack sitting out
+	for i := range h.Players {
+		if h.Players[i].Stack <= 0 {
+			h.Players[i].sittingOut = true
 		}
 	}
-	h.Players = tmp
 
-	h.skipToShowdown = false
 }

@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -97,4 +98,9 @@ func FindPlayerIndex(H *Hand, id string) int {
 		}
 	}
 	return -1
+}
+
+// move dcimal over 2 and round
+func roundToNearestCent(n float64) float64 {
+	return math.Round(n*100) / 100
 }
