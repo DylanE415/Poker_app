@@ -35,6 +35,7 @@ type Hand struct {
 	smallBlindIndex      int
 	smallBlindSize       float64
 	smallBlindName       string
+	bigBlindName         string
 	skipToShowdown       bool
 	showDownHands        []showDownHand
 	showDownMessage      string
@@ -127,11 +128,10 @@ func removePlayerAt(h *Hand, idx int) {
 		h.smallBlindName = h.Players[h.smallBlindIndex].Name
 	}
 
-	// fix action player
+	// if the player that folded is acting
 	if h.actionPlayerIndex == idx {
-		// actor folded
-		// put action on the LAST seat so the loop's "+1" hops to seat 0 (SB)
-		h.actionPlayerIndex = n - 1
+		// set to the seat just before the removed one, so +1 below hits the correct next actor
+		h.actionPlayerIndex = (idx - 1 + n) % n
 	} else if h.actionPlayerIndex > idx {
 		h.actionPlayerIndex--
 	}
@@ -254,7 +254,6 @@ func handleAction(H *Hand, action Action) bool {
 			p.potCommitment += totalPut
 			p.Stack = 0
 			p.currentBet += totalPut
-			p.potCommitment += totalPut
 			H.pot += totalPut
 
 			p.canAct = false
@@ -347,6 +346,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64, 
 		actionPlayerIndex: smallBlindPosition,
 		smallBlindIndex:   smallBlindPosition,
 		smallBlindName:    players[smallBlindPosition].Name,
+		bigBlindName:      players[(smallBlindPosition+1)%len(players)].Name,
 		deck:              deck,
 		currentState:      "pre-flop",
 		pot:               0,
@@ -361,7 +361,6 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64, 
 
 func streetLoop(h *Hand) {
 	h.actionPlayerIndex = h.smallBlindIndex
-	h.smallBlindName = h.Players[h.smallBlindIndex].Name
 	//if pre flop small blind raises
 	if h.currentState == "pre-flop" {
 		print("small blind is: ", h.Players[h.actionPlayerIndex].ID, "\n")
@@ -379,7 +378,7 @@ func streetLoop(h *Hand) {
 	for {
 
 		//check if everyone called the blind, then set actions to either check/raise/fold for big blind
-		if h.currentBet == (h.smallBlindSize*2) && h.actionPlayerIndex == ((h.smallBlindIndex+1)%len(h.Players)) && h.Players[h.actionPlayerIndex].currentBet == h.smallBlindSize*2 {
+		if h.currentBet == (h.smallBlindSize*2) && h.bigBlindName == h.Players[h.actionPlayerIndex].Name && h.Players[h.actionPlayerIndex].currentBet == h.smallBlindSize*2 {
 			h.avaliableActions = []string{"check", "raise", "fold", "clear"}
 		}
 		// if only one player left, street over

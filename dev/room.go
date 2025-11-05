@@ -355,8 +355,8 @@ func (r *Room) run() {
 				}
 
 				//if player had already had 1 chip in front of them and they raised a raise of 2 by 1 then they would only need to bet 2 more chips
-				playerBet := cmd.actionAmt + player.currentBet
-				if (playerBet < h.currentBet) && cmd.ActionType == "raise" {
+
+				if (cmd.actionAmt < h.raiseAmount) && cmd.ActionType == "raise" {
 					safeReply(cmd.reply, fmt.Errorf("not enough chips to raise"))
 					break
 				}

@@ -800,8 +800,11 @@
         const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
         const baseRaiseTo = tableBet + minAdd;
 
+        // how much I can ever show in the box/slider:
+        const maxRaiseTo = myBet + myStack;
+
         const sliderMin = Math.max(0, Math.round(baseRaiseTo * 100) / 100);
-        const sliderMax = Math.max(sliderMin, Math.round(myStack * 100) / 100);
+        const sliderMax = Math.max(sliderMin, Math.round(maxRaiseTo * 100) / 100);
 
         currentRaiseMin = sliderMin;
         currentRaiseMax = sliderMax;

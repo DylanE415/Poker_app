@@ -11,15 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// to prevent people from getting to the play page without logging in
-func (s *Server) playPage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.userIDFromRequest(r); !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-	// serve play.html
-}
-
 /* === HTTP server handlers === */
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
