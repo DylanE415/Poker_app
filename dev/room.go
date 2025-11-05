@@ -346,7 +346,13 @@ func (r *Room) run() {
 					safeReply(cmd.reply, fmt.Errorf("no hand in progress"))
 					break
 				}
-				if !contains(h.avaliableActions, cmd.ActionType) {
+
+				h.lock.Lock()
+				validAction := contains(h.avaliableActions, cmd.ActionType)
+				minRaise := h.raiseAmount
+				h.lock.Unlock()
+
+				if !validAction {
 					safeReply(cmd.reply, fmt.Errorf("invalid action"))
 					break
 				}
@@ -356,7 +362,7 @@ func (r *Room) run() {
 
 				//if player had already had 1 chip in front of them and they raised a raise of 2 by 1 then they would only need to bet 2 more chips
 
-				if (cmd.actionAmt < h.raiseAmount) && cmd.ActionType == "raise" {
+				if (cmd.actionAmt < minRaise) && cmd.ActionType == "raise" {
 					safeReply(cmd.reply, fmt.Errorf("not enough chips to raise"))
 					break
 				}
@@ -400,13 +406,17 @@ func (r *Room) run() {
 				//must now lock the hand thread to ensure that the hand is not being updated while we are sending it to the player
 				if h != nil {
 					h.lock.Lock()
+					actionPlayerName := ""
+					if h.actionPlayerIndex >= 0 && h.actionPlayerIndex < len(h.Players) {
+						actionPlayerName = h.Players[h.actionPlayerIndex].Name
+					}
 					state.Hand = handState{
 						Board:                   h.board,
 						Pot:                     h.pot,
 						AvaliableActions:        h.avaliableActions,
 						RaiseAmount:             h.raiseAmount,
 						CurrentBet:              h.currentBet,
-						ActionPlayerName:        h.Players[h.actionPlayerIndex].Name,
+						ActionPlayerName:        actionPlayerName,
 						Street:                  h.currentState,
 						ShowDownMessage:         h.showDownMessage,
 						ShowDownHands:           h.showDownHands,

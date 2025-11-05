@@ -622,7 +622,7 @@ func (h *Hand) run() {
 	playerHands := make([]playerHand, len(h.Players))
 	for i := range h.Players {
 		playerHands[i] = playerHand{playerId: h.Players[i].ID, hand: getPlayerBestHand(h, h.Players[i])}
-		showdownhands = append(showdownhands, showDownHand{PlayerName: h.Players[i].Name, Hand: h.Players[i].Hand})
+		showdownhands[i] = showDownHand{PlayerName: h.Players[i].Name, Hand: h.Players[i].Hand}
 
 	}
 
@@ -653,7 +653,7 @@ func (h *Hand) run() {
 				amountCanWin := currentPot.Amount
 				h.Players[tmpIndex].Stack += amountCanWin
 				h.pot -= amountCanWin
-				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.FormatFloat(amountCanWin, 'f', -1, 64) + " with " + string(winningHands[i].hand.Type)
+				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.FormatFloat(amountCanWin, 'f', -1, 64) + " with " + string(winningHands[0].hand.Type)
 				if isSevenTwoOff(h.Players[tmpIndex]) {
 					h.collectSevenTwoBounty(h.Room, h.Players[tmpIndex])
 					showdownmessage += h.Players[tmpIndex].Name + " collected 7 2 bounty"
@@ -662,10 +662,10 @@ func (h *Hand) run() {
 		} else {
 			print("side pot is:", currentPot.Amount, "\n")
 			//if the player id is not in the side pot they can't win(remove them from playerhands)
-			tmpPlayerHands := make([]playerHand, len(playerHands))
+			tmpPlayerHands := make([]playerHand, 0, len(playerHands))
 			for j := range playerHands {
 				if contains(currentPot.eligiblePlayerIDs, playerHands[j].playerId) {
-					tmpPlayerHands[j] = playerHands[j]
+					tmpPlayerHands = append(tmpPlayerHands, playerHands[j])
 
 				}
 			}
@@ -695,10 +695,10 @@ func (h *Hand) run() {
 	}
 
 	//if only 1 player dont show hand unless it is 7 2 off
-	if len(showdownhands) <= 2 {
-		if ((showdownhands[1].Hand[0].Rank == "7" && showdownhands[1].Hand[1].Rank == "2") && showdownhands[1].Hand[0].Suit != showdownhands[1].Hand[1].Suit) || ((showdownhands[1].Hand[1].Rank == "7" && showdownhands[1].Hand[0].Rank == "2") && showdownhands[1].Hand[0].Suit != showdownhands[1].Hand[1].Suit) {
+	if len(showdownhands) <= 1 {
+		if ((showdownhands[0].Hand[0].Rank == "7" && showdownhands[0].Hand[1].Rank == "2") && showdownhands[0].Hand[0].Suit != showdownhands[0].Hand[1].Suit) || ((showdownhands[0].Hand[1].Rank == "7" && showdownhands[0].Hand[0].Rank == "2") && showdownhands[0].Hand[0].Suit != showdownhands[0].Hand[1].Suit) {
 		} else {
-			showdownmessage = showdownhands[1].PlayerName + " wins"
+			showdownmessage = showdownhands[0].PlayerName + " wins"
 			showdownhands = nil
 		}
 	}
