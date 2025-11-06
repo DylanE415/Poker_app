@@ -87,7 +87,7 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .bet-chip img { width:22px; height:22px; display:block; }
 .bet-chip .amt { font-size:.8rem; font-weight:600; color:#e5f0ff; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:8px; padding:.1rem .32rem; }
 
-.cardimg { width:74px; height:108px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
+.cardimg { width:80px; height:115px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
 @media (max-width:520px){ .cardimg{ width:50px; height:84px; } }
 
 .hud { position:absolute; left:50%; top: 27%; transform: translateX(-50%); display:flex; gap:1rem; align-items:center; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.45rem .8rem; font-size:.95rem; z-index: 3; pointer-events:none; }
@@ -120,7 +120,7 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 /* right column */
 .myhand {
   position: relative;
-  width: min(560px, 70vw);           /* wider container so content can sit further left */
+  width: min(580px, 70vw);
   margin: 0.25rem auto 0;
   z-index:10;
   display:grid;
@@ -130,11 +130,12 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 }
 .myhand .cards {
   display:flex; gap:.45rem; justify-content:flex-start;
-  margin-left: 12px; /* nudge the hole cards slightly to the right */
+  margin-left: 12px; /* nudge hole cards slightly right */
 }
 
 /* emote panel */
 .emote-panel {
+  position: relative; /* so the menu can anchor */
   display:flex;
   flex-direction:column;
   gap:.5rem;
@@ -142,12 +143,44 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
   justify-content:flex-start;
   margin-left: -8px; /* pull emote button slightly left */
 }
-#emoteAngleBtn { min-width: 80px; }
+#emoteBtn { min-width: 140px; }
+
+/* Emote menu (popover) */
+.emote-menu {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  background: rgba(12,20,44,.98);
+  border:1px solid #2b3b71;
+  border-radius: 10px;
+  padding: .35rem;
+  box-shadow: 0 10px 24px rgba(0,0,0,.45);
+  display: none;
+  min-width: 160px;
+  z-index: 50;
+}
+.emote-menu.open { display:block; }
+.emote-item {
+  display:block;
+  width:100%;
+  text-align:left;
+  padding:.45rem .6rem;
+  border-radius:8px;
+  border:1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.emote-item:hover,
+.emote-item:focus { background:#182a5c; border-color:#2b3b71; outline: none; }
+.emote-item[disabled] { opacity:.5; cursor:not-allowed; }
+
+#emoteCooldown { font-size: .8rem; color: var(--muted); }
 
 /* controls column */
 .controls-right {
   background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px;
-  padding:.6rem .7rem; display:flex; flex-direction:column; gap:.55rem;
+  padding:.45rem .55rem; display:flex; flex-direction:column; gap:.4rem;
+  font-size: .92rem; 
 }
 .sliderRow { display:flex; align-items:center; gap:.6rem; }
 .sliderRow input[type="range"] { flex:1; }
@@ -159,7 +192,7 @@ input.amountBox[type="number"]::-webkit-outer-spin-button,
 input.amountBox[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input.amountBox[type="number"] { -moz-appearance: textfield; }
 
-.amountBox { width:6.6rem; text-align:center; }
+.amountBox { width:5.2rem; text-align:center; }
 .spinnerButtons { display:flex; flex-direction:column; gap:0.35rem; }
 .spinBtn {
   width:1.8rem; height:1.6rem; display:flex; align-items:center; justify-content:center;
@@ -168,7 +201,7 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
 
 .btnRow { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:.6rem; }
 .btnRow.single { grid-template-columns: 1fr; }
-.btnBig { padding: .9rem .7rem; font-weight: 700; font-size: 1.05rem; }
+.btnBig { padding: .75rem .6rem; font-weight: 700; font-size: 1.05rem; }
 .btnFold { background:#7d2b2b; border-color:#9a3b3b; }
 .btnCall { background:#184d2f; border-color:#256845; }
 .btnRaise { background:#60451f; border-color:#7a3b3b; }
@@ -189,16 +222,15 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
 /* ===== Emote bubble ===== */
 .emote-bubble {
   position: absolute;
-  font-size: 1.6rem;
+  font-size: 1.1rem;
+  line-height: 1.15;
   top: -10px;
   left: 100%;
-  line-height: 1; 
-  padding: .38rem .62rem;
+  padding: .28rem .48rem;
   transform: translate(-12%, -100%);
   background: rgba(18, 27, 58, .92);
   border: 1px solid #2b3b71;
   color: #e9efff;
-  padding: .30rem .55rem;
   border-radius: 14px;
   font-weight: 700;
   white-space: nowrap;
@@ -220,11 +252,7 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
   from { transform: translate(-12%, -120%) scale(.96); opacity: 0; }
   to   { transform: translate(-12%, -100%)  scale(1);   opacity: 1; }
 }
-/* keep bubble visible without re-animating every poll */
 .emote-bubble.sticky { animation: none; opacity: 1; }
-
-/* cooldown label under the emote button */
-.emote-cooldown { font-size: .8rem; color: var(--muted); margin-top: .25rem; }
   </style>
 </head>
 <body>
@@ -284,7 +312,8 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
     <section class="myhand">
       <!-- Emote column (left of hole cards) -->
       <div class="emote-panel">
-        <button id="emoteAngleBtn" type="button" title="Send angle emote">📐 Emote</button>
+        <button id="emoteBtn" type="button" aria-haspopup="menu" aria-expanded="false" title="Send an emote">Emote</button>
+        <div id="emoteMenu" class="emote-menu" role="menu" aria-label="Emotes"></div>
         <div id="emoteCooldown" class="emote-cooldown" aria-live="polite"></div>
       </div>
 
@@ -327,6 +356,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const $ = (id) => document.getElementById(id);
   const statusEl = $('status'), whoEl = $('who');
   const serverMsgEl = $('serverMsg');
+
+  // Text-only emotes; add/remove items here
+  const EMOTES = [
+    { type: 'angle', label: 'Angle' },
+    { type: 'sick',  label: 'So Sick' },
+    { type: 'itsPoker', label: "It's Poker Phil" },
+  ];
 
   let currentQueued = '';
   let lastHandCurrentBet = 0;
@@ -427,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
         raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
         raiseUp = $('raiseUp'), raiseDown = $('raiseDown'),
-        emoteAngleBtn = $('emoteAngleBtn'),
+        emoteBtn = $('emoteBtn'), emoteMenu = $('emoteMenu'),
         emoteCooldownEl = $('emoteCooldown');
   const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
@@ -438,6 +474,65 @@ document.addEventListener('DOMContentLoaded', () => {
     queuedValue.textContent = text || '—';
     queuedLabel.style.display='inline';
   }
+
+  // ===== Emote button + popover menu =====
+  function buildEmoteMenu(){
+    emoteMenu.innerHTML = '';
+    for (const e of EMOTES) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'emote-item';
+      btn.setAttribute('role', 'menuitem');
+      btn.dataset.emoteType = e.type;
+      btn.textContent = e.label;
+      btn.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        if (emoteBtn.disabled) return;
+        const room = roomSel.value;
+        try {
+          emoteBtn.disabled = true;
+          emoteBtn.title = 'Sending emote...';
+          const res = await api.emote(room, e.type);
+          if (res.status === 401) { location.href='/login'; return; }
+          if (!res.ok) {
+            const txt = (await res.text()).trim();
+            showMsg(`Emote failed: ${res.status} ${txt}`, 'err');
+          } else {
+            showMsg('Emote sent!', 'ok');
+            pollState.soon();
+          }
+        } catch (err) {
+          showMsg(`Emote error: ${err?.message||err}`, 'err');
+        } finally {
+          closeEmoteMenu();
+          // Re-enable; cooldown UI will immediately update after next state tick
+          emoteBtn.disabled = false;
+          emoteBtn.title = 'Send an emote';
+        }
+      });
+      emoteMenu.appendChild(btn);
+    }
+  }
+  function openEmoteMenu(){
+    if (emoteBtn.disabled) return;
+    emoteMenu.classList.add('open');
+    emoteBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeEmoteMenu(){
+    emoteMenu.classList.remove('open');
+    emoteBtn.setAttribute('aria-expanded', 'false');
+  }
+  emoteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (emoteMenu.classList.contains('open')) closeEmoteMenu();
+    else openEmoteMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if (!emoteMenu.contains(e.target) && e.target !== emoteBtn) {
+      closeEmoteMenu();
+    }
+  });
+  buildEmoteMenu();
 
   // JOIN/LEAVE/SIT
   joinBtn.addEventListener('click', async () => {
@@ -561,46 +656,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('clearBtn').addEventListener('click', () => doActionWithQueued('clear'));
   $('ledgerBtn').addEventListener('click', () => {location.href = '/ledger';});
 
-  // ===== Angle-only emote =====
-  if (emoteAngleBtn) {
-    emoteAngleBtn.addEventListener('click', async () => {
-      pulse(emoteAngleBtn);
-      const room = roomSel.value;
-      try {
-        emoteAngleBtn.disabled = true; // optimistic lock; UI will refresh on poll
-        const res = await api.emote(room, 'angle');
-        if (res.status === 401) { location.href='/login'; return; }
-        if (!res.ok) {
-          const txt = (await res.text()).trim();
-          showMsg(`Emote failed: ${res.status} ${txt}`, 'err');
-          return;
-        }
-        showMsg('Emote sent!', 'ok');
-      } catch (e) {
-        showMsg(`Emote error: ${e?.message||e}`, 'err');
-      }
-    });
-  }
-
-  // Helpers
-  function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
-  function cardURL(card){
-    const s = (card.suit||card.Suit||'').toString().toUpperCase();
-    const r = (card.rank||card.Rank||'');
-    const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
-    let rt = ''; const n=Number(r);
-    if(Number.isFinite(n)){
-      rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':'';
-    } else {
-      const up=String(r).toUpperCase();
-      rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':'';
+  // Remove emojis/pictographs so emote display stays text-only
+  function stripEmoji(s) {
+    if (!s) return s;
+    try {
+      return s.replace(/\p{Extended_Pictographic}/gu, '').replace(/\s{2,}/g, ' ').trim();
+    } catch {
+      return s.replace(/[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F6FF}\u{2600}-\u{27BF}]/gu, '').replace(/\s{2,}/g,' ').trim();
     }
-    return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
-  }
-  function renderCardImg(card){
-    const img=document.createElement('img'); img.className='cardimg'; const url=cardURL(card);
-    if(url){ img.src=url; img.alt=url.split('/').pop(); } else { img.alt='??'; img.title=JSON.stringify(card); }
-    return img;
   }
 
   // Countdown
@@ -695,7 +758,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${(secs*1000|0)}ms`;
   }
   function updateEmoteCooldownUI(hero, handServerNowMs){
-    if (!emoteCooldownEl) return;
     const nextAt = Number(hero?.nextEmoteAt ?? hero?.NextEmoteAt ?? 0);
     let nowMs = Number(handServerNowMs);
     if (!Number.isFinite(nowMs) || nowMs <= 0) nowMs = Date.now();
@@ -703,12 +765,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (secs > 0) {
       emoteCooldownEl.textContent = `Cooldown: ${formatSecs(secs)}`;
-      emoteAngleBtn.disabled = true;
-      emoteAngleBtn.title = `Cooldown ${formatSecs(secs)}`;
+      emoteBtn.disabled = true;
+      emoteBtn.title = `Cooldown ${formatSecs(secs)}`;
+      closeEmoteMenu();
+      // also disable menu items visually
+      emoteMenu.querySelectorAll('.emote-item').forEach(b => b.setAttribute('disabled',''));
     } else {
       emoteCooldownEl.textContent = 'Ready';
-      emoteAngleBtn.disabled = false;
-      emoteAngleBtn.title = 'Send angle emote';
+      emoteBtn.disabled = false;
+      emoteBtn.title = 'Send an emote';
+      emoteMenu.querySelectorAll('.emote-item').forEach(b => b.removeAttribute('disabled'));
     }
   }
 
@@ -809,16 +875,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
       const name = String(p.name ?? p.Name ?? '').trim();
       const isActing = !!(actorName && name === actorName);
-      const isHero = (i===0);
       const isSB = (name === sbName);
 
-      const seatEl = renderSeat(p, pos, isActing, isHero, isSB);
+      const seatEl = renderSeat(p, pos, isActing, i===0, isSB);
       seatsLayer.appendChild(seatEl);
 
-      // ----- EMOTE BUBBLE RENDER (stable, no name shown) -----
-      const emText = String(p.emoteText ?? p.EmoteText ?? '').trim();
-      const emAudio = String(p.emoteAudio ?? p.EmoteAudio ?? '').trim();
-      const emEnds  = Number(p.emoteEndsUnixMs ?? p.EmoteEndsUnixMs ?? 0) || 0;
+      // ----- EMOTE BUBBLE RENDER (stable, text-only) -----
+      const emTextRaw = String(p.emoteText ?? p.EmoteText ?? '').trim();
+      const emText    = emTextRaw;
+      const emAudio   = String(p.emoteAudio ?? p.EmoteAudio ?? '').trim();
+      const emEnds    = Number(p.emoteEndsUnixMs ?? p.EmoteEndsUnixMs ?? 0) || 0;
 
       const holdKey = name;
       const holdUntil = emoteHoldUntilByName.get(holdKey) || 0;
@@ -837,14 +903,16 @@ document.addEventListener('DOMContentLoaded', () => {
         lastEmoteKeyByName.set(holdKey, emKey);
       }
 
+      let bubble = seatEl.querySelector('.emote-bubble');
       if (shouldShow) {
-        let bubble = seatEl.querySelector('.emote-bubble');
         if (!bubble) {
           bubble = document.createElement('div');
           bubble.className = 'emote-bubble sticky';
           seatEl.appendChild(bubble);
         }
-        bubble.textContent = emText; // no player name
+        bubble.textContent = emText; // text-only, no emoji, no player name
+      } else if (bubble) {
+        bubble.remove();
       }
       // ----- /EMOTE BUBBLE RENDER -----
     });
@@ -853,7 +921,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // My hand
     myHandEl.innerHTML='';
-    const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
+    const myCards = players[0] ? (players[0].hand ?? players[0].Hand ?? []) : [];
     if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
 
     // 67 easter egg
@@ -924,7 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Right panel dynamic
     const avail = new Set(hand.avaliableActions || hand.availableActions || []);
-    const myBet   = Number((hero && (hero.currentBet ?? hero.CurrentBet)) ?? 0) || 0;
+    const myBet   = Number((players[0] && (players[0].currentBet ?? players[0].CurrentBet)) ?? 0) || 0;
     const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
     lastHandCurrentBet = tableBet;
 
@@ -940,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     lastMinRaiseAdd = minAdd;
 
-    const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
+    const myStack = Number((players[0] && (players[0].stack ?? players[0].Stack)) ?? 0) || 0;
     const baseRaiseTo = tableBet + minAdd;
     const maxRaiseTo = myBet + myStack;
 
@@ -950,8 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentRaiseMin = sliderMin;
     currentRaiseMax = sliderMax;
 
-    const actorNm = actorName;
-    const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorNm });
+    const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorName });
     const contextChanged = (ctx !== lastSliderCtx);
 
     const currentInputVal = Number(raiseAmt.value || NaN);
@@ -978,7 +1045,27 @@ document.addEventListener('DOMContentLoaded', () => {
     lastSliderCtx = ctx;
 
     // Update the emote cooldown/badge for ME
-    updateEmoteCooldownUI(hero, serverNowMs);
+    updateEmoteCooldownUI(players[0] || null, serverNowMs);
+  }
+
+  function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
+  function cardURL(card){
+    const s = (card.suit||card.Suit||'').toString().toUpperCase();
+    const r = (card.rank||card.Rank||'');
+    const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
+    let rt = ''; const n=Number(r);
+    if(Number.isFinite(n)){
+      rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':'';
+    } else {
+      const up=String(r).toUpperCase();
+      rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':'';
+    }
+    return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
+  }
+  function renderCardImg(card){
+    const img=document.createElement('img'); img.className='cardimg'; const url=cardURL(card);
+    if(url){ img.src=url; img.alt=url.split('/').pop(); } else { img.alt='??'; img.title=JSON.stringify(card); }
+    return img;
   }
 
   function renderSeat(p, pos, isActing, isHero, isSB){
@@ -1077,9 +1164,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {}
   })();
 
-  // expose for console testing
-  window.__renderState = renderState;
-  window.__setMyName = (n) => { myName = n; };
 });
 </script>
 </body>

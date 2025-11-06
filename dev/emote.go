@@ -5,7 +5,9 @@ import (
 )
 
 const (
-	angle = "angle"
+	angle    = "angle"
+	sick     = "sick"
+	itsPoker = "itsPoker"
 
 	EmoteDuration = 5000 * time.Millisecond
 	EmoteCooldown = 120 * time.Second
@@ -15,6 +17,10 @@ func isValidEmote(t string) bool {
 	switch t {
 	case angle:
 		return true
+	case sick:
+		return true
+	case itsPoker:
+		return true
 	default:
 		return false
 	}
@@ -23,7 +29,11 @@ func isValidEmote(t string) bool {
 func emoteDisplay(t string) string {
 	switch t {
 	case angle:
-		return "📐"
+		return "What an 📐"
+	case sick:
+		return "So Sick"
+	case itsPoker:
+		return "It's Poker"
 	default:
 		return t // fallback
 	}
@@ -33,6 +43,10 @@ func emoteAudio(t string) string {
 	switch t {
 	case angle:
 		return "/static/sounds/angle.mp3"
+	case sick:
+		return "/static/sounds/so_sick.mp3"
+	case itsPoker:
+		return "/static/sounds/its_poker.mp3"
 	default:
 		return t // fallback
 	}
