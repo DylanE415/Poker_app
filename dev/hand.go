@@ -10,12 +10,6 @@ import (
 	"time"
 )
 
-type Action struct {
-	PlayerID string  `json:"playerId"`
-	Action   string  `json:"action"` // "raise", "call", "fold", "check", "clear"
-	Amount   float64 `json:"amount"`
-}
-
 type showDownHand struct {
 	PlayerName string
 	Hand       []Card

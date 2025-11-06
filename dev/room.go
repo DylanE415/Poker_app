@@ -9,7 +9,8 @@ import (
 
 type Command struct {
 	Kind       string // "join, leave, sitOut, sitIn, action, "getState"
-	ActionType string // "fold, call, raise, check"
+	ActionType string // "fold, call, raise, check, "
+	EmoteType  string // "angle, ..."
 	PlayerID   string
 	PlayerName string
 	stack      float64
@@ -32,14 +33,18 @@ type Room struct {
 }
 
 type playerState struct {
-	ID         string  `json:"id"`
-	Name       string  `json:"name"`
-	Stack      float64 `json:"stack"`
-	Timebank   float64 `json:"timebank"`
-	SittingOut bool    `json:"sittingOut"`
-	Hand       []Card  `json:"hand"`
-	CurrentBet float64 `json:"currentBet"`
-	Folded     bool    `json:"folded"`
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	Stack           float64 `json:"stack"`
+	Timebank        float64 `json:"timebank"`
+	SittingOut      bool    `json:"sittingOut"`
+	Hand            []Card  `json:"hand"`
+	CurrentBet      float64 `json:"currentBet"`
+	Folded          bool    `json:"folded"`
+	EmoteText       string  `json:"emoteText,omitempty"`
+	EmoteAudio      string  `json:"emoteAudio,omitempty"`
+	EmoteEndsUnixMs int64   `json:"emoteEndsUnixMs,omitempty"`
+	NextEmoteAt     int64   `json:"nextEmoteAt,omitempty"`
 }
 
 type handState struct {
@@ -375,6 +380,14 @@ func (r *Room) run() {
 				// enqueue the action
 				enqueueLatestAction(player.pendingAction, Action{PlayerID: player.ID, Action: cmd.ActionType, Amount: cmd.actionAmt})
 
+			case "emote":
+				player := getPlayerFromID(cmd.PlayerID, r.players)
+				if player == nil {
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
+				safeReply(cmd.reply, nil)
+				r.handleEmote(player, cmd.EmoteType)
 			case "getState":
 				//send state to client
 				p := getPlayerFromID(cmd.PlayerID, r.players)
@@ -388,19 +401,41 @@ func (r *Room) run() {
 				//fill in various fields of the state
 				state := roomState{}
 				state.Players = make([]playerState, len(r.players))
+				now := time.Now()
 				// only info needed to display to client about other players(name, stack, sittingOut, timebank, currentBet) and hand if it is clients id
-				for i, p := range r.players {
-					state.Players[i] = playerState{
-						Name:       p.Name,
-						Stack:      p.Stack,
-						SittingOut: p.sittingOut,
-						Timebank:   p.timebank,
-						CurrentBet: p.currentBet,
-						Folded:     p.folded,
+				for i, pl := range r.players {
+					ps := playerState{
+						Name:       pl.Name,
+						ID:         pl.ID,
+						Stack:      pl.Stack,
+						SittingOut: pl.sittingOut,
+						Timebank:   pl.timebank,
+						CurrentBet: pl.currentBet,
+						Folded:     pl.folded,
 					}
-					if p.ID == cmd.PlayerID {
-						state.Players[i].Hand = p.Hand
+					if pl.ID == cmd.PlayerID {
+						ps.Hand = pl.Hand
+
 					}
+
+					// attach emote if still active
+					if !pl.emoteUntil.IsZero() && now.Before(pl.emoteUntil) {
+						ps.EmoteText = pl.emoteText
+						ps.EmoteAudio = pl.emoteAudio
+						ps.EmoteEndsUnixMs = pl.emoteUntil.UnixMilli()
+					} else {
+						// clear expired runtime so next poll has nothing
+						pl.emoteText, pl.emoteAudio = "", ""
+						pl.emoteUntil = time.Time{}
+					}
+					if !pl.nextEmoteAt.IsZero() && now.Before(pl.nextEmoteAt) {
+						ps.NextEmoteAt = pl.nextEmoteAt.UnixMilli()
+					} else {
+						// zero means "no cooldown"; with `omitempty` this disappears from JSON
+						ps.NextEmoteAt = 0
+					}
+
+					state.Players[i] = ps
 				}
 				//fill in hand state ( board, available actions, pot, currentBet, actionplayername, raiseAmount)
 				//must now lock the hand thread to ensure that the hand is not being updated while we are sending it to the player

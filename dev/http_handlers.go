@@ -386,6 +386,71 @@ func (s *Server) setActionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// emote handler
+/*
+POST http://localhost:8080/emote?room=1
+Content-Type: application/json
+
+{
+  "emoteType": "angle"
+}
+*/
+func (s *Server) setEmoteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+		return
+	}
+
+	uid, ok := s.userIDFromRequest(r)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
+		return
+	}
+
+	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	room := s.getRoom(fmt.Sprint(roomID))
+	if room == nil {
+		http.Error(w, "no such room", http.StatusBadRequest)
+		return
+	}
+
+	// 👇 simple JSON decode into your existing Action struct
+	var a Action
+	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+	if a.EmoteType == "" {
+		http.Error(w, "missing emoteType", http.StatusBadRequest)
+		return
+	}
+
+	reply := make(chan error, 1)
+	room.commandChan <- Command{
+		Kind:      "emote",
+		PlayerID:  uid,
+		reply:     reply,
+		EmoteType: a.EmoteType,
+	}
+
+	select {
+	case err := <-reply:
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	case <-time.After(2 * time.Second):
+		http.Error(w, "timeout waiting for emote ack", http.StatusGatewayTimeout)
+	case <-r.Context().Done():
+		http.Error(w, "request canceled", http.StatusGatewayTimeout)
+	}
+}
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // need id of player

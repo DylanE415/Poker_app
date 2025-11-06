@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 type Player struct {
 	ID            string  `json:"id"`
 	Name          string  `json:"name"`
@@ -13,6 +15,10 @@ type Player struct {
 	potCommitment float64
 	folded        bool
 	buyIn         float64
+	nextEmoteAt   time.Time
+	emoteUntil    time.Time
+	emoteText     string
+	emoteAudio    string
 }
 
 func newPlayer(id string, name string, stack float64) *Player {

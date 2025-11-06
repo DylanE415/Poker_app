@@ -14,6 +14,7 @@ func (s *Server) handleRoutes() http.Handler {
 	mux.Handle("/state", s.requireAuth(http.HandlerFunc(s.getStateHandler)))
 	mux.Handle("/action", s.requireAuth(http.HandlerFunc(s.setActionHandler)))
 	mux.Handle("/sitInOrOut", s.requireAuth(http.HandlerFunc(s.sitInOrOutHandler)))
+	mux.Handle("/emote", s.requireAuth(http.HandlerFunc(s.setEmoteHandler)))
 
 	///the static pages
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {

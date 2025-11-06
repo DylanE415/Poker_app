@@ -7,6 +7,13 @@ import (
 	"strconv"
 )
 
+type Action struct {
+	PlayerID  string  `json:"playerId"`
+	Action    string  `json:"action"` // "raise", "call", "fold", "check", "clear", "emote"
+	EmoteType string  `json:"emoteType"`
+	Amount    float64 `json:"amount"`
+}
+
 // for rmaking the latest action the current action in the channel
 func enqueueLatestAction(ch chan Action, a Action) {
 	for {

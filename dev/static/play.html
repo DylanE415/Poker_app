@@ -5,189 +5,226 @@
   <title>Poker — Table</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-
-        /* hide scrollbar in the action panel */
+/* hide scrollbar in the action panel */
 .controls-right {
-  overflow-y: auto;             /* still scrollable */
-  scrollbar-width: none;        /* Firefox */
-  -ms-overflow-style: none;     /* old Edge/IE */
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.controls-right::-webkit-scrollbar {
-  display: none;                /* Chrome / Safari / iOS */
+.controls-right::-webkit-scrollbar { display: none; }
+
+@media (max-width: 780px) { .controls-right { padding-bottom: 1.25rem; } }
+
+:root { --bg:#0b1020; --panel:#121a33; --muted:#aab3cc; --accent:#4da3ff; --bad:#f25f5c; --good:#3ecf8e; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff; }
+header { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom: 1px solid #1f2a4d; }
+.row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+.card { background: var(--panel); border:1px solid #1f2a4d; border-radius:14px; padding:1rem; }
+label { font-size:.9rem; color: var(--muted); }
+select, input, button { font: inherit; padding:.55rem .7rem; border-radius:10px; border:1px solid #243158; background:#0e1530; color:#e9efff; }
+button { background:#13214a; cursor:pointer; border-color:#2b3b71; transition: filter .15s ease, opacity .15s ease, background .15s ease, box-shadow .15s ease, transform .12s ease; }
+button:hover { background:#182a5c; }
+button:active { transform: translateY(1px); }
+button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
+.pill { padding:.25rem .6rem; border-radius:999px; font-size:.8rem; border:1px solid #2b3b71; color:#cfe0ff; }
+.ok { color: var(--good); }
+.err { color: var(--bad); }
+.muted { color: var(--muted); }
+
+@keyframes pressFlash { 0%{box-shadow:0 0 0 0 rgba(77,163,255,0)}25%{box-shadow:0 0 0 3px rgba(77,163,255,.45)}100%{box-shadow:0 0 0 0 rgba(77,163,255,0)} }
+.pulse { animation: pressFlash 160ms ease; }
+
+.layout { display:grid; grid-template-rows: auto auto 1fr auto; gap: 1rem; padding: 1rem; }
+.control-rail { position:relative; z-index:10; display:flex; gap:1rem; flex-wrap: wrap; align-items: center; background: var(--panel); border-radius: 14px; padding: 0.75rem 1rem; border: 1px solid #1f2a4d; }
+
+.table-wrap { position: relative; width: min(1100px, 94vw); height: min(680px, 72vh); margin: 0 auto; z-index:1; }
+.felt { position: absolute; inset: 0; margin: auto; background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%); border: 10px solid #3a240f; border-radius: 999px; box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35); pointer-events:none; }
+.board { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); display:flex; gap:.45rem; align-items:center; padding:.55rem .75rem; border-radius:12px; background: rgba(0,0,0,.25); border:1px solid #1f2a4d; z-index: 3; pointer-events:none; }
+
+.seat {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 135px; max-width: 34vw;
+  display:flex; flex-direction:column; align-items:center; gap:.22rem;
+  padding:.35rem .45rem; border-radius:12px;
+  background: rgba(10,20,40,.55); border:1px solid #223062;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  text-align:center; z-index: 2; pointer-events:none;
+}
+.seat .chips { font-weight:600; font-size:.88rem; display:flex; gap:.35rem; align-items:center; justify-content:center; }
+.seat .chips img { width:15px; height:15px; display:block; }
+.seat.hero { z-index: 2; }
+.acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
+.sittingout, .folded { opacity:.6; }
+
+.sb-indicator {
+  display:inline-block; background:#3a2a0f; color:#ffcc00;
+  font-size:.7rem; padding:0 0.25rem; border-radius:4px; margin-left:.26rem; font-weight:bold;
 }
 
-/* optional: on very small screens give it a little more bottom padding
-   so your thumb doesn't hit the edge */
-@media (max-width: 780px) {
-  .controls-right {
-    padding-bottom: 1.25rem;
-  }
+.seat-holes { position: relative; width: 58px; height: 50px; margin-top: 0.08rem; }
+.seat-holes img {
+  position: absolute; width: 36px; height: 50px; object-fit: cover;
+  border-radius: 5px; border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,.45);
 }
-    :root { --bg:#0b1020; --panel:#121a33; --muted:#aab3cc; --accent:#4da3ff; --bad:#f25f5c; --good:#3ecf8e; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: #e9efff; }
-    header { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom: 1px solid #1f2a4d; }
-    .row { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
-    .card { background: var(--panel); border:1px solid #1f2a4d; border-radius:14px; padding:1rem; }
-    label { font-size:.9rem; color: var(--muted); }
-    select, input, button { font: inherit; padding:.55rem .7rem; border-radius:10px; border:1px solid #243158; background:#0e1530; color:#e9efff; }
-    button { background:#13214a; cursor:pointer; border-color:#2b3b71; transition: filter .15s ease, opacity .15s ease, background .15s ease, box-shadow .15s ease, transform .12s ease; }
-    button:hover { background:#182a5c; }
-    button:active { transform: translateY(1px); }
-    button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
-    .pill { padding:.25rem .6rem; border-radius:999px; font-size:.8rem; border:1px solid #2b3b71; color:#cfe0ff; }
-    .ok { color: var(--good); }
-    .err { color: var(--bad); }
-    .muted { color: var(--muted); }
+.seat-holes img:nth-child(1) { left: 0; top: 0; }
+.seat-holes img:nth-child(2) { left: 15px; top: 2px; }
 
-    @keyframes pressFlash { 0%{box-shadow:0 0 0 0 rgba(77,163,255,0)}25%{box-shadow:0 0 0 3px rgba(77,163,255,.45)}100%{box-shadow:0 0 0 0 rgba(77,163,255,0)} }
-    .pulse { animation: pressFlash 160ms ease; }
+.act-timer-seat {
+  display:inline-flex; align-items:center; gap:.28rem;
+  border:1px solid #2b3b71; border-radius:999px; padding:.02rem .3rem; font-weight:600;
+  background: rgba(10,20,40,.55); margin-left:.28rem; font-size:.72rem;
+}
+.act-timer-seat .tval { min-width: 3.5ch; text-align:right; }
+.timer-ok  { color: var(--good); border-color: rgba(62,207,142,.6); }
+.timer-warn{ color: #ffd166;  border-color: rgba(255,209,102,.6); }
+.timer-bad { color: var(--bad);  border-color: rgba(242,95,92,.7); }
 
-    .layout { display:grid; grid-template-rows: auto auto 1fr auto; gap: 1rem; padding: 1rem; }
-    .control-rail { position:relative; z-index:10; display:flex; gap:1rem; flex-wrap: wrap; align-items: center; background: var(--panel); border-radius: 14px; padding: 0.75rem 1rem; border: 1px solid #1f2a4d; }
-    
-    .table-wrap { position: relative; width: min(1100px, 94vw); height: min(680px, 72vh); margin: 0 auto; z-index:1; }
-    .felt { position: absolute; inset: 0; margin: auto; background: radial-gradient(ellipse at center, #0f3b1e 0%, #0b2816 55%, #081b10 100%); border: 10px solid #3a240f; border-radius: 999px; box-shadow: 0 20px 60px rgba(0,0,0,.35) inset, 0 8px 40px rgba(0,0,0,.35); pointer-events:none; }
-    .board { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); display:flex; gap:.45rem; align-items:center; padding:.55rem .75rem; border-radius:12px; background: rgba(0,0,0,.25); border:1px solid #1f2a4d; z-index: 3; pointer-events:none; }
+#betsLayer { position:absolute; inset:0; pointer-events:none; z-index: 4; }
+.bet-chip { position:absolute; transform: translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; gap:.15rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,.45)); }
+.bet-chip img { width:22px; height:22px; display:block; }
+.bet-chip .amt { font-size:.8rem; font-weight:600; color:#e5f0ff; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:8px; padding:.1rem .32rem; }
 
-    .seat { position: absolute; transform: translate(-50%, -50%); width: 135px; max-width: 34vw; display:flex; flex-direction:column; align-items:center; gap:.22rem;
-            padding:.35rem .45rem; border-radius:12px; background: rgba(10,20,40,.55); border:1px solid #223062; box-shadow: 0 4px 16px rgba(0,0,0,.25); text-align:center; z-index: 2; pointer-events:none; }
-    .seat .chips { font-weight:600; font-size:.88rem; display:flex; gap:.35rem; align-items:center; justify-content:center; }
-    .seat .chips img { width:15px; height:15px; display:block; }
-    .seat.hero { z-index: 2; }
-    .acting { outline: 2px solid var(--accent); box-shadow: 0 0 0 4px rgba(77,163,255,.25); }
-    .sittingout, .folded { opacity:.6; }
+.cardimg { width:74px; height:108px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
+@media (max-width:520px){ .cardimg{ width:50px; height:84px; } }
 
-    .sb-indicator {
-      display: inline-block;
-      background: #3a2a0f;
-      color: #ffcc00;
-      font-size: 0.7rem;
-      padding: 0 0.25rem;
-      border-radius: 4px;
-      margin-left: 0.26rem;
-      font-weight: bold;
-    }
+.hud { position:absolute; left:50%; top: 27%; transform: translateX(-50%); display:flex; gap:1rem; align-items:center; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.45rem .8rem; font-size:.95rem; z-index: 3; pointer-events:none; }
+.hud .chip { width:18px; height:18px; vertical-align:middle; margin-right:.25rem; }
 
-    .seat-holes {
-      position: relative;
-      width: 58px;
-      height: 50px;
-      margin-top: 0.08rem;
-    }
-    .seat-holes img {
-      position: absolute;
-      width: 36px;
-      height: 50px;
-      object-fit: cover;
-      border-radius: 5px;
-      border: 1px solid rgba(255,255,255,.08);
-      box-shadow: 0 2px 10px rgba(0,0,0,.45);
-    }
-    .seat-holes img:nth-child(1) { left: 0; top: 0; }
-    .seat-holes img:nth-child(2) { left: 15px; top: 2px; }
+.actionmsg {
+  position:absolute; left:50%; top: 60%; transform: translateX(-50%);
+  background: rgba(18, 27, 58, .72); border:1px solid #2b3b71; color:#e9efff;
+  border-radius: 12px; padding:.5rem .8rem; font-weight:600;
+  box-shadow: 0 6px 22px rgba(0,0,0,.35); z-index: 3; max-width:92%;
+  text-align:center; display:none; pointer-events:none;
+}
+.showdown {
+  position:absolute; left:50%; top: 20%; transform: translateX(-50%);
+  background: rgba(20, 34, 70, .75); border:1px solid #315; color:#e9efff;
+  border-radius: 10px; padding: .45rem .7rem; font-weight: 600; text-align: center;
+  box-shadow: 0 6px 22px rgba(0,0,0,.35); max-width: 92%; z-index: 2; pointer-events:none;
+}
 
-    .act-timer-seat {
-      display:inline-flex; align-items:center; gap:.28rem;
-      border:1px solid #2b3b71; border-radius:999px; padding:.02rem .3rem; font-weight:600;
-      background: rgba(10,20,40,.55); margin-left:.28rem; font-size:.72rem;
-    }
-    .act-timer-seat .tval { min-width: 3.5ch; text-align:right; }
-    .timer-ok  { color: var(--good); border-color: rgba(62,207,142,.6); }
-    .timer-warn{ color: #ffd166;  border-color: rgba(255,209,102,.6); }
-    .timer-bad { color: var(--bad);  border-color: rgba(242,95,92,.7); }
+.showdown-list {
+  position:absolute; left:50%; top: calc(43% + 86px); transform: translateX(-50%);
+  display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center;
+  background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px;
+  padding:.5rem .7rem; max-width: 92%; z-index: 2; pointer-events:none;
+}
+.showdown-list .entry { display:flex; align-items:center; gap:.45rem; }
+.showdown-list .who { font-size:.9rem; color:#cfe0ff; margin-right:.15rem; }
+.showdown-list .cards { display:flex; gap:.35rem; }
 
-    #betsLayer { position:absolute; inset:0; pointer-events:none; z-index: 4; }
-    .bet-chip { position:absolute; transform: translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; gap:.15rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,.45)); }
-    .bet-chip img { width:22px; height:22px; display:block; }
-    .bet-chip .amt { font-size:.8rem; font-weight:600; color:#e5f0ff; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:8px; padding:.1rem .32rem; }
+/* right column */
+.myhand {
+  position: relative;
+  width: min(560px, 70vw);           /* wider container so content can sit further left */
+  margin: 0.25rem auto 0;
+  z-index:10;
+  display:grid;
+  grid-template-columns: 190px 1fr 320px; /* emote | cards | controls */
+  gap:.8rem;
+  align-items:start;
+}
+.myhand .cards {
+  display:flex; gap:.45rem; justify-content:flex-start;
+  margin-left: 12px; /* nudge the hole cards slightly to the right */
+}
 
-    .cardimg { width:74px; height:108px; object-fit: contain; background:#0a1433; border:1px solid #2b3b71; border-radius:8px; }
-    @media (max-width:520px){ .cardimg{ width:50px; height:84px; } }
+/* emote panel */
+.emote-panel {
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+  align-items:flex-start;
+  justify-content:flex-start;
+  margin-left: -8px; /* pull emote button slightly left */
+}
+#emoteAngleBtn { min-width: 80px; }
 
-    .hud { position:absolute; left:50%; top: 27%; transform: translateX(-50%); display:flex; gap:1rem; align-items:center; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:999px; padding:.45rem .8rem; font-size:.95rem; z-index: 3; pointer-events:none; }
-    .hud .chip { width:18px; height:18px; vertical-align:middle; margin-right:.25rem; }
+/* controls column */
+.controls-right {
+  background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px;
+  padding:.6rem .7rem; display:flex; flex-direction:column; gap:.55rem;
+}
+.sliderRow { display:flex; align-items:center; gap:.6rem; }
+.sliderRow input[type="range"] { flex:1; }
 
-    .actionmsg { position:absolute; left:50%; top: 60%; transform: translateX(-50%); background: rgba(18, 27, 58, .72); border:1px solid #2b3b71; color:#e9efff; border-radius: 12px; padding:.5rem .8rem; font-weight:600; box-shadow: 0 6px 22px rgba(0,0,0,.35); z-index: 3; max-width:92%; text-align:center; display:none; pointer-events:none; }
-    .showdown { position:absolute; left:50%; top: 20%; transform: translateX(-50%); background: rgba(20, 34, 70, .75); border:1px solid #315; color:#e9efff; border-radius: 10px; padding: .45rem .7rem; font-weight: 600; text-align: center; box-shadow: 0 6px 22px rgba(0,0,0,.35); max-width: 92%; z-index: 2; pointer-events:none; }
+.amountBoxWrap { display:flex; gap:0.35rem; align-items:center; }
 
-    .showdown-list { position:absolute; left:50%; top: calc(43% + 86px); transform: translateX(-50%); display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px; padding:.5rem .7rem; max-width: 92%; z-index: 2; pointer-events:none; }
-    .showdown-list .entry { display:flex; align-items:center; gap:.45rem; }
-    .showdown-list .who { font-size:.9rem; color:#cfe0ff; margin-right:.15rem; }
-    .showdown-list .cards { display:flex; gap:.35rem; }
+/* hide native number spinners */
+input.amountBox[type="number"]::-webkit-outer-spin-button,
+input.amountBox[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input.amountBox[type="number"] { -moz-appearance: textfield; }
 
-    .myhand {
-      position: relative;
-      width: min(300px, 20vw);
-      margin: 0.25rem auto 0;
-      z-index:10;
-      display:grid;
-      grid-template-columns: 1fr 320px;
-      gap:1rem;
-      align-items:start;
-    }
-    .myhand .cards { display:flex; gap:.45rem; justify-content:center; }
+.amountBox { width:6.6rem; text-align:center; }
+.spinnerButtons { display:flex; flex-direction:column; gap:0.35rem; }
+.spinBtn {
+  width:1.8rem; height:1.6rem; display:flex; align-items:center; justify-content:center;
+  font-size:0.7rem; background:#182a5c; border:1px solid #2b3b71; border-radius:6px; line-height:1; cursor:pointer; user-select:none;
+}
 
-    .controls-right {
-      background: rgba(10,20,40,.55);
-      border:1px solid #223062;
-      border-radius:12px;
-      padding:.6rem .7rem;
-      display:flex;
-      flex-direction:column;
-      gap:.55rem;
-    }
-    .sliderRow { display:flex; align-items:center; gap:.6rem; }
-    .sliderRow input[type="range"] { flex:1; }
+.btnRow { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:.6rem; }
+.btnRow.single { grid-template-columns: 1fr; }
+.btnBig { padding: .9rem .7rem; font-weight: 700; font-size: 1.05rem; }
+.btnFold { background:#7d2b2b; border-color:#9a3b3b; }
+.btnCall { background:#184d2f; border-color:#256845; }
+.btnRaise { background:#60451f; border-color:#7a3b3b; }
 
-    .amountBoxWrap { display:flex; gap:0.35rem; align-items:center; }
+.server-message { min-height: 1.4rem; margin: 0.4rem 0; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.9rem; display: none; }
+.server-message.show { display: block; }
+.server-message.ok { background: rgba(62, 207, 142, 0.2); border: 1px solid var(--good); color: var(--good); }
+.server-message.err { background: rgba(242, 95, 92, 0.2); border: 1px solid var(--bad); color: var(--bad); }
 
-    /* hide native number spinners – we have custom ▲ ▼ */
-    input.amountBox[type="number"]::-webkit-outer-spin-button,
-    input.amountBox[type="number"]::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input.amountBox[type="number"] {
-      -moz-appearance: textfield;
-    }
+.queued { font-size:.9rem; color: var(--muted); margin-left:.25rem; }
 
-    .amountBox { width:6.6rem; text-align:center; }
-    .spinnerButtons { display:flex; flex-direction:column; gap:0.35rem; }
-    .spinBtn {
-      width:1.8rem;
-      height:1.6rem;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:0.7rem;
-      background:#182a5c;
-      border:1px solid #2b3b71;
-      border-radius:6px;
-      line-height:1;
-      cursor:pointer;
-      user-select:none;
-    }
+@media (max-width: 900px) {
+  .myhand { grid-template-columns: 100px 1fr 280px; }
+  .emote-panel { margin-left: -6px; }
+  .myhand .cards { margin-left: 10px; }
+}
 
-    .btnRow { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:.6rem; }
-    .btnRow.single { grid-template-columns: 1fr; }
-    .btnBig { padding: .9rem .7rem; font-weight: 700; font-size: 1.05rem; }
-    .btnFold { background:#7d2b2b; border-color:#9a3b3b; }
-    .btnCall { background:#184d2f; border-color:#256845; }
-    .btnRaise { background:#60451f; border-color:#7a3b2b; }
+/* ===== Emote bubble ===== */
+.emote-bubble {
+  position: absolute;
+  font-size: 1.6rem;
+  top: -10px;
+  left: 100%;
+  line-height: 1; 
+  padding: .38rem .62rem;
+  transform: translate(-12%, -100%);
+  background: rgba(18, 27, 58, .92);
+  border: 1px solid #2b3b71;
+  color: #e9efff;
+  padding: .30rem .55rem;
+  border-radius: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  pointer-events: none;
+  opacity: 0;
+  animation: emotePop .16s ease-out forwards;
+}
+.emote-bubble::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  bottom: -6px;
+  border: 6px solid transparent;
+  border-top-color: #2b3b71;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
+}
+@keyframes emotePop {
+  from { transform: translate(-12%, -120%) scale(.96); opacity: 0; }
+  to   { transform: translate(-12%, -100%)  scale(1);   opacity: 1; }
+}
+/* keep bubble visible without re-animating every poll */
+.emote-bubble.sticky { animation: none; opacity: 1; }
 
-    .server-message { min-height: 1.4rem; margin: 0.4rem 0; padding: 0.25rem 0.5rem; border-radius: 8px; font-size: 0.9rem; display: none; }
-    .server-message.show { display: block; }
-    .server-message.ok { background: rgba(62, 207, 142, 0.2); border: 1px solid var(--good); color: var(--good); }
-    .server-message.err { background: rgba(242, 95, 92, 0.2); border: 1px solid var(--bad); color: var(--bad); }
-
-    .queued { font-size:.9rem; color: var(--muted); margin-left:.25rem; }
-    
-    @media (max-width: 900px) {
-      .myhand { grid-template-columns: 1fr 280px; }
-      .controls-right { order: 2; }
-      .myhand .cards { order: 1; }
-    }
+/* cooldown label under the emote button */
+.emote-cooldown { font-size: .8rem; color: var(--muted); margin-top: .25rem; }
   </style>
 </head>
 <body>
@@ -238,18 +275,23 @@
       <div id="seatsLayer"></div>
       <div id="betsLayer"></div>
 
-      <audio id="chipSound" src="/static/sounds/poker_chip_drop.mp3" preload="auto"></audio>
+      <audio id="chipSound"  src="/static/sounds/poker_chip_drop.mp3" preload="auto"></audio>
       <audio id="checkSound" src="/static/sounds/check.mp3" preload="auto"></audio>
-      <audio id="audio67" src="/static/sounds/67.mp3" preload="auto"></audio>
-      <audio id="dealSound" src="/static/sounds/deal_card.mp3" preload="auto"></audio>
+      <audio id="audio67"    src="/static/sounds/67.mp3" preload="auto"></audio>
+      <audio id="dealSound"  src="/static/sounds/deal_card.mp3" preload="auto"></audio>
     </section>
 
     <section class="myhand">
+      <!-- Emote column (left of hole cards) -->
+      <div class="emote-panel">
+        <button id="emoteAngleBtn" type="button" title="Send angle emote">📐 Emote</button>
+        <div id="emoteCooldown" class="emote-cooldown" aria-live="polite"></div>
+      </div>
+
       <div class="cards" id="myHand"></div>
 
       <div class="controls-right">
         <div class="sliderRow">
-          <!-- NOTE: slider now always 0..100, we map it in JS -->
           <input id="raiseSlider" type="range" min="0" max="100" step="1" value="0" />
           <div class="amountBoxWrap">
             <input id="raiseAmt" class="amountBox" type="number" step="0.25" min="0" value="0" />
@@ -261,7 +303,7 @@
         </div>
 
         <div class="btnRow">
-                    <button id="foldBtn" type="button" class="btnFold">Fold</button>
+          <button id="foldBtn" type="button" class="btnFold">Fold</button>
           <button id="callBtn" type="button" class="btnCall">Call <span id="callAmt">0.00</span></button>
           <button id="raiseBtn" type="button" class="btnRaise">Raise to <span id="raiseAmtLabel">0.00</span></button>
         </div>
@@ -280,667 +322,765 @@
     </section>
   </main>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const $ = (id) => document.getElementById(id);
-      const statusEl = $('status'), whoEl = $('who');
-      const serverMsgEl = $('serverMsg');
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $('status'), whoEl = $('who');
+  const serverMsgEl = $('serverMsg');
 
-      let currentQueued = '';
-      let lastHandCurrentBet = 0;
-      let lastMinRaiseAdd    = 0;
-      let lastHeroWas67 = false;
-      let lastBoardLen = 0;
+  let currentQueued = '';
+  let lastHandCurrentBet = 0;
+  let lastMinRaiseAdd    = 0;
+  let lastHeroWas67 = false;
+  let lastBoardLen = 0;
 
-      // NEW: current raise bounds for non-linear slider
-      let currentRaiseMin = 0;
-      let currentRaiseMax = 100;
+  // raise bounds for slider mapping
+  let currentRaiseMin = 0;
+  let currentRaiseMax = 100;
 
-      function showMsg(text, type = '') {
-        serverMsgEl.textContent = text;
-        serverMsgEl.className = 'server-message' + (type ? ' ' + type : '') + (text ? ' show' : '');
-      }
+  function showMsg(text, type = '') {
+    serverMsgEl.textContent = text;
+    serverMsgEl.className = 'server-message' + (type ? ' ' + type : '') + (text ? ' show' : '');
+  }
 
-      // AUDIO
-      const chipSound = $('chipSound');
-      const checkSound = $('checkSound');
-      const audio67 = $('audio67');
-      const dealSound = $('dealSound');
+  // AUDIO (core sounds)
+  const chipSound = $('chipSound');
+  const checkSound = $('checkSound');
+  const audio67 = $('audio67');
+  const dealSound = $('dealSound');
 
-      let audioUnlocked = false;
-      function unlockAudioOnce() {
-        if (audioUnlocked) return; audioUnlocked = true;
-        try {
-          const p1 = chipSound.play();
-          if (p1?.then) p1.then(()=>{ chipSound.pause(); chipSound.currentTime = 0; }).catch(()=>{});
-          const p2 = checkSound.play();
-          if (p2?.then) p2.then(()=>{ checkSound.pause(); checkSound.currentTime = 0; }).catch(()=>{});
-          const p3 = audio67.play();
-          if (p3?.then) p3.then(()=>{ audio67.pause(); audio67.currentTime = 0; }).catch(()=>{});
-          const p4 = dealSound.play();
-          if (p4?.then) p4.then(()=>{ dealSound.pause(); dealSound.currentTime = 0; }).catch(()=>{});
-        } catch {}
-      }
-      ['click','touchstart','keydown'].forEach(ev => document.addEventListener(ev, unlockAudioOnce, { once:true, passive:true }));
-      function safePlayChip(){ try{ chipSound.currentTime=0; chipSound.play().catch(()=>{});}catch{} }
-      function safePlayCheck(){ try{ checkSound.currentTime=0; checkSound.play().catch(()=>{});}catch{} }
-      function safePlay67(){ try{ audio67.currentTime=0; audio67.play().catch(()=>{});}catch{} }
-      function safePlayDeal(){ try{ dealSound.currentTime=0; dealSound.play().catch(()=>{});}catch{} }
+  let audioUnlocked = false;
+  function unlockAudioOnce() {
+    if (audioUnlocked) return; audioUnlocked = true;
+    try {
+      const p1 = chipSound.play(); if (p1?.then) p1.then(()=>{ chipSound.pause(); chipSound.currentTime = 0; }).catch(()=>{});
+      const p2 = checkSound.play(); if (p2?.then) p2.then(()=>{ checkSound.pause(); checkSound.currentTime = 0; }).catch(()=>{});
+      const p3 = audio67.play(); if (p3?.then) p3.then(()=>{ audio67.pause(); audio67.currentTime = 0; }).catch(()=>{});
+      const p4 = dealSound.play(); if (p4?.then) p4.then(()=>{ dealSound.pause(); dealSound.currentTime = 0; }).catch(()=>{});
+    } catch {}
+  }
+  ['click','touchstart','keydown'].forEach(ev => document.addEventListener(ev, unlockAudioOnce, { once:true, passive:true }));
+  function safePlayChip(){ try{ chipSound.currentTime=0; chipSound.play().catch(()=>{});}catch{} }
+  function safePlayCheck(){ try{ checkSound.currentTime=0; checkSound.play().catch(()=>{});}catch{} }
+  function safePlay67(){ try{ audio67.currentTime=0; audio67.play().catch(()=>{});}catch{} }
+  function safePlayDeal(){ try{ dealSound.currentTime=0; dealSound.play().catch(()=>{});}catch{} }
 
-      // ME
-      let myName = '';
-      (async function loadMe(){
-        try {
-          const res = await fetch('/me', { credentials: 'include' });
-          if (res.status === 401) { location.href = '/login'; return; }
-          if (!res.ok) return;
-          const me = await res.json();
-          myName = String(me?.username || '').trim();
-          whoEl.textContent = myName ? `Signed in as ${myName}` : '';
-        } catch {}
-      })();
+  // Per-emote playback (path from state)
+  function playEmoteAudio(path){
+    if (!path) return;
+    try { new Audio(path).play().catch(()=>{}); } catch {}
+  }
 
-      // API
-      async function doFetch(url, opts) { return await fetch(url, Object.assign({ credentials:'include' }, opts||{})); }
-      const api = {
-        async join(room, stack) {
-          const jsonTry = await doFetch(`/join?room=${encodeURIComponent(room)}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ stack: Number(stack)||0 })
-          });
-          if (jsonTry.ok || jsonTry.status === 401) return jsonTry;
-          const formTry = await doFetch(`/join?room=${encodeURIComponent(room)}`, {
-            method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({ stack: String(Number(stack)||0) }).toString()
-          });
-          if (formTry.ok || formTry.status === 401) return formTry;
-          return await doFetch(`/join?room=${encodeURIComponent(room)}&stack=${encodeURIComponent(Number(stack)||0)}`);
-        },
-        async leave(room) { return await doFetch(`/leave?room=${encodeURIComponent(room)}`, { method:'POST' }); },
-        async state(room) { return await doFetch(`/state?room=${encodeURIComponent(room)}`, { method:'GET' }); },
-        async action(room, action, amount=0) {
-          return await doFetch(`/action?room=${encodeURIComponent(room)}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ action, amount: Number(amount)||0 })
-          });
-        },
-        async sit(room, sitIn) { return await doFetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method:'POST' }); },
-        async logout(){ location.href='/login'; }
-      };
+  // ME
+  let myName = '';
+  (async function loadMe(){
+    try {
+      const res = await fetch('/me', { credentials: 'include' });
+      if (res.status === 401) { location.href = '/login'; return; }
+      if (!res.ok) return;
+      const me = await res.json();
+      myName = String(me?.username || '').trim();
+      whoEl.textContent = myName ? `Signed in as ${myName}` : '';
+    } catch {}
+  })();
 
-      // ELEMENTS
-      const roomSel = $('room'), stackInp = $('stack'),
-            joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'),
-            sitInBtn = $('sitInBtn'), sitOutBtn = $('sitOutBtn'),
-            checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'),
-            raiseAmt = $('raiseAmt'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
-            ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
-            raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
-            raiseUp = $('raiseUp'), raiseDown = $('raiseDown');
-      const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
-
-      $('logoutBtn').addEventListener('click', api.logout);
-      function pulse(el){ if(!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 180); }
-      function setQueuedDisplay(text){
-        currentQueued = text || '';
-        queuedValue.textContent = text || '—';
-        queuedLabel.style.display='inline';
-      }
-
-      // JOIN/LEAVE/SIT
-      joinBtn.addEventListener('click', async () => {
-        pulse(joinBtn);
-        const room = roomSel.value, stack = stackInp.value;
-        try {
-          const res = await api.join(room, stack);
-          if (res.status === 401) { location.href='/login'; return; }
-          if (!res.ok) { showMsg(`Join failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
-          showMsg(`Joined room ${room}`, 'ok');
-          setQueuedDisplay('');
-          pollState.now();
-        } catch (e) { showMsg(`Join error: ${e.message}`, 'err'); }
+  // API
+  async function doFetch(url, opts) { return await fetch(url, Object.assign({ credentials:'include' }, opts||{})); }
+  const api = {
+    async join(room, stack) {
+      const jsonTry = await doFetch(`/join?room=${encodeURIComponent(room)}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ stack: Number(stack)||0 })
       });
-
-      leaveBtn.addEventListener('click', async () => {
-        pulse(leaveBtn);
-        const room = roomSel.value;
-        try {
-          const res = await api.leave(room);
-          if (res.status === 401) { location.href='/login'; return; }
-          if (!res.ok) { showMsg(`Leave failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
-          showMsg(`Left room ${room}`, 'ok');
-          renderState(null);
-          setQueuedDisplay('');
-        } catch (e) { showMsg(`Leave error: ${e.message}`, 'err'); }
+      if (jsonTry.ok || jsonTry.status === 401) return jsonTry;
+      const formTry = await doFetch(`/join?room=${encodeURIComponent(room)}`, {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({ stack: String(Number(stack)||0) }).toString()
       });
-
-      sitInBtn.addEventListener('click', async () => {
-        pulse(sitInBtn);
-        const room = roomSel.value;
-        try {
-          const res = await api.sit(room, true);
-          if (res.status === 401) { location.href='/login'; return; }
-          if (!res.ok) { showMsg(`Sit in failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
-          showMsg('Sat in', 'ok'); pollState.soon();
-        } catch (e) { showMsg(`Sit in error: ${e.message}`, 'err'); }
+      if (formTry.ok || formTry.status === 401) return formTry;
+      return await doFetch(`/join?room=${encodeURIComponent(room)}&stack=${encodeURIComponent(Number(stack)||0)}`);
+    },
+    async leave(room) { return await doFetch(`/leave?room=${encodeURIComponent(room)}`, { method:'POST' }); },
+    async state(room) { return await doFetch(`/state?room=${encodeURIComponent(room)}`, { method:'GET' }); },
+    async action(room, action, amount=0) {
+      return await doFetch(`/action?room=${encodeURIComponent(room)}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action, amount: Number(amount)||0 })
       });
-
-      sitOutBtn.addEventListener('click', async () => {
-        pulse(sitOutBtn);
-        const room = roomSel.value;
-        try {
-          const res = await api.sit(room, false);
-          if (res.status === 401) { location.href='/login'; return; }
-          if (!res.ok) { showMsg(`Sit out failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
-          showMsg('Sat out', 'ok'); pollState.soon();
-        } catch (e) { showMsg(`Sit out error: ${e.message}`, 'err'); }
+    },
+    async emote(room, emoteType) {
+      return await doFetch(`/emote?room=${encodeURIComponent(room)}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ emoteType })
       });
+    },
+    async sit(room, sitIn) { return await doFetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method:'POST' }); },
+    async logout(){ location.href='/login'; }
+  };
 
-      // non-linear mapping helpers
-      function sliderToAmount(sliderVal) {
-        const t = Math.min(1, Math.max(0, sliderVal / 100));
-        const eased = t * t; // quadratic: more precision at start
-        return currentRaiseMin + (currentRaiseMax - currentRaiseMin) * eased;
+  // ELEMENTS
+  const roomSel = $('room'), stackInp = $('stack'),
+        joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'),
+        sitInBtn = $('sitInBtn'), sitOutBtn = $('sitOutBtn'),
+        checkBtn = $('checkBtn'), callBtn = $('callBtn'), raiseBtn = $('raiseBtn'),
+        raiseAmt = $('raiseAmt'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
+        ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
+        raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
+        raiseUp = $('raiseUp'), raiseDown = $('raiseDown'),
+        emoteAngleBtn = $('emoteAngleBtn'),
+        emoteCooldownEl = $('emoteCooldown');
+  const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
+
+  $('logoutBtn').addEventListener('click', api.logout);
+  function pulse(el){ if(!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'), 180); }
+  function setQueuedDisplay(text){
+    currentQueued = text || '';
+    queuedValue.textContent = text || '—';
+    queuedLabel.style.display='inline';
+  }
+
+  // JOIN/LEAVE/SIT
+  joinBtn.addEventListener('click', async () => {
+    pulse(joinBtn);
+    const room = roomSel.value, stack = stackInp.value;
+    try {
+      statusEl.textContent='joining…'; statusEl.className='pill';
+      const res = await api.join(room, stack);
+      if (res.status === 401) { location.href='/login'; return; }
+      if (!res.ok) {
+        const errTxt = (await res.text()).trim();
+        showMsg(`Join failed: ${res.status} ${errTxt}`, 'err');
+        statusEl.textContent='join failed'; statusEl.className='pill err';
+        return;
       }
-      function amountToSlider(amount) {
-        if (currentRaiseMax <= currentRaiseMin) return 0;
-        const norm = (amount - currentRaiseMin) / (currentRaiseMax - currentRaiseMin);
-        const clamped = Math.min(1, Math.max(0, norm));
-        const t = Math.sqrt(clamped); // inverse of t^2
-        return t * 100;
+      showMsg(`Joined room ${room}`, 'ok');
+      setQueuedDisplay('');
+      statusEl.textContent='joined'; statusEl.className='pill ok';
+      pollState.now();
+    } catch (e) { showMsg(`Join error: ${e?.message||e}`, 'err'); statusEl.textContent='join error'; statusEl.className='pill err'; }
+  });
+
+  leaveBtn.addEventListener('click', async () => {
+    pulse(leaveBtn);
+    const room = roomSel.value;
+    try {
+      const res = await api.leave(room);
+      if (res.status === 401) { location.href='/login'; return; }
+      if (!res.ok) { showMsg(`Leave failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+      showMsg(`Left room ${room}`, 'ok');
+      renderState(null);
+      setQueuedDisplay('');
+      statusEl.textContent='left'; statusEl.className='pill';
+    } catch (e) { showMsg(`Leave error: ${e.message}`, 'err'); }
+  });
+
+  sitInBtn.addEventListener('click', async () => {
+    pulse(sitInBtn);
+    const room = roomSel.value;
+    try {
+      const res = await api.sit(room, true);
+      if (res.status === 401) { location.href='/login'; return; }
+      if (!res.ok) { showMsg(`Sit in failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+      showMsg('Sat in', 'ok'); pollState.soon();
+    } catch (e) { showMsg(`Sit in error: ${e.message}`, 'err'); }
+  });
+
+  sitOutBtn.addEventListener('click', async () => {
+    pulse(sitOutBtn);
+    const room = roomSel.value;
+    try {
+      const res = await api.sit(room, false);
+      if (res.status === 401) { location.href='/login'; return; }
+      if (!res.ok) { showMsg(`Sit out failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+      showMsg('Sat out', 'ok'); pollState.soon();
+    } catch (e) { showMsg(`Sit out error: ${e.message}`, 'err'); }
+  });
+
+  // non-linear mapping helpers
+  function sliderToAmount(sliderVal) {
+    const t = Math.min(1, Math.max(0, sliderVal / 100));
+    const eased = t * t; // precision near min
+    return currentRaiseMin + (currentRaiseMax - currentRaiseMin) * eased;
+  }
+  function amountToSlider(amount) {
+    if (currentRaiseMax <= currentRaiseMin) return 0;
+    const norm = (amount - currentRaiseMin) / (currentRaiseMax - currentRaiseMin);
+    const clamped = Math.min(1, Math.max(0, norm));
+    const t = Math.sqrt(clamped);
+    return t * 100;
+  }
+
+  // ACTIONS
+  async function doActionWithQueued(act, amt=0, displayAmt=null) {
+    const room = roomSel.value;
+    const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn };
+    pulse(btnMap[act]);
+    try {
+      const res = await api.action(room, act, amt);
+      if (res.status === 401) { location.href='/login'; return; }
+      if (!res.ok) { showMsg(`Action failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+
+      if (act === 'raise') {
+        const shown = displayAmt != null ? displayAmt : amt;
+        setQueuedDisplay(`Raise to ${shown.toFixed(2)}`);
+        showMsg(`Action: raise to ${shown.toFixed(2)}`, 'ok');
+        safePlayChip();
       }
+      else if (act === 'call') { setQueuedDisplay('Call'); showMsg('Action: call', 'ok'); safePlayChip(); }
+      else if (act === 'check') { setQueuedDisplay('Check'); showMsg('Action: check', 'ok'); safePlayCheck(); }
+      else if (act === 'fold') { setQueuedDisplay('Fold'); showMsg('Action: fold', 'ok'); }
+      else if (act === 'clear') { setQueuedDisplay(''); showMsg('Cleared action', 'ok'); }
 
-      // ACTIONS
-      async function doActionWithQueued(act, amt=0, displayAmt=null) {
-        const room = roomSel.value;
-        const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn };
-        pulse(btnMap[act]);
-        try {
-          const res = await api.action(room, act, amt);
-          if (res.status === 401) { location.href='/login'; return; }
-          if (!res.ok) { showMsg(`Action failed: ${res.status} ${(await res.text())||''}`, 'err'); return; }
+      pollState.soon();
+    } catch (e) { showMsg(`Action error: ${e.message}`, 'err'); }
+  }
 
-          if (act === 'raise') {
-            const shown = displayAmt != null ? displayAmt : amt;
-            setQueuedDisplay(`Raise to ${shown.toFixed(2)}`);
-            showMsg(`Action: raise to ${shown.toFixed(2)}`, 'ok');
-            safePlayChip();
-          }
-          else if (act === 'call') { setQueuedDisplay('Call'); showMsg('Action: call', 'ok'); safePlayChip(); }
-          else if (act === 'check') { setQueuedDisplay('Check'); showMsg('Action: check', 'ok'); safePlayCheck(); }
-          else if (act === 'fold') { setQueuedDisplay('Fold'); showMsg('Action: fold', 'ok'); }
-          else if (act === 'clear') { setQueuedDisplay(''); showMsg('Cleared action', 'ok'); }
+  $('checkBtn').addEventListener('click', () => doActionWithQueued('check'));
+  $('callBtn').addEventListener('click', () => {
+    const amt = Number(callAmtEl.dataset.val)||0;
+    doActionWithQueued('call', amt);
+  });
 
-          pollState.soon();
-        } catch (e) { showMsg(`Action error: ${e.message}`, 'err'); }
+  // raise: send (raiseTo - currentBet)
+  $('raiseBtn').addEventListener('click', () => {
+    const raiseTo = Number(raiseAmt.value) || 0;
+    let handBet = Number(lastHandCurrentBet) || 0;
+    if (handBet === 0) {
+      const minAdd = Number(lastMinRaiseAdd) || 0;
+      if (currentRaiseMin > 0) {
+        const inferred = currentRaiseMin - minAdd;
+        if (inferred >= 0) handBet = inferred;
       }
+    }
+    let sendAmt = raiseTo - handBet;
+    if (sendAmt < 0) sendAmt = 0;
+    doActionWithQueued('raise', sendAmt, raiseTo);
+  });
 
-      checkBtn.addEventListener('click', () => doActionWithQueued('check'));
-      callBtn.addEventListener('click', () => {
-        const amt = Number(callAmtEl.dataset.val)||0;
-        doActionWithQueued('call', amt);
-      });
+  $('foldBtn').addEventListener('click', () => doActionWithQueued('fold'));
+  $('clearBtn').addEventListener('click', () => doActionWithQueued('clear'));
+  $('ledgerBtn').addEventListener('click', () => {location.href = '/ledger';});
 
-      // raise: send (raiseTo - handCurrentBet)
-      raiseBtn.addEventListener('click', () => {
-        const raiseTo = Number(raiseAmt.value) || 0;
-        let handBet = Number(lastHandCurrentBet) || 0;
-
-        if (handBet === 0) {
-          const minAdd = Number(lastMinRaiseAdd) || 0;
-          if (currentRaiseMin > 0) {
-            const inferred = currentRaiseMin - minAdd;
-            if (inferred >= 0) handBet = inferred;
-          }
-        }
-
-        let sendAmt = raiseTo - handBet;
-        if (sendAmt < 0) sendAmt = 0;
-
-        doActionWithQueued('raise', sendAmt, raiseTo);
-      });
-
-      foldBtn.addEventListener('click', () => doActionWithQueued('fold'));
-      clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
-      ledgerBtn.addEventListener('click', () => {location.href = '/ledger';});
-
-      // Helpers
-      function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
-      function cardURL(card){
-        const s = (card.suit||card.Suit||'').toString().toUpperCase();
-        const r = (card.rank||card.Rank||'');
-        const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':''; 
-        let rt = ''; const n=Number(r);
-        if(Number.isFinite(n)){ rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':''; }
-        else { const up=String(r).toUpperCase(); rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':''; }
-        return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
-      }
-      function renderCardImg(card){
-        const img=document.createElement('img'); img.className='cardimg'; const url=cardURL(card);
-        if(url){ img.src=url; img.alt=url.split('/').pop(); } else { img.alt='??'; img.title=JSON.stringify(card); }
-        return img;
-      }
-
-      // Countdown
-      let rafId = 0, deadlineMsGlobal = 0, skewMsGlobal = 0;
-      function getTimerEls(){
-        const pill = document.querySelector('.act-timer-seat');
-        const val  = pill ? pill.querySelector('.tval') : null;
-        return { pill, val };
-      }
-      function setTimerClasses(pill, msLeft){
-        if (!pill) return;
-        pill.classList.remove('timer-ok','timer-warn','timer-bad');
-        const s = msLeft/1000;
-        if (s <= 5) pill.classList.add('timer-bad');
-        else if (s <= 10) pill.classList.add('timer-warn');
-        else pill.classList.add('timer-ok');
-      }
-      function startCountdown(deadlineMs, serverNowMs){
-        deadlineMsGlobal = Number(deadlineMs)||0;
-        skewMsGlobal = Number(serverNowMs||0) - Date.now();
-        if (rafId) cancelAnimationFrame(rafId);
-
-        const { pill, val } = getTimerEls();
-        if (!deadlineMsGlobal || !pill || !val) return;
-
-        const tick = () => {
-          const els = getTimerEls();
-          if (!els.pill || !els.val) { cancelAnimationFrame(rafId); rafId=0; return; }
-          const remaining = Math.max(0, deadlineMsGlobal - (Date.now() + skewMsGlobal));
-          const secs = remaining / 1000;
-          els.val.textContent = secs >= 10 ? secs.toFixed(0)+'s' : secs.toFixed(1)+'s';
-          setTimerClasses(els.pill, remaining);
-          rafId = requestAnimationFrame(tick);
-        };
-        tick();
-      }
-      function stopCountdown(){ if (rafId) cancelAnimationFrame(rafId); rafId = 0; }
-
-      // slider stickiness
-      let isAdjusting = false;
-      raiseSlider.addEventListener('pointerdown', () => { isAdjusting = true; });
-      document.addEventListener('pointerup', () => { isAdjusting = false; });
-      raiseAmt.addEventListener('focus', () => { isAdjusting = true; });
-      raiseAmt.addEventListener('blur',  () => { isAdjusting = false; });
-
-      function bumpRaise(delta) {
-        const min = Number(currentRaiseMin) || 0;
-        const max = Number(currentRaiseMax) || 0;
-        let v = Number(raiseAmt.value || '0') || 0;
-        v = v + delta;
-        v = Math.max(min, Math.min(max, Math.round(v * 100) / 100));
-        raiseAmt.value = v.toFixed(2);
-        raiseAmtLabel.textContent = v.toFixed(2);
-        raiseSlider.value = amountToSlider(v);
-      }
-      raiseUp.addEventListener('click', () => bumpRaise(0.25));
-      raiseDown.addEventListener('click', () => bumpRaise(-0.25));
-
-      // context key for betting
-      let lastSliderCtx = '';
-      function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
-        return [
-          String(street||'').toLowerCase(),
-          Number(tableBet||0).toFixed(2),
-          Number(myBet||0).toFixed(2),
-          Number(minAdd||0).toFixed(2),
-          String(actorName||'')
-        ].join('|');
-      }
-
-      const SEAT_RX = 46, SEAT_RY = 38, BET_RX=31, BET_RY=26;
-      function heroPolar(){ return Math.PI/2; }
-      function otherPolars(n){ if(!n) return []; const step=2*Math.PI/(n+1); return Array.from({length:n},(_,k)=>Math.PI/2+(k+1)*step); }
-      function ellipseXY(theta, rx, ry){ const cx=50, cy=50; return { x: cx + rx*Math.cos(theta), y: cy + ry*Math.sin(theta) }; }
-
-      const potEl = $('pot'), boardEl = $('board'), seatsLayer = $('seatsLayer'), betsLayer = $('betsLayer'), myHandEl = $('myHand');
-      const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
-
-      // Polling
-      const pollState = (() => {
-        let timer=null;
-        async function tick(){
-          const room = $('room').value;
-          statusEl.textContent='updating…';
-          try {
-            const res = await api.state(room);
-            if (!res.ok) {
-              const txt = (await res.text()).trim().toLowerCase();
-              if (res.status === 400 && txt.includes('player not in room')) {
-                renderState(null);
-                showMsg('You are not in the room', 'err');
-                statusEl.textContent='not in room'; statusEl.className='pill err';
-              } else if (res.status === 401) {
-                location.href='/login'; return;
-              } else {
-                statusEl.textContent='error'; statusEl.className='pill err';
-              }
-              return;
-            }
-            const st = JSON.parse(await res.text());
-            renderState(st);
-            statusEl.textContent='connected'; statusEl.className='pill';
-          } catch {
-            statusEl.textContent='error'; statusEl.className='pill err';
-          } finally { timer=setTimeout(tick, 1000); }
-        }
-        function start(){ if(!timer) timer=setTimeout(tick, 80); }
-        function stop(){ if(timer){ clearTimeout(timer); timer=null; } }
-        function now(){ stop(); start(); }
-        function soon(){ stop(); timer=setTimeout(tick, 300); }
-        document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stop(); else now(); });
-        start();
-        return { start, stop, now, soon };
-      })();
-
-      function getShowdownHandsArray(hand) {
-        const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
-        return Array.isArray(raw) ? raw : [];
-      }
-
-      let prevActionMessage='';
-      function renderState(st){
-        if (!st || (Object.keys(st).length===0)){
-          potEl.textContent='—';
-          stopCountdown();
-          boardEl.innerHTML=''; seatsLayer.innerHTML=''; betsLayer.innerHTML=''; myHandEl.innerHTML='';
-          showdownBanner.style.display='none'; showdownList.style.display='none'; showdownList.innerHTML='';
-          actionMsgEl.style.display='none';
-          serverMsgEl.className = 'server-message';
-          lastHeroWas67 = false;
-          lastBoardLen = 0;
+  // ===== Angle-only emote =====
+  if (emoteAngleBtn) {
+    emoteAngleBtn.addEventListener('click', async () => {
+      pulse(emoteAngleBtn);
+      const room = roomSel.value;
+      try {
+        emoteAngleBtn.disabled = true; // optimistic lock; UI will refresh on poll
+        const res = await api.emote(room, 'angle');
+        if (res.status === 401) { location.href='/login'; return; }
+        if (!res.ok) {
+          const txt = (await res.text()).trim();
+          showMsg(`Emote failed: ${res.status} ${txt}`, 'err');
           return;
         }
-
-        const hand = st.hand || st.Hand || {};
-        const actorName = String(hand.actionPlayerName ?? hand.ActionPlayerName ?? '').trim();
-        const sbName = String(hand.smallBlindName   ?? hand.SmallBlindName   ?? '').trim();
-
-        // Pot
-        potEl.textContent = fmtMoney(hand.pot ?? hand.Pot ?? '');
-
-        // Board
-        const board = Array.isArray(hand.board ?? hand.Board) ? (hand.board ?? hand.Board) : [];
-        const currentBoardLen = board.length;
-        boardEl.innerHTML='';
-        board.forEach(c=>boardEl.appendChild(renderCardImg(c)));
-        if (currentBoardLen > lastBoardLen) {
-          for (let i = lastBoardLen; i < currentBoardLen; i++) {
-            setTimeout(() => safePlayDeal(), (i - lastBoardLen) * 120);
-          }
-        }
-        lastBoardLen = currentBoardLen;
-
-        // Players
-        const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
-        let heroIdx = -1;
-        if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
-        if (heroIdx < 0) heroIdx = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand));
-        if (heroIdx < 0) heroIdx = 0;
-
-        const hero = rawPlayers[heroIdx] || null;
-        const others = rawPlayers.length ? [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)] : [];
-        const heroTheta = heroPolar(); const othersTheta = otherPolars(others.length);
-        const players = hero ? [hero, ...others] : others.slice();
-        const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
-
-        seatsLayer.innerHTML='';
-        players.forEach((p,i)=>{
-          const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
-          const name = String(p.name ?? p.Name ?? '').trim();
-          const isActing = !!(actorName && name === actorName);
-          const isHero = (i===0);
-          const isSB = (name === sbName);
-          seatsLayer.appendChild( renderSeat(p, pos, isActing, isHero, isSB) );
-        });
-
-        renderBets(players, angles);
-
-        // My hand
-        myHandEl.innerHTML='';
-        const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
-        if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
-
-        // 67 easter egg
-        if (Array.isArray(myCards) && myCards.length === 2) {
-          const r1 = parseInt(myCards[0].rank ?? myCards[0].Rank ?? 0, 10);
-          const r2 = parseInt(myCards[1].rank ?? myCards[1].Rank ?? 0, 10);
-          const is67 = ( (r1 === 6 && r2 === 7) || (r1 === 7 && r2 === 6) );
-          if (is67 && !lastHeroWas67) {
-            safePlay67();
-            lastHeroWas67 = true;
-          } else if (!is67) {
-            lastHeroWas67 = false;
-          }
-        } else {
-          lastHeroWas67 = false;
-        }
-
-        // Action message
-        const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
-        if (actionMsg){ 
-          actionMsgEl.textContent=actionMsg; 
-          actionMsgEl.style.display='block'; 
-          if (actionMsg !== prevActionMessage) {
-            if (/\b(check|checked)\b/i.test(actionMsg)) {
-              safePlayCheck();
-            } else if (/\b(call|called|calls|raise|raised|raises|re-?raise|reraise|bet|bets)\b/i.test(actionMsg)) {
-              safePlayChip();
-              if (!/^\s*fold/i.test(currentQueued)) {
-                setQueuedDisplay('');
-                showMsg('Your queued action was cleared (opponent raised)', 'ok');
-              }
-            }
-          }
-        }
-        else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
-        prevActionMessage = actionMsg;
-
-        // timer
-        const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
-        const serverNowMs = Number(hand.serverCurrentTimeUnixMs ?? hand.ServerCurrentTimeUnixMs ?? Date.now());
-        if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
-
-        // showdown
-        const sdMsg = String(hand.showDownMessage ?? hand.ShowDownMessage ?? '').trim();
-        const sdHands = getShowdownHandsArray(hand);
-        const street = String(hand.street ?? hand.Street ?? '').toLowerCase();
-        const hasShowdown = (street==='showdown') && (sdMsg.length > 0 || (Array.isArray(sdHands) && sdHands.length > 0));
-        showdownBanner.style.display = hasShowdown ? 'block' : 'none';
-        showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
-        showdownList.innerHTML = '';
-        if (hasShowdown && Array.isArray(sdHands) && sdHands.length) {
-          const nameById = new Map();
-          rawPlayers.forEach(p => {
-            const pid = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
-            const nm  = String(p.name ?? p.Name ?? '').trim();
-            if (pid) nameById.set(pid, nm);
-            if (nm && !nameById.has(nm)) nameById.set(nm, nm);
-          });
-          sdHands.forEach(entry => {
-            const cards = entry.Hand ?? entry.hand ?? null;
-            if (!Array.isArray(cards) || cards.length === 0) return;
-            const pidOrName = String(entry.PlayerName ?? entry.playerName ?? entry.PlayerID ?? entry.playerId ?? '').trim();
-            const displayName = nameById.get(pidOrName) || pidOrName || 'player';
-            const row = document.createElement('div');
-            row.className = 'entry';
-            const who = document.createElement('div'); who.className = 'who'; who.textContent = displayName;
-            const cardsWrap = document.createElement('div'); cardsWrap.className = 'cards';
-            cards.forEach(c => cardsWrap.appendChild(renderCardImg(c)));
-            row.appendChild(who); row.appendChild(cardsWrap);
-            showdownList.appendChild(row);
-          });
-          showdownList.style.display = showdownList.children.length ? 'flex' : 'none';
-        } else {
-          showdownList.style.display = 'none';
-        }
-
-        // Right panel dynamic
-        const avail = new Set(hand.avaliableActions || hand.availableActions || []);
-        const myBet   = Number((hero && (hero.currentBet ?? hero.CurrentBet)) ?? 0) || 0;
-        const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
-        lastHandCurrentBet = tableBet;
-
-        const callAmt = Math.max(0, tableBet - myBet);
-        callAmtEl.textContent = fmtMoney(callAmt);
-        callAmtEl.dataset.val = String(callAmt);
-
-        const ONE_BB = 0.25;
-        let minAdd = Number(hand.raiseAmount ?? hand.RaiseAmount ?? 0);
-        if (!Number.isFinite(minAdd) || minAdd <= 0) {
-          if (tableBet <= myBet) {
-            minAdd = ONE_BB;
-          } else {
-            minAdd = Math.max(ONE_BB, tableBet - myBet);
-          }
-        }
-        lastMinRaiseAdd = minAdd;
-
-        const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
-        const baseRaiseTo = tableBet + minAdd;
-
-        // how much I can ever show in the box/slider:
-        const maxRaiseTo = myBet + myStack;
-
-        const sliderMin = Math.max(0, Math.round(baseRaiseTo * 100) / 100);
-        const sliderMax = Math.max(sliderMin, Math.round(maxRaiseTo * 100) / 100);
-
-        currentRaiseMin = sliderMin;
-        currentRaiseMax = sliderMax;
-
-        const actorNm = actorName;
-        const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorNm });
-        const contextChanged = (ctx !== lastSliderCtx);
-
-        const currentInputVal = Number(raiseAmt.value || NaN);
-        const outOfBounds = !Number.isFinite(currentInputVal) ||
-                            currentInputVal < sliderMin - 1e-9 ||
-                            currentInputVal > sliderMax + 1e-9;
-
-        if ((!isAdjusting && contextChanged) || outOfBounds) {
-          raiseAmt.value = sliderMin.toFixed(2);
-          raiseAmtLabel.textContent = sliderMin.toFixed(2);
-          raiseSlider.value = amountToSlider(sliderMin);
-        } else {
-          const kept = Math.min(sliderMax, Math.max(sliderMin, currentInputVal));
-          raiseAmt.value = kept.toFixed(2);
-          raiseAmtLabel.textContent = kept.toFixed(2);
-          raiseSlider.value = amountToSlider(kept);
-        }
-
-        if (avail.has('check')) {
-          foldBtn.disabled = true;
-        } else {
-          foldBtn.disabled = false;
-        }
-
-        checkBtn.disabled = !avail.has('check');
-        callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001;
-        raiseBtn.disabled = !avail.has('raise');
-
-        lastSliderCtx = ctx;
+        showMsg('Emote sent!', 'ok');
+      } catch (e) {
+        showMsg(`Emote error: ${e?.message||e}`, 'err');
       }
-
-      function renderSeat(p, pos, isActing, isHero, isSB){
-        const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
-        const stack = p.stack ?? p.Stack ?? '';
-        const sittingOut = !!(p.sittingOut ?? p.SittingOut);
-        const folded = !!(p.folded ?? p.Folded);
-
-        const seat=document.createElement('div');
-        seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'')+(folded?' folded':'');
-        seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
-
-        const nameWrap = document.createElement('div');
-        const nameSpan = document.createElement('strong'); nameSpan.textContent = name;
-        nameWrap.appendChild(nameSpan);
-
-        if (isSB) {
-          const sbSpan = document.createElement('span');
-          sbSpan.className = 'sb-indicator';
-          sbSpan.textContent = 'SB';
-          nameWrap.appendChild(sbSpan);
-        }
-
-        if (isActing) {
-          const timer = document.createElement('span');
-          timer.className = 'act-timer-seat timer-ok';
-          const clock = document.createTextNode('⏱ ');
-          const tval = document.createElement('span');
-          tval.className = 'tval';
-          tval.textContent = '0.0s';
-          timer.appendChild(clock); timer.appendChild(tval);
-          nameWrap.appendChild(timer);
-        }
-
-        const chips=document.createElement('div'); chips.className='chips';
-        const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
-        const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(stack);
-        chips.appendChild(chipImg); chips.appendChild(chipsText);
-
-        seat.appendChild(nameWrap);
-        seat.appendChild(chips);
-
-        if (!sittingOut && !folded) {
-          const holes = document.createElement('div');
-          holes.className = 'seat-holes';
-          const card1 = document.createElement('img');
-          card1.src = '/static/card_svgs/card_back.png';
-          card1.alt = 'card back';
-          const card2 = document.createElement('img');
-          card2.src = '/static/card_svgs/card_back.png';
-          card2.alt = 'card back';
-          holes.appendChild(card1);
-          holes.appendChild(card2);
-          seat.appendChild(holes);
-        }
-
-        return seat;
-      }
-
-      function renderBets(players, angles){
-        betsLayer.innerHTML='';
-        players.forEach((p,i)=>{
-          const bet=Number(p.currentBet ?? p.CurrentBet ?? 0);
-          if(!Number.isFinite(bet) || bet<=0) return;
-          const pos=ellipseXY(angles[i], BET_RX, BET_RY);
-          const wrap=document.createElement('div'); wrap.className='bet-chip'; wrap.style.left=pos.x+'%'; wrap.style.top=pos.y+'%';
-          const img=document.createElement('img'); img.src='/static/chips/chips.png'; img.alt='bet';
-          const amt=document.createElement('div'); amt.className='amt'; amt.textContent=fmtMoney(bet);
-          wrap.appendChild(img); wrap.appendChild(amt); betsLayer.appendChild(wrap);
-        });
-      }
-
-      // slider <-> number sync
-      function syncFromSlider(){
-        const sliderVal = Number(raiseSlider.value)||0;
-        const amt = sliderToAmount(sliderVal);
-        raiseAmt.value = amt.toFixed(2);
-        raiseAmtLabel.textContent = amt.toFixed(2);
-      }
-      function syncFromBox(){
-        const v=Number(raiseAmt.value)||0;
-        const clamped = Math.max(currentRaiseMin, Math.min(currentRaiseMax, v));
-        raiseAmt.value = clamped.toFixed(2);
-        raiseAmtLabel.textContent = clamped.toFixed(2);
-        raiseSlider.value = amountToSlider(clamped);
-      }
-      raiseSlider.addEventListener('input', syncFromSlider);
-      raiseAmt.addEventListener('input',    syncFromBox);
-
-      // initial
-      (async () => {
-        try {
-          const res = await api.state($('room').value);
-          if (res.ok) renderState(JSON.parse(await res.text()));
-        } catch {}
-      })();
-
-      // expose for console testing
-      window.__renderState = renderState;
-      window.__setMyName = (n) => { myName = n; };
     });
-  </script>
+  }
+
+  // Helpers
+  function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
+  function cardURL(card){
+    const s = (card.suit||card.Suit||'').toString().toUpperCase();
+    const r = (card.rank||card.Rank||'');
+    const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
+    let rt = ''; const n=Number(r);
+    if(Number.isFinite(n)){
+      rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':'';
+    } else {
+      const up=String(r).toUpperCase();
+      rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':'';
+    }
+    return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
+  }
+  function renderCardImg(card){
+    const img=document.createElement('img'); img.className='cardimg'; const url=cardURL(card);
+    if(url){ img.src=url; img.alt=url.split('/').pop(); } else { img.alt='??'; img.title=JSON.stringify(card); }
+    return img;
+  }
+
+  // Countdown
+  let rafId = 0, deadlineMsGlobal = 0, skewMsGlobal = 0;
+  function getTimerEls(){
+    const pill = document.querySelector('.act-timer-seat');
+    const val  = pill ? pill.querySelector('.tval') : null;
+    return { pill, val };
+  }
+  function setTimerClasses(pill, msLeft){
+    if (!pill) return;
+    pill.classList.remove('timer-ok','timer-warn','timer-bad');
+    const s = msLeft/1000;
+    if (s <= 5) pill.classList.add('timer-bad');
+    else if (s <= 10) pill.classList.add('timer-warn');
+    else pill.classList.add('timer-ok');
+  }
+  function startCountdown(deadlineMs, serverNowMs){
+    deadlineMsGlobal = Number(deadlineMs)||0;
+    skewMsGlobal = Number(serverNowMs||0) - Date.now();
+    if (rafId) cancelAnimationFrame(rafId);
+
+    const { pill, val } = getTimerEls();
+    if (!deadlineMsGlobal || !pill || !val) return;
+
+    const tick = () => {
+      const els = getTimerEls();
+      if (!els.pill || !els.val) { cancelAnimationFrame(rafId); rafId=0; return; }
+      const remaining = Math.max(0, deadlineMsGlobal - (Date.now() + skewMsGlobal));
+      const secs = remaining / 1000;
+      els.val.textContent = secs >= 10 ? secs.toFixed(0)+'s' : secs.toFixed(1)+'s';
+      setTimerClasses(els.pill, remaining);
+      rafId = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+  function stopCountdown(){ if (rafId) cancelAnimationFrame(rafId); rafId = 0; }
+
+  // slider stickiness
+  let isAdjusting = false;
+  $('raiseSlider').addEventListener('pointerdown', () => { isAdjusting = true; });
+  document.addEventListener('pointerup', () => { isAdjusting = false; });
+  $('raiseAmt').addEventListener('focus', () => { isAdjusting = true; });
+  $('raiseAmt').addEventListener('blur',  () => { isAdjusting = false; });
+
+  function bumpRaise(delta) {
+    const min = Number(currentRaiseMin) || 0;
+    const max = Number(currentRaiseMax) || 0;
+    let v = Number(raiseAmt.value || '0') || 0;
+    v = v + delta;
+    v = Math.max(min, Math.min(max, Math.round(v * 100) / 100));
+    raiseAmt.value = v.toFixed(2);
+    $('raiseAmtLabel').textContent = v.toFixed(2);
+    $('raiseSlider').value = amountToSlider(v);
+  }
+  $('raiseUp').addEventListener('click', () => bumpRaise(0.25));
+  $('raiseDown').addEventListener('click', () => bumpRaise(-0.25));
+
+  // context key for betting
+  let lastSliderCtx = '';
+  function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
+    return [
+      String(street||'').toLowerCase(),
+      Number(tableBet||0).toFixed(2),
+      Number(myBet||0).toFixed(2),
+      Number(minAdd||0).toFixed(2),
+      String(actorName||'')
+    ].join('|');
+  }
+
+  const SEAT_RX = 46, SEAT_RY = 38, BET_RX=31, BET_RY=26;
+  function heroPolar(){ return Math.PI/2; }
+  function otherPolars(n){ if(!n) return []; const step=2*Math.PI/(n+1); return Array.from({length:n},(_,k)=>Math.PI/2+(k+1)*step); }
+  function ellipseXY(theta, rx, ry){ const cx=50, cy=50; return { x: cx + rx*Math.cos(theta), y: cy + ry*Math.sin(theta) }; }
+
+  const potEl = $('pot'), boardEl = $('board'), seatsLayer = $('seatsLayer'), betsLayer = $('betsLayer'), myHandEl = $('myHand');
+  const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
+
+  // Track last-seen emote and hold time to prevent flicker
+  const lastEmoteKeyByName = new Map();
+  const emoteHoldUntilByName = new Map(); // name -> ms (end + small buffer)
+
+  // Cooldown helpers
+  function secondsLeft(nextAtMs, serverNowMs){
+    if (!Number.isFinite(nextAtMs) || nextAtMs <= 0) return 0;
+    const left = Math.max(0, nextAtMs - serverNowMs);
+    return left / 1000;
+  }
+  function formatSecs(secs){
+    if (secs >= 10) return `${Math.ceil(secs)}s`;
+    if (secs >= 1) return `${secs.toFixed(1)}s`;
+    return `${(secs*1000|0)}ms`;
+  }
+  function updateEmoteCooldownUI(hero, handServerNowMs){
+    if (!emoteCooldownEl) return;
+    const nextAt = Number(hero?.nextEmoteAt ?? hero?.NextEmoteAt ?? 0);
+    let nowMs = Number(handServerNowMs);
+    if (!Number.isFinite(nowMs) || nowMs <= 0) nowMs = Date.now();
+    const secs = secondsLeft(nextAt, nowMs);
+
+    if (secs > 0) {
+      emoteCooldownEl.textContent = `Cooldown: ${formatSecs(secs)}`;
+      emoteAngleBtn.disabled = true;
+      emoteAngleBtn.title = `Cooldown ${formatSecs(secs)}`;
+    } else {
+      emoteCooldownEl.textContent = 'Ready';
+      emoteAngleBtn.disabled = false;
+      emoteAngleBtn.title = 'Send angle emote';
+    }
+  }
+
+  // Polling
+  const pollState = (() => {
+    let timer=null;
+    async function tick(){
+      const room = $('room').value;
+      statusEl.textContent='updating…'; statusEl.className='pill';
+      try {
+        const res = await api.state(room);
+        if (!res.ok) {
+          const txt = (await res.text()).trim().toLowerCase();
+          if (res.status === 400 && txt.includes('player not in room')) {
+            renderState(null);
+            showMsg('You are not in the room', 'err');
+            statusEl.textContent='not in room'; statusEl.className='pill err';
+          } else if (res.status === 401) {
+            location.href='/login'; return;
+          } else {
+            statusEl.textContent='error'; statusEl.className='pill err';
+          }
+          return;
+        }
+        const st = JSON.parse(await res.text());
+        renderState(st);
+        statusEl.textContent='connected'; statusEl.className='pill';
+      } catch (e) {
+        statusEl.textContent='error'; statusEl.className='pill err';
+      } finally { timer=setTimeout(tick, 1000); }
+    }
+    function start(){ if(!timer) timer=setTimeout(tick, 80); }
+    function stop(){ if(timer){ clearTimeout(timer); timer=null; } }
+    function now(){ stop(); start(); }
+    function soon(){ stop(); timer=setTimeout(tick, 300); }
+    document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stop(); else now(); });
+    start();
+    return { start, stop, now, soon };
+  })();
+
+  function getShowdownHandsArray(hand) {
+    const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
+    return Array.isArray(raw) ? raw : [];
+  }
+
+  let prevActionMessage='';
+  function renderState(st){
+    if (!st || (Object.keys(st).length===0)){
+      potEl.textContent='—';
+      stopCountdown();
+      boardEl.innerHTML=''; seatsLayer.innerHTML=''; betsLayer.innerHTML=''; myHandEl.innerHTML='';
+      showdownBanner.style.display='none'; showdownList.style.display='none'; showdownList.innerHTML='';
+      actionMsgEl.style.display='none';
+      serverMsgEl.className = 'server-message';
+      lastHeroWas67 = false;
+      lastBoardLen = 0;
+      updateEmoteCooldownUI(null, Date.now());
+      return;
+    }
+
+    const hand = st.hand || st.Hand || {};
+    let serverNowMs = Number(hand.serverCurrentTimeUnixMs ?? hand.ServerCurrentTimeUnixMs);
+    if (!Number.isFinite(serverNowMs) || serverNowMs <= 0) serverNowMs = Date.now();
+
+    const actorName = String(hand.actionPlayerName ?? hand.ActionPlayerName ?? '').trim();
+    const sbName = String(hand.smallBlindName   ?? hand.SmallBlindName   ?? '').trim();
+
+    // Pot
+    potEl.textContent = fmtMoney(hand.pot ?? hand.Pot ?? '');
+
+    // Board
+    const board = Array.isArray(hand.board ?? hand.Board) ? (hand.board ?? hand.Board) : [];
+    const currentBoardLen = board.length;
+    boardEl.innerHTML='';
+    board.forEach(c=>boardEl.appendChild(renderCardImg(c)));
+    if (currentBoardLen > lastBoardLen) {
+      for (let i = lastBoardLen; i < currentBoardLen; i++) {
+        setTimeout(() => safePlayDeal(), (i - lastBoardLen) * 120);
+      }
+    }
+    lastBoardLen = currentBoardLen;
+
+    // Players -> compute seating order (hero at bottom)
+    const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
+    let heroIdx = -1;
+    if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
+    if (heroIdx < 0) heroIdx = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand));
+    if (heroIdx < 0) heroIdx = 0;
+
+    const hero = rawPlayers[heroIdx] || null;
+    const others = rawPlayers.length ? [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)] : [];
+    const heroTheta = heroPolar(); const othersTheta = otherPolars(others.length);
+    const players = hero ? [hero, ...others] : others.slice();
+    const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
+
+    seatsLayer.innerHTML='';
+    players.forEach((p,i)=>{
+      const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
+      const name = String(p.name ?? p.Name ?? '').trim();
+      const isActing = !!(actorName && name === actorName);
+      const isHero = (i===0);
+      const isSB = (name === sbName);
+
+      const seatEl = renderSeat(p, pos, isActing, isHero, isSB);
+      seatsLayer.appendChild(seatEl);
+
+      // ----- EMOTE BUBBLE RENDER (stable, no name shown) -----
+      const emText = String(p.emoteText ?? p.EmoteText ?? '').trim();
+      const emAudio = String(p.emoteAudio ?? p.EmoteAudio ?? '').trim();
+      const emEnds  = Number(p.emoteEndsUnixMs ?? p.EmoteEndsUnixMs ?? 0) || 0;
+
+      const holdKey = name;
+      const holdUntil = emoteHoldUntilByName.get(holdKey) || 0;
+      const shouldShow = emText && (serverNowMs <= Math.max(emEnds, holdUntil));
+
+      if (emText && emEnds > 0) {
+        if (serverNowMs <= emEnds + 200) {
+          emoteHoldUntilByName.set(holdKey, emEnds + 200);
+        }
+      }
+
+      const emKey = emText && emEnds ? `${holdKey}|${emEnds}|${emText}` : '';
+      const lastKey = lastEmoteKeyByName.get(holdKey);
+      if (emKey && emKey !== lastKey) {
+        playEmoteAudio(emAudio);
+        lastEmoteKeyByName.set(holdKey, emKey);
+      }
+
+      if (shouldShow) {
+        let bubble = seatEl.querySelector('.emote-bubble');
+        if (!bubble) {
+          bubble = document.createElement('div');
+          bubble.className = 'emote-bubble sticky';
+          seatEl.appendChild(bubble);
+        }
+        bubble.textContent = emText; // no player name
+      }
+      // ----- /EMOTE BUBBLE RENDER -----
+    });
+
+    renderBets(players, angles);
+
+    // My hand
+    myHandEl.innerHTML='';
+    const myCards = hero ? (hero.hand ?? hero.Hand ?? []) : [];
+    if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
+
+    // 67 easter egg
+    if (Array.isArray(myCards) && myCards.length === 2) {
+      const r1 = parseInt(myCards[0].rank ?? myCards[0].Rank ?? 0, 10);
+      const r2 = parseInt(myCards[1].rank ?? myCards[1].Rank ?? 0, 10);
+      const is67 = ( (r1 === 6 && r2 === 7) || (r1 === 7 && r2 === 6) );
+      if (is67 && !lastHeroWas67) { safePlay67(); lastHeroWas67 = true; }
+      else if (!is67) { lastHeroWas67 = false; }
+    } else { lastHeroWas67 = false; }
+
+    // Action message (poker actions only)
+    const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
+    if (actionMsg){
+      actionMsgEl.textContent=actionMsg;
+      actionMsgEl.style.display='block';
+      if (actionMsg !== prevActionMessage) {
+        if (/\b(check|checked)\b/i.test(actionMsg)) {
+          safePlayCheck();
+        } else if (/\b(call|called|calls|raise|raised|raises|re-?raise|reraise|bet|bets)\b/i.test(actionMsg)) {
+          safePlayChip();
+          if (!/^\s*fold/i.test(currentQueued)) {
+            setQueuedDisplay('');
+            showMsg('Your queued action was cleared (opponent raised)', 'ok');
+          }
+        }
+      }
+    } else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
+    prevActionMessage = actionMsg;
+
+    // timer
+    const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
+    if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
+
+    // showdown
+    const sdMsg = String(hand.showDownMessage ?? hand.ShowDownMessage ?? '').trim();
+    const sdHands = getShowdownHandsArray(hand);
+    const street = String(hand.street ?? hand.Street ?? '').toLowerCase();
+    const hasShowdown = (street==='showdown') && (sdMsg.length > 0 || (Array.isArray(sdHands) && sdHands.length > 0));
+    showdownBanner.style.display = hasShowdown ? 'block' : 'none';
+    showdownBanner.textContent = hasShowdown ? (sdMsg || 'Showdown') : '';
+    showdownList.innerHTML = '';
+    if (hasShowdown && Array.isArray(sdHands) && sdHands.length) {
+      const nameById = new Map();
+      (st.players || st.Players || []).forEach(p => {
+        const pid = String(p.id ?? p.ID ?? p.playerId ?? p.PlayerID ?? '').trim();
+        const nm  = String(p.name ?? p.Name ?? '').trim();
+        if (pid) nameById.set(pid, nm);
+        if (nm && !nameById.has(nm)) nameById.set(nm, nm);
+      });
+      sdHands.forEach(entry => {
+        const cards = entry.Hand ?? entry.hand ?? null;
+        if (!Array.isArray(cards) || cards.length === 0) return;
+        const pidOrName = String(entry.PlayerName ?? entry.playerName ?? entry.PlayerID ?? entry.playerId ?? '').trim();
+        const displayName = nameById.get(pidOrName) || pidOrName || 'player';
+        const row = document.createElement('div');
+        row.className = 'entry';
+        const who = document.createElement('div'); who.className = 'who'; who.textContent = displayName;
+        const cardsWrap = document.createElement('div'); cardsWrap.className = 'cards';
+        cards.forEach(c => cardsWrap.appendChild(renderCardImg(c)));
+        row.appendChild(who); row.appendChild(cardsWrap);
+        showdownList.appendChild(row);
+      });
+      showdownList.style.display = showdownList.children.length ? 'flex' : 'none';
+    } else {
+      showdownList.style.display = 'none';
+    }
+
+    // Right panel dynamic
+    const avail = new Set(hand.avaliableActions || hand.availableActions || []);
+    const myBet   = Number((hero && (hero.currentBet ?? hero.CurrentBet)) ?? 0) || 0;
+    const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
+    lastHandCurrentBet = tableBet;
+
+    const callAmt = Math.max(0, tableBet - myBet);
+    $('callAmt').textContent = fmtMoney(callAmt);
+    $('callAmt').dataset.val = String(callAmt);
+
+    const ONE_BB = 0.25;
+    let minAdd = Number(hand.raiseAmount ?? hand.RaiseAmount ?? 0);
+    if (!Number.isFinite(minAdd) || minAdd <= 0) {
+      if (tableBet <= myBet) { minAdd = ONE_BB; }
+      else { minAdd = Math.max(ONE_BB, tableBet - myBet); }
+    }
+    lastMinRaiseAdd = minAdd;
+
+    const myStack = Number((hero && (hero.stack ?? hero.Stack)) ?? 0) || 0;
+    const baseRaiseTo = tableBet + minAdd;
+    const maxRaiseTo = myBet + myStack;
+
+    const sliderMin = Math.max(0, Math.round(baseRaiseTo * 100) / 100);
+    const sliderMax = Math.max(sliderMin, Math.round(maxRaiseTo * 100) / 100);
+
+    currentRaiseMin = sliderMin;
+    currentRaiseMax = sliderMax;
+
+    const actorNm = actorName;
+    const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorNm });
+    const contextChanged = (ctx !== lastSliderCtx);
+
+    const currentInputVal = Number(raiseAmt.value || NaN);
+    const outOfBounds = !Number.isFinite(currentInputVal) ||
+                        currentInputVal < sliderMin - 1e-9 ||
+                        currentInputVal > sliderMax + 1e-9;
+
+    if ((!isAdjusting && contextChanged) || outOfBounds) {
+      raiseAmt.value = sliderMin.toFixed(2);
+      $('raiseAmtLabel').textContent = sliderMin.toFixed(2);
+      $('raiseSlider').value = amountToSlider(sliderMin);
+    } else {
+      const kept = Math.min(sliderMax, Math.max(sliderMin, currentInputVal));
+      raiseAmt.value = kept.toFixed(2);
+      $('raiseAmtLabel').textContent = kept.toFixed(2);
+      $('raiseSlider').value = amountToSlider(kept);
+    }
+
+    if (avail.has('check')) { $('foldBtn').disabled = true; } else { $('foldBtn').disabled = false; }
+    $('checkBtn').disabled = !avail.has('check');
+    $('callBtn').disabled  = !avail.has('call') || callAmt <= 0.0001;
+    $('raiseBtn').disabled = !avail.has('raise');
+
+    lastSliderCtx = ctx;
+
+    // Update the emote cooldown/badge for ME
+    updateEmoteCooldownUI(hero, serverNowMs);
+  }
+
+  function renderSeat(p, pos, isActing, isHero, isSB){
+    const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
+    const stack = p.stack ?? p.Stack ?? '';
+    const sittingOut = !!(p.sittingOut ?? p.SittingOut);
+    const folded = !!(p.folded ?? p.Folded);
+
+    const seat=document.createElement('div');
+    seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'')+(folded?' folded':'');
+    seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
+
+    const nameWrap = document.createElement('div');
+    const nameSpan = document.createElement('strong'); nameSpan.textContent = name;
+    nameWrap.appendChild(nameSpan);
+
+    if (isSB) {
+      const sbSpan = document.createElement('span');
+      sbSpan.className = 'sb-indicator';
+      sbSpan.textContent = 'SB';
+      nameWrap.appendChild(sbSpan);
+    }
+
+    if (isActing) {
+      const timer = document.createElement('span');
+      timer.className = 'act-timer-seat timer-ok';
+      const clock = document.createTextNode('⏱ ');
+      const tval = document.createElement('span');
+      tval.className = 'tval';
+      tval.textContent = '0.0s';
+      timer.appendChild(clock); timer.appendChild(tval);
+      nameWrap.appendChild(timer);
+    }
+
+    const chips=document.createElement('div'); chips.className='chips';
+    const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
+    const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(stack);
+    chips.appendChild(chipImg); chips.appendChild(chipsText);
+
+    seat.appendChild(nameWrap);
+    seat.appendChild(chips);
+
+    if (!sittingOut && !folded) {
+      const holes = document.createElement('div');
+      holes.className = 'seat-holes';
+      const card1 = document.createElement('img');
+      card1.src = '/static/card_svgs/card_back.png';
+      card1.alt = 'card back';
+      const card2 = document.createElement('img');
+      card2.src = '/static/card_svgs/card_back.png';
+      card2.alt = 'card back';
+      holes.appendChild(card1);
+      holes.appendChild(card2);
+      seat.appendChild(holes);
+    }
+
+    return seat;
+  }
+
+  function renderBets(players, angles){
+    const betsLayer = document.getElementById('betsLayer');
+    betsLayer.innerHTML='';
+    players.forEach((p,i)=>{
+      const bet=Number(p.currentBet ?? p.CurrentBet ?? 0);
+      if(!Number.isFinite(bet) || bet<=0) return;
+      const pos=ellipseXY(angles[i], BET_RX, BET_RY);
+      const wrap=document.createElement('div'); wrap.className='bet-chip'; wrap.style.left=pos.x+'%'; wrap.style.top=pos.y+'%';
+      const img=document.createElement('img'); img.src='/static/chips/chips.png'; img.alt='bet';
+      const amt=document.createElement('div'); amt.className='amt'; amt.textContent=fmtMoney(bet);
+      wrap.appendChild(img); wrap.appendChild(amt); betsLayer.appendChild(wrap);
+    });
+  }
+
+  // slider <-> number sync
+  function syncFromSlider(){
+    const sliderVal = Number($('raiseSlider').value)||0;
+    const amt = sliderToAmount(sliderVal);
+    $('raiseAmt').value = amt.toFixed(2);
+    $('raiseAmtLabel').textContent = amt.toFixed(2);
+  }
+  function syncFromBox(){
+    const v=Number($('raiseAmt').value)||0;
+    const clamped = Math.max(currentRaiseMin, Math.min(currentRaiseMax, v));
+    $('raiseAmt').value = clamped.toFixed(2);
+    $('raiseAmtLabel').textContent = clamped.toFixed(2);
+    $('raiseSlider').value = amountToSlider(clamped);
+  }
+  $('raiseSlider').addEventListener('input', syncFromSlider);
+  $('raiseAmt').addEventListener('input',    syncFromBox);
+
+  // initial
+  (async () => {
+    try {
+      const res = await api.state($('room').value);
+      if (res.ok) renderState(JSON.parse(await res.text()));
+    } catch {}
+  })();
+
+  // expose for console testing
+  window.__renderState = renderState;
+  window.__setMyName = (n) => { myName = n; };
+});
+</script>
 </body>
 </html>
