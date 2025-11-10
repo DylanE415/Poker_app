@@ -3,24 +3,23 @@ package main
 import "time"
 
 type Player struct {
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Stack          float64 `json:"stack"`
-	canAct         bool
-	timebank       time.Duration
-	sittingOut     bool
-	Hand           []Card `json:"hand"`
-	pendingAction  chan Action
-	currentBet     float64
-	potCommitment  float64
-	folded         bool
-	buyIn          float64
-	nextEmoteAt    time.Time
-	emoteUntil     time.Time
-	emoteText      string
-	emoteAudio     string
-	ShowCards      bool
-	ShowCardsUntil time.Time
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	Stack         float64 `json:"stack"`
+	canAct        bool
+	timebank      time.Duration
+	sittingOut    bool
+	Hand          []Card `json:"hand"`
+	pendingAction chan Action
+	currentBet    float64
+	potCommitment float64
+	folded        bool
+	buyIn         float64
+	nextEmoteAt   time.Time
+	emoteUntil    time.Time
+	emoteText     string
+	emoteAudio    string
+	ShowCards     bool
 }
 
 func newPlayer(id string, name string, stack float64) *Player {

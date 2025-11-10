@@ -498,6 +498,7 @@ func (h *Hand) run() {
 		h.Players[i].folded = false
 		h.Players[i].currentBet = 0
 		h.Players[i].timebank = time.Second * 60
+		h.Players[i].ShowCards = false
 		playerCount++
 
 	}

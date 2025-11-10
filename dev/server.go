@@ -95,6 +95,7 @@ func (s *Server) createSessionFor(w http.ResponseWriter, userID string) error {
 }
 
 // userIDFromRequest fetches the logged-in user ID from the session cookie.
+
 func (s *Server) userIDFromRequest(r *http.Request) (string, bool) {
 	cookie, err := r.Cookie("session")
 	if err != nil || cookie.Value == "" {

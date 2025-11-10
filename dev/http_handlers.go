@@ -516,3 +516,66 @@ func (s *Server) sitInOrOutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+// format is :8080/showHand?room=1&showHand=true
+func (s *Server) showHandHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+		return
+	}
+
+	//make sure valid cookie
+	uid, ok := s.userIDFromRequest(r)
+	if !ok {
+		http.Error(w, "auth required", http.StatusUnauthorized)
+		return
+	}
+
+	// check valid room
+	roomID, err := room_request_to_int(r.URL.Query().Get("room"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// user lookup
+	_, ok = s.usersByID[uid]
+	if !ok {
+		http.Error(w, "no such user", http.StatusBadRequest)
+		return
+	}
+
+	//parse either show or hide
+	showHand, err := strconv.ParseBool(r.URL.Query().Get("showHand"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	//send  command to room
+	room := s.getRoom(fmt.Sprint(roomID))
+	reply := make(chan error, 1)
+	if showHand {
+		Command := Command{Kind: "showHand", PlayerID: uid, reply: reply}
+		room.commandChan <- Command
+	} else {
+		Command := Command{Kind: "hideHand", PlayerID: uid, reply: reply}
+		room.commandChan <- Command
+	}
+
+	//wait for timeout,reply, or the client to cancel
+	select {
+	case err := <-reply:
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent) // done
+	case <-time.After(2 * time.Second):
+		http.Error(w, "timeout waiting for action ack", http.StatusGatewayTimeout)
+		return
+	case <-r.Context().Done():
+		http.Error(w, "request canceled", http.StatusGatewayTimeout)
+		return
+	}
+
+}

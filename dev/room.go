@@ -48,6 +48,7 @@ type playerState struct {
 	EmoteAudio      string  `json:"emoteAudio,omitempty"`
 	EmoteEndsUnixMs int64   `json:"emoteEndsUnixMs,omitempty"`
 	NextEmoteAt     int64   `json:"nextEmoteAt,omitempty"`
+	ShowingHand     bool    `json:"showingHand"`
 }
 
 type handState struct {
@@ -69,6 +70,7 @@ type handState struct {
 type roomState struct {
 	Players []playerState `json:"players"`
 	Hand    handState     `json:"hand"`
+	HeroID  string        `json:"heroID"`
 }
 
 // has a command buffer of 16 commands
@@ -394,6 +396,38 @@ func (r *Room) run() {
 				}
 				safeReply(cmd.reply, nil)
 				r.handleEmote(player, cmd.EmoteType)
+			case "showHand":
+				player := getPlayerFromID(cmd.PlayerID, r.players)
+				if player == nil {
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
+				if r.currentHand == nil {
+					safeReply(cmd.reply, fmt.Errorf("no hand in progress"))
+					break
+				}
+				if player.ShowCards {
+					safeReply(cmd.reply, fmt.Errorf("player already showing hand"))
+					break
+				}
+				safeReply(cmd.reply, nil)
+				player.ShowCards = true
+			case "hideHand":
+				player := getPlayerFromID(cmd.PlayerID, r.players)
+				if player == nil {
+					safeReply(cmd.reply, fmt.Errorf("player not in room"))
+					break
+				}
+				if r.currentHand == nil {
+					safeReply(cmd.reply, fmt.Errorf("no hand in progress"))
+					break
+				}
+				if !player.ShowCards {
+					safeReply(cmd.reply, fmt.Errorf("player not showing hand"))
+					break
+				}
+				safeReply(cmd.reply, nil)
+				player.ShowCards = false
 			case "getState":
 				//send state to client
 				p := getPlayerFromID(cmd.PlayerID, r.players)
@@ -406,6 +440,7 @@ func (r *Room) run() {
 
 				//fill in various fields of the state
 				state := roomState{}
+				state.HeroID = cmd.PlayerID
 				state.Players = make([]playerState, len(r.players))
 				now := time.Now()
 				// only info needed to display to client about other players(name, stack, sittingOut, timebank, currentBet) and hand if it is clients id
@@ -422,6 +457,14 @@ func (r *Room) run() {
 					if pl.ID == cmd.PlayerID {
 						ps.Hand = pl.Hand
 
+					}
+					//show other players cards if they are showing their hand
+					if pl.ShowCards {
+						ps.Hand = pl.Hand
+						ps.ShowingHand = true
+					} else if !pl.ShowCards {
+						ps.Hand = nil
+						ps.ShowingHand = false
 					}
 
 					// attach emote if still active
@@ -510,14 +553,13 @@ func (r *Room) run() {
 				}
 
 			}
-			// if no hand in the last30 minutes, kick everyone
+			// if no hand in the last30 minutes, sit players out
 			if r.currentHand == nil && !r.timeSinceLastHand.IsZero() &&
 				now.Sub(r.timeSinceLastHand) > 30*time.Minute {
 
 				for len(r.players) > 0 {
-					r.leavePlayerByID(r.players[0].ID)
+					r.players[0].sittingOut = true
 				}
-				fmt.Println("auto kick: no hand for 30 minutes")
 			}
 
 		} // select bracket
