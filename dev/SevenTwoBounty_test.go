@@ -10,7 +10,7 @@ func TestCollectSevenTwoBounty(t *testing.T) {
 	// type Card struct { Suit, Rank string }
 	// type Player struct { ID, Name string; Stack float64; Hand []Card }
 
-	r := newRoom(1, 0, 150)
+	r := newRoom(1, 0, 150, 0.25, "0.25/0.50 NL Hold'em")
 
 	// Helper to make a player with a stack
 	mk := func(id string, stack float64) *Player {

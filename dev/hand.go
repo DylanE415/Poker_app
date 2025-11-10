@@ -40,7 +40,7 @@ type Hand struct {
 }
 
 const (
-	timeLimit = 45 //seconds
+	timeLimitPerAction = 45 //seconds
 
 )
 
@@ -424,14 +424,19 @@ func streetLoop(h *Hand) {
 		fmt.Printf("can do: %s\n", strings.Join(h.avaliableActions, ", "))
 
 		// Wait on THIS player until valid action or timeout
-		h.actionPlayerDeadline = time.Now().Add(timeLimit * time.Second)
-		timer := time.NewTimer(timeLimit * time.Second)
+		h.actionPlayerDeadline = time.Now().Add(timeLimitPerAction * time.Second)
+		timer := time.NewTimer(time.Duration(timeLimitPerAction)*time.Second + cur.timebank)
 		for {
 			var act Action
 
 			select {
 			case act = <-cur.pendingAction:
 				// Ignore messages not from this player or not currently allowed
+				//see if player used up timebank time
+				if time.Now().After(h.actionPlayerDeadline) {
+					usedTime := time.Since(h.actionPlayerDeadline)
+					cur.timebank -= time.Duration(usedTime)
+				}
 				if act.PlayerID != cur.ID || !contains(h.avaliableActions, act.Action) {
 					continue
 				}
@@ -447,6 +452,7 @@ func streetLoop(h *Hand) {
 			case <-timer.C:
 				// Timeout -> default move for THIS
 				//if they are sitting out fold to timeout
+				cur.timebank = 0
 				if cur.sittingOut {
 					handleAction(h, Action{PlayerID: cur.ID, Action: "fold"})
 				}
@@ -491,6 +497,7 @@ func (h *Hand) run() {
 		h.Players[i].potCommitment = 0
 		h.Players[i].folded = false
 		h.Players[i].currentBet = 0
+		h.Players[i].timebank = time.Second * 60
 		playerCount++
 
 	}

@@ -72,6 +72,7 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .seat-holes img:nth-child(1) { left: 0; top: 0; }
 .seat-holes img:nth-child(2) { left: 15px; top: 2px; }
 
+/* Base + timebank timers on acting seat */
 .act-timer-seat {
   display:inline-flex; align-items:center; gap:.28rem;
   border:1px solid #2b3b71; border-radius:999px; padding:.02rem .3rem; font-weight:600;
@@ -82,6 +83,12 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .timer-warn{ color: #ffd166;  border-color: rgba(255,209,102,.6); }
 .timer-bad { color: var(--bad);  border-color: rgba(242,95,92,.7); }
 
+/* timebank pill appears only after base time expires */
+.act-timer-seat.tb-timer {
+  margin-left: .24rem;
+}
+
+/* bets overlay */
 #betsLayer { position:absolute; inset:0; pointer-events:none; z-index: 4; }
 .bet-chip { position:absolute; transform: translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; gap:.15rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,.45)); }
 .bet-chip img { width:22px; height:22px; display:block; }
@@ -130,22 +137,21 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 }
 .myhand .cards {
   display:flex; gap:.45rem; justify-content:flex-start;
-  margin-left: 12px; /* nudge hole cards slightly right */
+  margin-left: 12px;
 }
 
 /* emote panel */
 .emote-panel {
-  position: relative; /* so the menu can anchor */
+  position: relative;
   display:flex;
   flex-direction:column;
-  gap:.5rem;
+  gap:.4rem;
   align-items:flex-start;
   justify-content:flex-start;
-  margin-left: -8px; /* pull emote button slightly left */
+  margin-left: -8px;
 }
 #emoteBtn { min-width: 140px; }
 
-/* Emote menu (popover) */
 .emote-menu {
   position: absolute;
   top: 44px;
@@ -175,19 +181,19 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .emote-item[disabled] { opacity:.5; cursor:not-allowed; }
 
 #emoteCooldown { font-size: .8rem; color: var(--muted); }
+.timebank-display { font-size:.8rem; color: var(--muted); }
 
 /* controls column */
 .controls-right {
   background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px;
   padding:.45rem .55rem; display:flex; flex-direction:column; gap:.4rem;
-  font-size: .92rem; 
+  font-size: .92rem;
 }
 .sliderRow { display:flex; align-items:center; gap:.6rem; }
 .sliderRow input[type="range"] { flex:1; }
 
 .amountBoxWrap { display:flex; gap:0.35rem; align-items:center; }
 
-/* hide native number spinners */
 input.amountBox[type="number"]::-webkit-outer-spin-button,
 input.amountBox[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input.amountBox[type="number"] { -moz-appearance: textfield; }
@@ -219,7 +225,7 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
   .myhand .cards { margin-left: 10px; }
 }
 
-/* ===== Emote bubble ===== */
+/* Emote bubble */
 .emote-bubble {
   position: absolute;
   font-size: 1.1rem;
@@ -272,11 +278,11 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
       <div class="control-item">
         <span class="control-label">Room</span>
         <select id="room" class="control-input">
-          <option value="1">Room 1</option>
+          <option value="1">0.25/0.50 NL Hold'em</option>
         </select>
       </div>
       <div class="control-item">
-        <span class="control-label">Buy In(20-40)</span>
+        <span class="control-label">Buy In(20-50)</span>
         <input id="stack" type="number" step="1" min="0" value="40" class="control-input" />
       </div>
       <div class="control-actions">
@@ -315,6 +321,7 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
         <button id="emoteBtn" type="button" aria-haspopup="menu" aria-expanded="false" title="Send an emote">Emote</button>
         <div id="emoteMenu" class="emote-menu" role="menu" aria-label="Emotes"></div>
         <div id="emoteCooldown" class="emote-cooldown" aria-live="polite"></div>
+        <div id="timebankDisplay" class="timebank-display"></div>
       </div>
 
       <div class="cards" id="myHand"></div>
@@ -357,7 +364,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusEl = $('status'), whoEl = $('who');
   const serverMsgEl = $('serverMsg');
 
-  // Text-only emotes; add/remove items here
   const EMOTES = [
     { type: 'angle', label: 'Angle' },
     { type: 'sick',  label: 'So Sick' },
@@ -370,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastHeroWas67 = false;
   let lastBoardLen = 0;
 
-  // raise bounds for slider mapping
   let currentRaiseMin = 0;
   let currentRaiseMax = 100;
 
@@ -379,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
     serverMsgEl.className = 'server-message' + (type ? ' ' + type : '') + (text ? ' show' : '');
   }
 
-  // AUDIO (core sounds)
   const chipSound = $('chipSound');
   const checkSound = $('checkSound');
   const audio67 = $('audio67');
@@ -401,13 +405,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function safePlay67(){ try{ audio67.currentTime=0; audio67.play().catch(()=>{});}catch{} }
   function safePlayDeal(){ try{ dealSound.currentTime=0; dealSound.play().catch(()=>{});}catch{} }
 
-  // Per-emote playback (path from state)
   function playEmoteAudio(path){
     if (!path) return;
     try { new Audio(path).play().catch(()=>{}); } catch {}
   }
 
-  // ME
   let myName = '';
   (async function loadMe(){
     try {
@@ -420,7 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch {}
   })();
 
-  // API
   async function doFetch(url, opts) { return await fetch(url, Object.assign({ credentials:'include' }, opts||{})); }
   const api = {
     async join(room, stack) {
@@ -450,11 +451,12 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ emoteType })
       });
     },
-    async sit(room, sitIn) { return await doFetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method:'POST' }); },
+    async sit(room, sitIn) { 
+      return await doFetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method:'POST' }); 
+    },
     async logout(){ location.href='/login'; }
   };
 
-  // ELEMENTS
   const roomSel = $('room'), stackInp = $('stack'),
         joinBtn = $('joinBtn'), leaveBtn = $('leaveBtn'),
         sitInBtn = $('sitInBtn'), sitOutBtn = $('sitOutBtn'),
@@ -464,7 +466,8 @@ document.addEventListener('DOMContentLoaded', () => {
         raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
         raiseUp = $('raiseUp'), raiseDown = $('raiseDown'),
         emoteBtn = $('emoteBtn'), emoteMenu = $('emoteMenu'),
-        emoteCooldownEl = $('emoteCooldown');
+        emoteCooldownEl = $('emoteCooldown'),
+        timebankDisplayEl = $('timebankDisplay');
   const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
   $('logoutBtn').addEventListener('click', api.logout);
@@ -475,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
     queuedLabel.style.display='inline';
   }
 
-  // ===== Emote button + popover menu =====
   function buildEmoteMenu(){
     emoteMenu.innerHTML = '';
     for (const e of EMOTES) {
@@ -505,7 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
           showMsg(`Emote error: ${err?.message||err}`, 'err');
         } finally {
           closeEmoteMenu();
-          // Re-enable; cooldown UI will immediately update after next state tick
           emoteBtn.disabled = false;
           emoteBtn.title = 'Send an emote';
         }
@@ -534,7 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   buildEmoteMenu();
 
-  // JOIN/LEAVE/SIT
   joinBtn.addEventListener('click', async () => {
     pulse(joinBtn);
     const room = roomSel.value, stack = stackInp.value;
@@ -591,10 +591,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { showMsg(`Sit out error: ${e.message}`, 'err'); }
   });
 
-  // non-linear mapping helpers
   function sliderToAmount(sliderVal) {
     const t = Math.min(1, Math.max(0, sliderVal / 100));
-    const eased = t * t; // precision near min
+    const eased = t * t;
     return currentRaiseMin + (currentRaiseMax - currentRaiseMin) * eased;
   }
   function amountToSlider(amount) {
@@ -605,7 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return t * 100;
   }
 
-  // ACTIONS
   async function doActionWithQueued(act, amt=0, displayAmt=null) {
     const room = roomSel.value;
     const btnMap = { check: checkBtn, call: callBtn, raise: raiseBtn, fold: foldBtn, clear: clearBtn };
@@ -630,14 +628,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) { showMsg(`Action error: ${e.message}`, 'err'); }
   }
 
-  $('checkBtn').addEventListener('click', () => doActionWithQueued('check'));
-  $('callBtn').addEventListener('click', () => {
+  checkBtn.addEventListener('click', () => doActionWithQueued('check'));
+  callBtn.addEventListener('click', () => {
     const amt = Number(callAmtEl.dataset.val)||0;
     doActionWithQueued('call', amt);
   });
-
-  // raise: send (raiseTo - currentBet)
-  $('raiseBtn').addEventListener('click', () => {
+  raiseBtn.addEventListener('click', () => {
     const raiseTo = Number(raiseAmt.value) || 0;
     let handBet = Number(lastHandCurrentBet) || 0;
     if (handBet === 0) {
@@ -651,12 +647,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sendAmt < 0) sendAmt = 0;
     doActionWithQueued('raise', sendAmt, raiseTo);
   });
+  foldBtn.addEventListener('click', () => doActionWithQueued('fold'));
+  clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
+  ledgerBtn.addEventListener('click', () => { location.href = '/ledger'; });
 
-  $('foldBtn').addEventListener('click', () => doActionWithQueued('fold'));
-  $('clearBtn').addEventListener('click', () => doActionWithQueued('clear'));
-  $('ledgerBtn').addEventListener('click', () => {location.href = '/ledger';});
-
-  // Remove emojis/pictographs so emote display stays text-only
   function stripEmoji(s) {
     if (!s) return s;
     try {
@@ -666,13 +660,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Countdown
-  let rafId = 0, deadlineMsGlobal = 0, skewMsGlobal = 0;
+  // ===== Dual countdown (base + timebank) =====
+  let rafId = 0, baseDeadlineMsGlobal = 0, skewMsGlobal = 0, tbMsGlobal = 0;
+
   function getTimerEls(){
-    const pill = document.querySelector('.act-timer-seat');
-    const val  = pill ? pill.querySelector('.tval') : null;
-    return { pill, val };
+    const basePill = document.querySelector('.seat.acting .base-timer');
+    const baseVal  = basePill ? basePill.querySelector('.tval') : null;
+    const tbPill   = document.querySelector('.seat.acting .tb-timer');
+    const tbVal    = tbPill ? tbPill.querySelector('.tval') : null;
+    return { basePill, baseVal, tbPill, tbVal };
   }
+
   function setTimerClasses(pill, msLeft){
     if (!pill) return;
     pill.classList.remove('timer-ok','timer-warn','timer-bad');
@@ -681,33 +679,66 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (s <= 10) pill.classList.add('timer-warn');
     else pill.classList.add('timer-ok');
   }
-  function startCountdown(deadlineMs, serverNowMs){
-    deadlineMsGlobal = Number(deadlineMs)||0;
+
+  function startCountdown(baseDeadlineMs, serverNowMs, timebankMs){
+    baseDeadlineMsGlobal = Number(baseDeadlineMs)||0;
+    tbMsGlobal = Math.max(0, Number(timebankMs)||0);
     skewMsGlobal = Number(serverNowMs||0) - Date.now();
     if (rafId) cancelAnimationFrame(rafId);
 
-    const { pill, val } = getTimerEls();
-    if (!deadlineMsGlobal || !pill || !val) return;
+    const { basePill, baseVal } = getTimerEls();
+    if (!baseDeadlineMsGlobal || !basePill || !baseVal) return;
 
     const tick = () => {
       const els = getTimerEls();
-      if (!els.pill || !els.val) { cancelAnimationFrame(rafId); rafId=0; return; }
-      const remaining = Math.max(0, deadlineMsGlobal - (Date.now() + skewMsGlobal));
-      const secs = remaining / 1000;
-      els.val.textContent = secs >= 10 ? secs.toFixed(0)+'s' : secs.toFixed(1)+'s';
-      setTimerClasses(els.pill, remaining);
+      if (!els.basePill || !els.baseVal) { cancelAnimationFrame(rafId); rafId=0; return; }
+
+      const nowMs = Date.now() + skewMsGlobal;
+
+      if (nowMs <= baseDeadlineMsGlobal) {
+        // Base countdown active
+        const remaining = Math.max(0, baseDeadlineMsGlobal - nowMs);
+        const secs = remaining / 1000;
+        els.baseVal.textContent = secs >= 10 ? secs.toFixed(0)+'s' : secs.toFixed(1)+'s';
+        setTimerClasses(els.basePill, remaining);
+        if (els.tbPill) els.tbPill.style.display = 'none';
+      } else {
+        // Base expired
+        if (tbMsGlobal > 0 && els.tbPill && els.tbVal) {
+          const overMs = nowMs - baseDeadlineMsGlobal;
+          const leftMs = Math.max(0, tbMsGlobal - overMs);
+          els.basePill.style.display = 'none';
+          if (leftMs > 0) {
+            els.tbPill.style.display = 'inline-flex';
+            const secs = leftMs / 1000;
+            els.tbVal.textContent = secs >= 10 ? secs.toFixed(0)+'s' : secs.toFixed(1)+'s';
+            setTimerClasses(els.tbPill, leftMs);
+          } else {
+            els.tbPill.style.display = 'none';
+            cancelAnimationFrame(rafId); rafId=0;
+            return;
+          }
+        } else {
+          // No timebank; lock at zero
+          els.baseVal.textContent = '0.0s';
+          setTimerClasses(els.basePill, 0);
+          cancelAnimationFrame(rafId); rafId=0;
+          return;
+        }
+      }
+
       rafId = requestAnimationFrame(tick);
     };
     tick();
   }
+
   function stopCountdown(){ if (rafId) cancelAnimationFrame(rafId); rafId = 0; }
 
-  // slider stickiness
   let isAdjusting = false;
-  $('raiseSlider').addEventListener('pointerdown', () => { isAdjusting = true; });
+  raiseSlider.addEventListener('pointerdown', () => { isAdjusting = true; });
   document.addEventListener('pointerup', () => { isAdjusting = false; });
-  $('raiseAmt').addEventListener('focus', () => { isAdjusting = true; });
-  $('raiseAmt').addEventListener('blur',  () => { isAdjusting = false; });
+  raiseAmt.addEventListener('focus', () => { isAdjusting = true; });
+  raiseAmt.addEventListener('blur',  () => { isAdjusting = false; });
 
   function bumpRaise(delta) {
     const min = Number(currentRaiseMin) || 0;
@@ -716,13 +747,12 @@ document.addEventListener('DOMContentLoaded', () => {
     v = v + delta;
     v = Math.max(min, Math.min(max, Math.round(v * 100) / 100));
     raiseAmt.value = v.toFixed(2);
-    $('raiseAmtLabel').textContent = v.toFixed(2);
-    $('raiseSlider').value = amountToSlider(v);
+    raiseAmtLabel.textContent = v.toFixed(2);
+    raiseSlider.value = amountToSlider(v);
   }
-  $('raiseUp').addEventListener('click', () => bumpRaise(0.25));
-  $('raiseDown').addEventListener('click', () => bumpRaise(-0.25));
+  raiseUp.addEventListener('click', () => bumpRaise(0.25));
+  raiseDown.addEventListener('click', () => bumpRaise(-0.25));
 
-  // context key for betting
   let lastSliderCtx = '';
   function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
     return [
@@ -742,11 +772,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const potEl = $('pot'), boardEl = $('board'), seatsLayer = $('seatsLayer'), betsLayer = $('betsLayer'), myHandEl = $('myHand');
   const showdownBanner = $('showdownBanner'), showdownList = $('showdownList'), actionMsgEl = $('actionMsg');
 
-  // Track last-seen emote and hold time to prevent flicker
   const lastEmoteKeyByName = new Map();
-  const emoteHoldUntilByName = new Map(); // name -> ms (end + small buffer)
+  const emoteHoldUntilByName = new Map();
 
-  // Cooldown helpers
   function secondsLeft(nextAtMs, serverNowMs){
     if (!Number.isFinite(nextAtMs) || nextAtMs <= 0) return 0;
     const left = Math.max(0, nextAtMs - serverNowMs);
@@ -768,7 +796,6 @@ document.addEventListener('DOMContentLoaded', () => {
       emoteBtn.disabled = true;
       emoteBtn.title = `Cooldown ${formatSecs(secs)}`;
       closeEmoteMenu();
-      // also disable menu items visually
       emoteMenu.querySelectorAll('.emote-item').forEach(b => b.setAttribute('disabled',''));
     } else {
       emoteCooldownEl.textContent = 'Ready';
@@ -778,11 +805,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Polling
   const pollState = (() => {
     let timer=null;
     async function tick(){
-      const room = $('room').value;
+      const room = roomSel.value;
       statusEl.textContent='updating…'; statusEl.className='pill';
       try {
         const res = await api.state(room);
@@ -831,6 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
       serverMsgEl.className = 'server-message';
       lastHeroWas67 = false;
       lastBoardLen = 0;
+      if (timebankDisplayEl) timebankDisplayEl.textContent = '';
       updateEmoteCooldownUI(null, Date.now());
       return;
     }
@@ -842,10 +869,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const actorName = String(hand.actionPlayerName ?? hand.ActionPlayerName ?? '').trim();
     const sbName = String(hand.smallBlindName   ?? hand.SmallBlindName   ?? '').trim();
 
-    // Pot
     potEl.textContent = fmtMoney(hand.pot ?? hand.Pot ?? '');
 
-    // Board
     const board = Array.isArray(hand.board ?? hand.Board) ? (hand.board ?? hand.Board) : [];
     const currentBoardLen = board.length;
     boardEl.innerHTML='';
@@ -857,7 +882,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     lastBoardLen = currentBoardLen;
 
-    // Players -> compute seating order (hero at bottom)
     const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
     let heroIdx = -1;
     if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
@@ -870,17 +894,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const players = hero ? [hero, ...others] : others.slice();
     const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
+    // Update hero timebank under Emote button
+    if (timebankDisplayEl) {
+      if (hero) {
+        const tbMs = Number(hero.timeBankUnixMs ?? hero.TimeBankUnixMs ?? 0) || 0;
+        const label = tbMs > 0 ? (tbMs/1000).toFixed(1) + 's' : '0.0s';
+        timebankDisplayEl.textContent = 'Timebank: ' + label;
+      } else {
+        timebankDisplayEl.textContent = '';
+      }
+    }
+
     seatsLayer.innerHTML='';
     players.forEach((p,i)=>{
       const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
       const name = String(p.name ?? p.Name ?? '').trim();
       const isActing = !!(actorName && name === actorName);
       const isSB = (name === sbName);
-
-      const seatEl = renderSeat(p, pos, isActing, i===0, isSB);
+      const tbMs = Number(p.timeBankUnixMs ?? p.TimeBankUnixMs ?? 0) || 0;
+      const seatEl = renderSeat(p, pos, isActing, i===0, isSB, tbMs);
       seatsLayer.appendChild(seatEl);
 
-      // ----- EMOTE BUBBLE RENDER (stable, text-only) -----
       const emTextRaw = String(p.emoteText ?? p.EmoteText ?? '').trim();
       const emText    = emTextRaw;
       const emAudio   = String(p.emoteAudio ?? p.EmoteAudio ?? '').trim();
@@ -910,21 +944,18 @@ document.addEventListener('DOMContentLoaded', () => {
           bubble.className = 'emote-bubble sticky';
           seatEl.appendChild(bubble);
         }
-        bubble.textContent = emText; // text-only, no emoji, no player name
+        bubble.textContent = emText;
       } else if (bubble) {
         bubble.remove();
       }
-      // ----- /EMOTE BUBBLE RENDER -----
     });
 
     renderBets(players, angles);
 
-    // My hand
     myHandEl.innerHTML='';
     const myCards = players[0] ? (players[0].hand ?? players[0].Hand ?? []) : [];
     if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
 
-    // 67 easter egg
     if (Array.isArray(myCards) && myCards.length === 2) {
       const r1 = parseInt(myCards[0].rank ?? myCards[0].Rank ?? 0, 10);
       const r2 = parseInt(myCards[1].rank ?? myCards[1].Rank ?? 0, 10);
@@ -933,7 +964,6 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (!is67) { lastHeroWas67 = false; }
     } else { lastHeroWas67 = false; }
 
-    // Action message (poker actions only)
     const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
     if (actionMsg){
       actionMsgEl.textContent=actionMsg;
@@ -952,11 +982,18 @@ document.addEventListener('DOMContentLoaded', () => {
     } else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
     prevActionMessage = actionMsg;
 
-    // timer
+    // Dual timer: base + timebank (for acting player)
     const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
-    if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs); else stopCountdown();
+    let actorTimebankMs = 0;
+    if (actorName) {
+      const actor = players.find(p => (String(p.name ?? p.Name ?? '').trim() === actorName));
+      if (actor) {
+        actorTimebankMs = Number(actor.timeBankUnixMs ?? actor.TimeBankUnixMs ?? 0) || 0;
+      }
+    }
+    if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs, actorTimebankMs);
+    else stopCountdown();
 
-    // showdown
     const sdMsg = String(hand.showDownMessage ?? hand.ShowDownMessage ?? '').trim();
     const sdHands = getShowdownHandsArray(hand);
     const street = String(hand.street ?? hand.Street ?? '').toLowerCase();
@@ -990,15 +1027,14 @@ document.addEventListener('DOMContentLoaded', () => {
       showdownList.style.display = 'none';
     }
 
-    // Right panel dynamic
     const avail = new Set(hand.avaliableActions || hand.availableActions || []);
     const myBet   = Number((players[0] && (players[0].currentBet ?? players[0].CurrentBet)) ?? 0) || 0;
     const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
     lastHandCurrentBet = tableBet;
 
     const callAmt = Math.max(0, tableBet - myBet);
-    $('callAmt').textContent = fmtMoney(callAmt);
-    $('callAmt').dataset.val = String(callAmt);
+    callAmtEl.textContent = fmtMoney(callAmt);
+    callAmtEl.dataset.val = String(callAmt);
 
     const ONE_BB = 0.25;
     let minAdd = Number(hand.raiseAmount ?? hand.RaiseAmount ?? 0);
@@ -1028,23 +1064,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if ((!isAdjusting && contextChanged) || outOfBounds) {
       raiseAmt.value = sliderMin.toFixed(2);
-      $('raiseAmtLabel').textContent = sliderMin.toFixed(2);
-      $('raiseSlider').value = amountToSlider(sliderMin);
+      raiseAmtLabel.textContent = sliderMin.toFixed(2);
+      raiseSlider.value = amountToSlider(sliderMin);
     } else {
       const kept = Math.min(sliderMax, Math.max(sliderMin, currentInputVal));
       raiseAmt.value = kept.toFixed(2);
-      $('raiseAmtLabel').textContent = kept.toFixed(2);
-      $('raiseSlider').value = amountToSlider(kept);
+      raiseAmtLabel.textContent = kept.toFixed(2);
+      raiseSlider.value = amountToSlider(kept);
     }
 
-    if (avail.has('check')) { $('foldBtn').disabled = true; } else { $('foldBtn').disabled = false; }
-    $('checkBtn').disabled = !avail.has('check');
-    $('callBtn').disabled  = !avail.has('call') || callAmt <= 0.0001;
-    $('raiseBtn').disabled = !avail.has('raise');
+    if (avail.has('check')) { foldBtn.disabled = true; } else { foldBtn.disabled = false; }
+    checkBtn.disabled = !avail.has('check');
+    callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001;
+    raiseBtn.disabled = !avail.has('raise');
 
     lastSliderCtx = ctx;
 
-    // Update the emote cooldown/badge for ME
     updateEmoteCooldownUI(players[0] || null, serverNowMs);
   }
 
@@ -1068,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return img;
   }
 
-  function renderSeat(p, pos, isActing, isHero, isSB){
+  function renderSeat(p, pos, isActing, isHero, isSB, tbMs){
     const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
     const stack = p.stack ?? p.Stack ?? '';
     const sittingOut = !!(p.sittingOut ?? p.SittingOut);
@@ -1090,14 +1125,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (isActing) {
-      const timer = document.createElement('span');
-      timer.className = 'act-timer-seat timer-ok';
+      // Base timer pill (always visible while base time running)
+      const baseTimer = document.createElement('span');
+      baseTimer.className = 'act-timer-seat timer-ok base-timer';
       const clock = document.createTextNode('⏱ ');
       const tval = document.createElement('span');
       tval.className = 'tval';
       tval.textContent = '0.0s';
-      timer.appendChild(clock); timer.appendChild(tval);
-      nameWrap.appendChild(timer);
+      baseTimer.appendChild(clock); baseTimer.appendChild(tval);
+      nameWrap.appendChild(baseTimer);
+
+      // Timebank pill (appears after base expires if tbMs > 0)
+      if (tbMs > 0) {
+        const tbTimer = document.createElement('span');
+        tbTimer.className = 'act-timer-seat timer-ok tb-timer';
+        tbTimer.style.display = 'none';
+        const icon = document.createTextNode('⏳ ');
+        const tbVal = document.createElement('span');
+        tbVal.className = 'tval';
+        tbVal.textContent = (tbMs/1000).toFixed(1)+'s';
+        tbTimer.appendChild(icon);
+        tbTimer.appendChild(tbVal);
+        nameWrap.appendChild(tbTimer);
+      }
     }
 
     const chips=document.createElement('div'); chips.className='chips';
@@ -1126,7 +1176,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderBets(players, angles){
-    const betsLayer = document.getElementById('betsLayer');
     betsLayer.innerHTML='';
     players.forEach((p,i)=>{
       const bet=Number(p.currentBet ?? p.CurrentBet ?? 0);
@@ -1139,27 +1188,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // slider <-> number sync
   function syncFromSlider(){
-    const sliderVal = Number($('raiseSlider').value)||0;
+    const sliderVal = Number(raiseSlider.value)||0;
     const amt = sliderToAmount(sliderVal);
-    $('raiseAmt').value = amt.toFixed(2);
-    $('raiseAmtLabel').textContent = amt.toFixed(2);
+    raiseAmt.value = amt.toFixed(2);
+    raiseAmtLabel.textContent = amt.toFixed(2);
   }
   function syncFromBox(){
-    const v=Number($('raiseAmt').value)||0;
+    const v=Number(raiseAmt.value)||0;
     const clamped = Math.max(currentRaiseMin, Math.min(currentRaiseMax, v));
-    $('raiseAmt').value = clamped.toFixed(2);
-    $('raiseAmtLabel').textContent = clamped.toFixed(2);
-    $('raiseSlider').value = amountToSlider(clamped);
+    raiseAmt.value = clamped.toFixed(2);
+    raiseAmtLabel.textContent = clamped.toFixed(2);
+    raiseSlider.value = amountToSlider(clamped);
   }
-  $('raiseSlider').addEventListener('input', syncFromSlider);
-  $('raiseAmt').addEventListener('input',    syncFromBox);
+  raiseSlider.addEventListener('input', syncFromSlider);
+  raiseAmt.addEventListener('input',    syncFromBox);
 
-  // initial
   (async () => {
     try {
-      const res = await api.state($('room').value);
+      const res = await api.state(roomSel.value);
       if (res.ok) renderState(JSON.parse(await res.text()));
     } catch {}
   })();

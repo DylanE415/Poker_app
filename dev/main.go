@@ -68,8 +68,8 @@ func main() {
 	}
 
 	s := &Server{
-		room1:           newRoom(1, 20.0, 40),
-		room2:           newRoom(2, 30.0, 100.0),
+		room1:           newRoom(1, 20.0, 50.0, 0.25, "0.25/0.50 NL Hold'em"),
+		room2:           newRoom(2, 30.0, 100.0, 0.5, "0.50/1 NL Hold'em"),
 		usersByUsername: uByName,
 		usersByID:       uByID, // <-- you use this in handlers; make sure it’s populated
 		sessions:        make(map[string]Session),

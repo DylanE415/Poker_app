@@ -21,26 +21,29 @@ type Command struct {
 
 type Room struct {
 	id                 int
+	RoomName           string
 	commandChan        chan Command
 	players            []*Player
 	minStack           float64
 	maxStack           float64
 	smallBlindPosition int
+	smallBlindSize     float64
 	currentHand        *Hand
 	previousHand       *Hand
 	handDone           chan struct{}
 	sitOutSince        map[string]time.Time
+	timeSinceLastHand  time.Time
 }
 
 type playerState struct {
 	ID              string  `json:"id"`
 	Name            string  `json:"name"`
 	Stack           float64 `json:"stack"`
-	Timebank        float64 `json:"timebank"`
 	SittingOut      bool    `json:"sittingOut"`
 	Hand            []Card  `json:"hand"`
 	CurrentBet      float64 `json:"currentBet"`
 	Folded          bool    `json:"folded"`
+	TimeBankUnixMs  int64   `json:"timeBankUnixMs,omitempty"`
 	EmoteText       string  `json:"emoteText,omitempty"`
 	EmoteAudio      string  `json:"emoteAudio,omitempty"`
 	EmoteEndsUnixMs int64   `json:"emoteEndsUnixMs,omitempty"`
@@ -69,7 +72,7 @@ type roomState struct {
 }
 
 // has a command buffer of 16 commands
-func newRoom(id int, minStack float64, maxStack float64) *Room {
+func newRoom(id int, minStack float64, maxStack float64, smallBlindSize float64, roomName string) *Room {
 	return &Room{
 		id:                 id,
 		commandChan:        make(chan Command, 16),
@@ -79,6 +82,8 @@ func newRoom(id int, minStack float64, maxStack float64) *Room {
 		smallBlindPosition: 0,
 		handDone:           make(chan struct{}, 1),
 		sitOutSince:        make(map[string]time.Time),
+		smallBlindSize:     smallBlindSize,
+		RoomName:           roomName,
 	}
 }
 
@@ -204,7 +209,7 @@ func (r *Room) startNextHandIfReady() {
 	r.smallBlindPosition %= len(eligible)
 
 	// create the new hand (newHand returns *Hand)
-	r.currentHand = newHand(eligible, r.smallBlindPosition, 0.25, r)
+	r.currentHand = newHand(eligible, r.smallBlindPosition, r.smallBlindSize, r)
 	// advance blinds for the NEXT hand
 	r.smallBlindPosition = (r.smallBlindPosition + 1) % len(eligible)
 
@@ -226,6 +231,7 @@ func (r *Room) startNextHandIfReady() {
 		default:
 		}
 	}(r.currentHand)
+	r.timeSinceLastHand = time.Now()
 }
 
 // for sending a reply to the client
@@ -405,13 +411,13 @@ func (r *Room) run() {
 				// only info needed to display to client about other players(name, stack, sittingOut, timebank, currentBet) and hand if it is clients id
 				for i, pl := range r.players {
 					ps := playerState{
-						Name:       pl.Name,
-						ID:         pl.ID,
-						Stack:      pl.Stack,
-						SittingOut: pl.sittingOut,
-						Timebank:   pl.timebank,
-						CurrentBet: pl.currentBet,
-						Folded:     pl.folded,
+						Name:           pl.Name,
+						ID:             pl.ID,
+						Stack:          pl.Stack,
+						SittingOut:     pl.sittingOut,
+						TimeBankUnixMs: pl.timebank.Milliseconds(),
+						CurrentBet:     pl.currentBet,
+						Folded:         pl.folded,
 					}
 					if pl.ID == cmd.PlayerID {
 						ps.Hand = pl.Hand
@@ -503,6 +509,15 @@ func (r *Room) run() {
 
 				}
 
+			}
+			// if no hand in the last30 minutes, kick everyone
+			if r.currentHand == nil && !r.timeSinceLastHand.IsZero() &&
+				now.Sub(r.timeSinceLastHand) > 30*time.Minute {
+
+				for len(r.players) > 0 {
+					r.leavePlayerByID(r.players[0].ID)
+				}
+				fmt.Println("auto kick: no hand for 30 minutes")
 			}
 
 		} // select bracket
