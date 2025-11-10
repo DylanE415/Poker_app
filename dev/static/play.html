@@ -185,8 +185,12 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .emote-item:focus { background:#182a5c; border-color:#2b3b71; outline: none; }
 .emote-item[disabled] { opacity:.5; cursor:not-allowed; }
 
-#emoteCooldown { font-size: .8rem; color: var(--muted); }
-.timebank-display { font-size:.8rem; color: var(--muted); }
+#emoteCooldown { font-size: 1rem; color: var(--muted); font-weight: 600;}
+.timebank-display {
+  font-size: 1rem;       /* bigger */
+  font-weight: 600;      /* bolder */
+  color: var(--muted);  /* or keep var(--muted) if you like it subtle */
+}
 
 .controls-right {
   background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px;

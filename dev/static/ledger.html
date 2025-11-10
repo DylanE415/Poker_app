@@ -35,8 +35,10 @@
     <p class="muted">Positive = up; negative = down. Source: <code>/static/ledger.json</code>.</p>
 
     <div class="controls">
+      <button id="backBtn" type="button">Back</button>
       <button id="refreshBtn" type="button">Refresh</button>
     </div>
+
 
     <table aria-label="ledger">
       <thead>
@@ -107,7 +109,9 @@
         errEl.style.display = 'block';
       }
     }
-
+  document.getElementById('backBtn').addEventListener('click', () => {
+    window.location.href = '/play';
+  });
     document.getElementById('refreshBtn').addEventListener('click', render);
     render();
   </script>
