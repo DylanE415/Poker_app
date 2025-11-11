@@ -483,6 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
         raiseAmt = $('raiseAmt'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
         ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
         raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
+        raiseUp = $('raiseUp'), raiseDown = $('raiseDown'),
         emoteBtn = $('emoteBtn'), emoteMenu = $('emoteMenu'),
         emoteCooldownEl = $('emoteCooldown'),
         timebankDisplayEl = $('timebankDisplay'),
@@ -721,7 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function getTimerEls(){
     const basePill = document.querySelector('.seat.acting .base-timer');
     const baseVal  = basePill ? basePill.querySelector('.tval') : null;
-    const tbPill   = document.querySelector('.seat.acting .tb-timer');
+    const tbPill   = basePill ? document.querySelector('.seat.acting .tb-timer') : null;
     const tbVal    = tbPill ? tbPill.querySelector('.tval') : null;
     return { basePill, baseVal, tbPill, tbVal };
   }
@@ -980,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const players = hero ? [hero, ...others] : others.slice();
     const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
-    // Hero show-hand buttons enabled state
+    // Hero show-hand buttons state
     if (showHandBtn && hideHandBtn) {
       const heroShowing = !!(hero && (hero.showingHand ?? hero.ShowingHand));
       showHandBtn.disabled = heroShowing;
@@ -1055,9 +1056,6 @@ document.addEventListener('DOMContentLoaded', () => {
       seat.appendChild(nameWrap);
       seat.appendChild(chips);
 
-      // hole cards:
-      // - Hero seat: faces only if showingHand == true (table view)
-      // - Others: faces only if showingHand == true
       const sittingOut = !!(p.sittingOut ?? p.SittingOut);
       const folded = !!(p.folded ?? p.Folded);
       const handArr = Array.isArray(p.hand ?? p.Hand) ? (p.hand ?? p.Hand) : [];
@@ -1089,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
         seat.appendChild(holes);
       }
 
-      // emotes
+      // Emotes
       const emTextRaw = String(p.emoteText ?? p.EmoteText ?? '').trim();
       const emText    = emTextRaw;
       const emAudio   = String(p.emoteAudio ?? p.EmoteAudio ?? '').trim();
@@ -1129,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderBets(players, angles);
 
-    // Hero cards at bottom: ALWAYS show hero's actual hole cards (if sent by server)
+    // Hero cards at bottom: ALWAYS show hero's actual hole cards (server should include hero hand)
     myHandEl.innerHTML='';
     const myCards = players[0] ? (players[0].hand ?? players[0].Hand ?? []) : [];
     if (Array.isArray(myCards) && myCards.length) {
@@ -1294,6 +1292,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   raiseSlider.addEventListener('input', syncFromSlider);
   raiseAmt.addEventListener('input',    syncFromBox);
+
+  // Spin buttons for raise amount
+  if (raiseUp && raiseDown) {
+    const STEP = 0.25; // BB increment
+
+    raiseUp.addEventListener('click', () => {
+      let val = Number(raiseAmt.value);
+      if (!Number.isFinite(val) || val < currentRaiseMin) val = currentRaiseMin;
+      val += STEP;
+      if (val > currentRaiseMax) val = currentRaiseMax;
+      raiseAmt.value = val.toFixed(2);
+      raiseAmtLabel.textContent = val.toFixed(2);
+      raiseSlider.value = amountToSlider(val);
+    });
+
+    raiseDown.addEventListener('click', () => {
+      let val = Number(raiseAmt.value);
+      if (!Number.isFinite(val) || val < currentRaiseMin) val = currentRaiseMin;
+      val -= STEP;
+      if (val < currentRaiseMin) val = currentRaiseMin;
+      raiseAmt.value = val.toFixed(2);
+      raiseAmtLabel.textContent = val.toFixed(2);
+      raiseSlider.value = amountToSlider(val);
+    });
+  }
 
   (async () => {
     try {
