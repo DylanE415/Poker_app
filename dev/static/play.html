@@ -187,9 +187,9 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 
 #emoteCooldown { font-size: 1rem; color: var(--muted); font-weight: 600;}
 .timebank-display {
-  font-size: 1rem;       /* bigger */
-  font-weight: 600;      /* bolder */
-  color: var(--muted);  /* or keep var(--muted) if you like it subtle */
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .controls-right {
@@ -390,7 +390,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentRaiseMin = 0;
   let currentRaiseMax = 100;
-  let isShowingHand = false;
 
   function showMsg(text, type = '') {
     serverMsgEl.textContent = text;
@@ -484,7 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
         raiseAmt = $('raiseAmt'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
         ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
         raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
-        raiseUp = $('raiseUp'), raiseDown = $('raiseDown'),
         emoteBtn = $('emoteBtn'), emoteMenu = $('emoteMenu'),
         emoteCooldownEl = $('emoteCooldown'),
         timebankDisplayEl = $('timebankDisplay'),
@@ -600,7 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Join / leave / sit handlers (unchanged)
+  // Join / leave / sit handlers
   joinBtn.addEventListener('click', async () => {
     pulse(joinBtn);
     const room = roomSel.value, stack = stackInp.value;
@@ -829,6 +827,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
+
+  function cardURL(card){
+    const s = (card.suit||card.Suit||'').toString().toUpperCase();
+    const r = (card.rank||card.Rank||'');
+    const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
+    let rt = ''; const n=Number(r);
+    if(Number.isFinite(n)){
+      rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':'';
+    } else {
+      const up=String(r).toUpperCase();
+      rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':'';
+    }
+    return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
+  }
+
+  function renderCardImg(card) {
+    const img = document.createElement('img');
+    img.className = 'cardimg';
+    const url = cardURL(card);
+    if (url) {
+      img.src = url;
+      img.alt = url.split('/').pop() || 'card';
+    } else {
+      img.src = '/static/card_svgs/card_back.png';
+      img.alt = 'card';
+    }
+    return img;
+  }
+
+  function getShowdownHandsArray(hand) {
+    const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
+    return Array.isArray(raw) ? raw : [];
+  }
+
   const pollState = (() => {
     let timer=null;
     async function tick(){
@@ -865,12 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return { start, stop, now, soon };
   })();
 
-  function getShowdownHandsArray(hand) {
-    const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
-    return Array.isArray(raw) ? raw : [];
-  }
-
-  let prevActionMessage='';
+  let prevActionMessage = '';
 
   function renderState(st){
     if (!st || (Object.keys(st).length===0)){
@@ -885,7 +913,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (timebankDisplayEl) timebankDisplayEl.textContent = '';
       updateEmoteCooldownUI(null, Date.now());
       if (showHandBtn && hideHandBtn) {
-        isShowingHand = false;
         showHandBtn.disabled = false;
         hideHandBtn.disabled = true;
       }
@@ -916,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ? (st.players || st.Players).slice()
       : [];
 
-    // === HERO SEAT DETERMINATION (HeroID first) ===
+    // HERO SEAT DETECTION
     const heroIdFromState = st.heroID || st.heroId || st.HeroID || null;
     let heroIdx = -1;
 
@@ -953,10 +980,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const players = hero ? [hero, ...others] : others.slice();
     const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
 
-    // Hero show-hand buttons state from server
+    // Hero show-hand buttons enabled state
     if (showHandBtn && hideHandBtn) {
       const heroShowing = !!(hero && (hero.showingHand ?? hero.ShowingHand));
-      isShowingHand = heroShowing;
       showHandBtn.disabled = heroShowing;
       hideHandBtn.disabled = !heroShowing;
     }
@@ -976,13 +1002,94 @@ document.addEventListener('DOMContentLoaded', () => {
     seatsLayer.innerHTML='';
     players.forEach((p,i)=>{
       const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
-      const name = String(p.name ?? p.Name ?? '').trim();
+      const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
       const isActing = !!(actorName && name === actorName);
       const isSB = (name === sbName);
       const tbMs = Number(p.timeBankUnixMs ?? p.TimeBankUnixMs ?? 0) || 0;
-      const seatEl = renderSeat(p, pos, isActing, i===0, isSB, tbMs);
-      seatsLayer.appendChild(seatEl);
+      const isHeroSeat = (i === 0 && !!hero);
 
+      const seat=document.createElement('div');
+      seat.className='seat'+(isHeroSeat?' hero':'')+(isActing?' acting':'')+((p.sittingOut ?? p.SittingOut)?' sittingout':'')+((p.folded ?? p.Folded)?' folded':'');
+      seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
+
+      const nameWrap = document.createElement('div');
+      const nameSpan = document.createElement('strong'); nameSpan.textContent = name;
+      nameWrap.appendChild(nameSpan);
+
+      if (isSB) {
+        const sbSpan = document.createElement('span');
+        sbSpan.className = 'sb-indicator';
+        sbSpan.textContent = 'SB';
+        nameWrap.appendChild(sbSpan);
+      }
+
+      if (isActing) {
+        const baseTimer = document.createElement('span');
+        baseTimer.className = 'act-timer-seat timer-ok base-timer';
+        const clock = document.createTextNode('⏱ ');
+        const tval = document.createElement('span');
+        tval.className = 'tval';
+        tval.textContent = '0.0s';
+        baseTimer.appendChild(clock); baseTimer.appendChild(tval);
+        nameWrap.appendChild(baseTimer);
+
+        if (tbMs > 0) {
+          const tbTimer = document.createElement('span');
+          tbTimer.className = 'act-timer-seat timer-ok tb-timer';
+          tbTimer.style.display = 'none';
+          const icon = document.createTextNode('⏳ ');
+          const tbVal = document.createElement('span');
+          tbVal.className = 'tval';
+          tbVal.textContent = (tbMs/1000).toFixed(1)+'s';
+          tbTimer.appendChild(icon);
+          tbTimer.appendChild(tbVal);
+          nameWrap.appendChild(tbTimer);
+        }
+      }
+
+      const chips=document.createElement('div'); chips.className='chips';
+      const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
+      const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(p.stack ?? p.Stack ?? '');
+      chips.appendChild(chipImg); chips.appendChild(chipsText);
+
+      seat.appendChild(nameWrap);
+      seat.appendChild(chips);
+
+      // hole cards:
+      // - Hero seat: faces only if showingHand == true (table view)
+      // - Others: faces only if showingHand == true
+      const sittingOut = !!(p.sittingOut ?? p.SittingOut);
+      const folded = !!(p.folded ?? p.Folded);
+      const handArr = Array.isArray(p.hand ?? p.Hand) ? (p.hand ?? p.Hand) : [];
+      const showing = !!(p.showingHand ?? p.ShowingHand);
+
+      if (!sittingOut && !folded) {
+        const holes = document.createElement('div');
+        holes.className = 'seat-holes';
+
+        if (showing && handArr.length) {
+          handArr.slice(0,2).forEach((c) => {
+            const img = document.createElement('img');
+            const url = cardURL(c);
+            img.src = url || '/static/card_svgs/card_back.png';
+            img.alt = url ? url.split('/').pop() : 'card';
+            holes.appendChild(img);
+          });
+        } else {
+          const card1 = document.createElement('img');
+          card1.src = '/static/card_svgs/card_back.png';
+          card1.alt = 'card back';
+          const card2 = document.createElement('img');
+          card2.src = '/static/card_svgs/card_back.png';
+          card2.alt = 'card back';
+          holes.appendChild(card1);
+          holes.appendChild(card2);
+        }
+
+        seat.appendChild(holes);
+      }
+
+      // emotes
       const emTextRaw = String(p.emoteText ?? p.EmoteText ?? '').trim();
       const emText    = emTextRaw;
       const emAudio   = String(p.emoteAudio ?? p.EmoteAudio ?? '').trim();
@@ -1005,22 +1112,24 @@ document.addEventListener('DOMContentLoaded', () => {
         lastEmoteKeyByName.set(holdKey, emKey);
       }
 
-      let bubble = seatEl.querySelector('.emote-bubble');
+      let bubble = seat.querySelector('.emote-bubble');
       if (shouldShow) {
         if (!bubble) {
           bubble = document.createElement('div');
           bubble.className = 'emote-bubble sticky';
-          seatEl.appendChild(bubble);
+          seat.appendChild(bubble);
         }
         bubble.textContent = emText;
       } else if (bubble) {
         bubble.remove();
       }
+
+      seatsLayer.appendChild(seat);
     });
 
     renderBets(players, angles);
 
-    // Hero cards at bottom
+    // Hero cards at bottom: ALWAYS show hero's actual hole cards (if sent by server)
     myHandEl.innerHTML='';
     const myCards = players[0] ? (players[0].hand ?? players[0].Hand ?? []) : [];
     if (Array.isArray(myCards) && myCards.length) {
@@ -1036,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (!is67) { lastHeroWas67 = false; }
     } else { lastHeroWas67 = false; }
 
-    // Action message and sound hints
+    // Action message and sounds
     const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
     if (actionMsg){
       actionMsgEl.textContent=actionMsg;
@@ -1055,7 +1164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
     prevActionMessage = actionMsg;
 
-    // Timers for acting player
+    // Timers
     const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
     let actorTimebankMs = 0;
     if (actorName) {
@@ -1155,107 +1264,6 @@ document.addEventListener('DOMContentLoaded', () => {
     raiseBtn.disabled = !avail.has('raise');
 
     updateEmoteCooldownUI(players[0] || null, serverNowMs);
-  }
-
-  function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
-
-  function cardURL(card){
-    const s = (card.suit||card.Suit||'').toString().toUpperCase();
-    const r = (card.rank||card.Rank||'');
-    const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
-    let rt = ''; const n=Number(r);
-    if(Number.isFinite(n)){
-      rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':'';
-    } else {
-      const up=String(r).toUpperCase();
-      rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':'';
-    }
-    return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
-  }
-
-  // Use showingHand flag to control what appears on each seat
-  function renderSeat(p, pos, isActing, isHero, isSB, tbMs){
-    const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
-    const stack = p.stack ?? p.Stack ?? '';
-    const sittingOut = !!(p.sittingOut ?? p.SittingOut);
-    const folded = !!(p.folded ?? p.Folded);
-    const handArr = Array.isArray(p.hand ?? p.Hand) ? (p.hand ?? p.Hand) : [];
-    const showing = !!(p.showingHand ?? p.ShowingHand);
-
-    const seat=document.createElement('div');
-    seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'')+(folded?' folded':'');
-    seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
-
-    const nameWrap = document.createElement('div');
-    const nameSpan = document.createElement('strong'); nameSpan.textContent = name;
-    nameWrap.appendChild(nameSpan);
-
-    if (isSB) {
-      const sbSpan = document.createElement('span');
-      sbSpan.className = 'sb-indicator';
-      sbSpan.textContent = 'SB';
-      nameWrap.appendChild(sbSpan);
-    }
-
-    if (isActing) {
-      const baseTimer = document.createElement('span');
-      baseTimer.className = 'act-timer-seat timer-ok base-timer';
-      const clock = document.createTextNode('⏱ ');
-      const tval = document.createElement('span');
-      tval.className = 'tval';
-      tval.textContent = '0.0s';
-      baseTimer.appendChild(clock); baseTimer.appendChild(tval);
-      nameWrap.appendChild(baseTimer);
-
-      if (tbMs > 0) {
-        const tbTimer = document.createElement('span');
-        tbTimer.className = 'act-timer-seat timer-ok tb-timer';
-        tbTimer.style.display = 'none';
-        const icon = document.createTextNode('⏳ ');
-        const tbVal = document.createElement('span');
-        tbVal.className = 'tval';
-        tbVal.textContent = (tbMs/1000).toFixed(1)+'s';
-        tbTimer.appendChild(icon);
-        tbTimer.appendChild(tbVal);
-        nameWrap.appendChild(tbTimer);
-      }
-    }
-
-    const chips=document.createElement('div'); chips.className='chips';
-    const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
-    const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(stack);
-    chips.appendChild(chipImg); chips.appendChild(chipsText);
-
-    seat.appendChild(nameWrap);
-    seat.appendChild(chips);
-
-    if (!sittingOut && !folded) {
-      const holes = document.createElement('div');
-      holes.className = 'seat-holes';
-
-      if (showing && handArr.length) {
-        handArr.slice(0,2).forEach((c) => {
-          const img = document.createElement('img');
-          const url = cardURL(c);
-          img.src = url || '/static/card_svgs/card_back.png';
-          img.alt = url ? url.split('/').pop() : 'card';
-          holes.appendChild(img);
-        });
-      } else {
-        const card1 = document.createElement('img');
-        card1.src = '/static/card_svgs/card_back.png';
-        card1.alt = 'card back';
-        const card2 = document.createElement('img');
-        card2.src = '/static/card_svgs/card_back.png';
-        card2.alt = 'card back';
-        holes.appendChild(card1);
-        holes.appendChild(card2);
-      }
-
-      seat.appendChild(holes);
-    }
-
-    return seat;
   }
 
   function renderBets(players, angles){

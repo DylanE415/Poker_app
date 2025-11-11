@@ -460,11 +460,15 @@ func (r *Room) run() {
 					}
 					//show other players cards if they are showing their hand
 					if pl.ShowCards {
-						ps.Hand = pl.Hand
+						// everyone can see this player's hand
 						ps.ShowingHand = true
-					} else if !pl.ShowCards {
-						ps.Hand = nil
+						ps.Hand = pl.Hand
+					} else {
 						ps.ShowingHand = false
+						// hide hand from others, but DON'T clear hero's private hand
+						if pl.ID != cmd.PlayerID {
+							ps.Hand = nil
+						}
 					}
 
 					// attach emote if still active

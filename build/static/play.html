@@ -45,9 +45,9 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .seat {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 135px; max-width: 34vw;
+  width: 150px; max-width: 36vw;
   display:flex; flex-direction:column; align-items:center; gap:.22rem;
-  padding:.35rem .45rem; border-radius:12px;
+  padding:.35rem .5rem; border-radius:12px;
   background: rgba(10,20,40,.55); border:1px solid #223062;
   box-shadow: 0 4px 16px rgba(0,0,0,.25);
   text-align:center; z-index: 2; pointer-events:none;
@@ -63,16 +63,25 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
   font-size:.7rem; padding:0 0.25rem; border-radius:4px; margin-left:.26rem; font-weight:bold;
 }
 
-.seat-holes { position: relative; width: 58px; height: 50px; margin-top: 0.08rem; }
+/* hole cards spacing */
+.seat-holes {
+  position: relative;
+  width: 80px;
+  height: 52px;
+  margin-top: 0.08rem;
+}
 .seat-holes img {
-  position: absolute; width: 36px; height: 50px; object-fit: cover;
-  border-radius: 5px; border: 1px solid rgba(255,255,255,.08);
+  position: absolute;
+  width: 36px; height: 50px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,.08);
   box-shadow: 0 2px 10px rgba(0,0,0,.45);
 }
-.seat-holes img:nth-child(1) { left: 0; top: 0; }
-.seat-holes img:nth-child(2) { left: 15px; top: 2px; }
+.seat-holes img:nth-child(1) { left: 0px;  top: 0px; }
+.seat-holes img:nth-child(2) { left: 28px; top: 2px; }
 
-/* Base + timebank timers on acting seat */
+/* timers */
 .act-timer-seat {
   display:inline-flex; align-items:center; gap:.28rem;
   border:1px solid #2b3b71; border-radius:999px; padding:.02rem .3rem; font-weight:600;
@@ -82,11 +91,7 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .timer-ok  { color: var(--good); border-color: rgba(62,207,142,.6); }
 .timer-warn{ color: #ffd166;  border-color: rgba(255,209,102,.6); }
 .timer-bad { color: var(--bad);  border-color: rgba(242,95,92,.7); }
-
-/* timebank pill appears only after base time expires */
-.act-timer-seat.tb-timer {
-  margin-left: .24rem;
-}
+.act-timer-seat.tb-timer { margin-left: .24rem; }
 
 /* bets overlay */
 #betsLayer { position:absolute; inset:0; pointer-events:none; z-index: 4; }
@@ -180,10 +185,13 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 .emote-item:focus { background:#182a5c; border-color:#2b3b71; outline: none; }
 .emote-item[disabled] { opacity:.5; cursor:not-allowed; }
 
-#emoteCooldown { font-size: .8rem; color: var(--muted); }
-.timebank-display { font-size:.8rem; color: var(--muted); }
+#emoteCooldown { font-size: 1rem; color: var(--muted); font-weight: 600;}
+.timebank-display {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+}
 
-/* controls column */
 .controls-right {
   background: rgba(10,20,40,.55); border:1px solid #223062; border-radius:12px;
   padding:.45rem .55rem; display:flex; flex-direction:column; gap:.4rem;
@@ -316,12 +324,16 @@ input.amountBox[type="number"] { -moz-appearance: textfield; }
     </section>
 
     <section class="myhand">
-      <!-- Emote column (left of hole cards) -->
+      <!-- Emote + show-hand column (left of hole cards) -->
       <div class="emote-panel">
         <button id="emoteBtn" type="button" aria-haspopup="menu" aria-expanded="false" title="Send an emote">Emote</button>
         <div id="emoteMenu" class="emote-menu" role="menu" aria-label="Emotes"></div>
         <div id="emoteCooldown" class="emote-cooldown" aria-live="polite"></div>
         <div id="timebankDisplay" class="timebank-display"></div>
+        <div style="display:flex; gap:.4rem; margin-top:.15rem;">
+          <button id="showHandBtn" type="button" title="Show your hand to the table">Show Hand</button>
+          <button id="hideHandBtn" type="button" title="Hide your hand from the table">Hide Hand</button>
+        </div>
       </div>
 
       <div class="cards" id="myHand"></div>
@@ -454,6 +466,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async sit(room, sitIn) { 
       return await doFetch(`/sitInOrOut?room=${encodeURIComponent(room)}&sitIn=${sitIn}`, { method:'POST' }); 
     },
+    async showHand(room, show) {
+      const params = new URLSearchParams({
+        room: room,
+        showHand: String(!!show),
+      });
+      return await doFetch(`/showHand?${params.toString()}`, { method:'POST' });
+    },
     async logout(){ location.href='/login'; }
   };
 
@@ -464,10 +483,10 @@ document.addEventListener('DOMContentLoaded', () => {
         raiseAmt = $('raiseAmt'), foldBtn = $('foldBtn'), clearBtn = $('clearBtn'),
         ledgerBtn = $('ledgerBtn'), raiseSlider = $('raiseSlider'),
         raiseAmtLabel = $('raiseAmtLabel'), callAmtEl = $('callAmt'),
-        raiseUp = $('raiseUp'), raiseDown = $('raiseDown'),
         emoteBtn = $('emoteBtn'), emoteMenu = $('emoteMenu'),
         emoteCooldownEl = $('emoteCooldown'),
-        timebankDisplayEl = $('timebankDisplay');
+        timebankDisplayEl = $('timebankDisplay'),
+        showHandBtn = $('showHandBtn'), hideHandBtn = $('hideHandBtn');
   const queuedLabel = $('queuedLabel'), queuedValue = $('queuedValue');
 
   $('logoutBtn').addEventListener('click', api.logout);
@@ -535,6 +554,51 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   buildEmoteMenu();
 
+  // Show / Hide Hand buttons
+  if (showHandBtn && hideHandBtn) {
+    hideHandBtn.disabled = true; // start hidden
+    showHandBtn.addEventListener('click', async () => {
+      const room = roomSel.value;
+      try {
+        pulse(showHandBtn);
+        showHandBtn.disabled = true;
+        hideHandBtn.disabled = true;
+        const res = await api.showHand(room, true);
+        if (res.status === 401) { location.href = '/login'; return; }
+        if (!res.ok) {
+          const txt = (await res.text()).trim();
+          showMsg(`Show hand failed: ${res.status} ${txt}`, 'err');
+          return;
+        }
+        showMsg('You are now showing your hand', 'ok');
+        pollState.soon();
+      } catch (e) {
+        showMsg(`Show hand error: ${e.message}`, 'err');
+      }
+    });
+
+    hideHandBtn.addEventListener('click', async () => {
+      const room = roomSel.value;
+      try {
+        pulse(hideHandBtn);
+        showHandBtn.disabled = true;
+        hideHandBtn.disabled = true;
+        const res = await api.showHand(room, false);
+        if (res.status === 401) { location.href = '/login'; return; }
+        if (!res.ok) {
+          const txt = (await res.text()).trim();
+          showMsg(`Hide hand failed: ${res.status} ${txt}`, 'err');
+          return;
+        }
+        showMsg('You are now hiding your hand', 'ok');
+        pollState.soon();
+      } catch (e) {
+        showMsg(`Hide hand error: ${e.message}`, 'err');
+      }
+    });
+  }
+
+  // Join / leave / sit handlers
   joinBtn.addEventListener('click', async () => {
     pulse(joinBtn);
     const room = roomSel.value, stack = stackInp.value;
@@ -651,15 +715,6 @@ document.addEventListener('DOMContentLoaded', () => {
   clearBtn.addEventListener('click', () => doActionWithQueued('clear'));
   ledgerBtn.addEventListener('click', () => { location.href = '/ledger'; });
 
-  function stripEmoji(s) {
-    if (!s) return s;
-    try {
-      return s.replace(/\p{Extended_Pictographic}/gu, '').replace(/\s{2,}/g, ' ').trim();
-    } catch {
-      return s.replace(/[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F6FF}\u{2600}-\u{27BF}]/gu, '').replace(/\s{2,}/g,' ').trim();
-    }
-  }
-
   // ===== Dual countdown (base + timebank) =====
   let rafId = 0, baseDeadlineMsGlobal = 0, skewMsGlobal = 0, tbMsGlobal = 0;
 
@@ -696,14 +751,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const nowMs = Date.now() + skewMsGlobal;
 
       if (nowMs <= baseDeadlineMsGlobal) {
-        // Base countdown active
         const remaining = Math.max(0, baseDeadlineMsGlobal - nowMs);
         const secs = remaining / 1000;
         els.baseVal.textContent = secs >= 10 ? secs.toFixed(0)+'s' : secs.toFixed(1)+'s';
         setTimerClasses(els.basePill, remaining);
         if (els.tbPill) els.tbPill.style.display = 'none';
       } else {
-        // Base expired
         if (tbMsGlobal > 0 && els.tbPill && els.tbVal) {
           const overMs = nowMs - baseDeadlineMsGlobal;
           const leftMs = Math.max(0, tbMsGlobal - overMs);
@@ -719,7 +772,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
         } else {
-          // No timebank; lock at zero
           els.baseVal.textContent = '0.0s';
           setTimerClasses(els.basePill, 0);
           cancelAnimationFrame(rafId); rafId=0;
@@ -733,36 +785,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function stopCountdown(){ if (rafId) cancelAnimationFrame(rafId); rafId = 0; }
-
-  let isAdjusting = false;
-  raiseSlider.addEventListener('pointerdown', () => { isAdjusting = true; });
-  document.addEventListener('pointerup', () => { isAdjusting = false; });
-  raiseAmt.addEventListener('focus', () => { isAdjusting = true; });
-  raiseAmt.addEventListener('blur',  () => { isAdjusting = false; });
-
-  function bumpRaise(delta) {
-    const min = Number(currentRaiseMin) || 0;
-    const max = Number(currentRaiseMax) || 0;
-    let v = Number(raiseAmt.value || '0') || 0;
-    v = v + delta;
-    v = Math.max(min, Math.min(max, Math.round(v * 100) / 100));
-    raiseAmt.value = v.toFixed(2);
-    raiseAmtLabel.textContent = v.toFixed(2);
-    raiseSlider.value = amountToSlider(v);
-  }
-  raiseUp.addEventListener('click', () => bumpRaise(0.25));
-  raiseDown.addEventListener('click', () => bumpRaise(-0.25));
-
-  let lastSliderCtx = '';
-  function makeBettingCtx({ street, tableBet, myBet, minAdd, actorName }) {
-    return [
-      String(street||'').toLowerCase(),
-      Number(tableBet||0).toFixed(2),
-      Number(myBet||0).toFixed(2),
-      Number(minAdd||0).toFixed(2),
-      String(actorName||'')
-    ].join('|');
-  }
 
   const SEAT_RX = 46, SEAT_RY = 38, BET_RX=31, BET_RY=26;
   function heroPolar(){ return Math.PI/2; }
@@ -805,6 +827,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
+
+  function cardURL(card){
+    const s = (card.suit||card.Suit||'').toString().toUpperCase();
+    const r = (card.rank||card.Rank||'');
+    const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
+    let rt = ''; const n=Number(r);
+    if(Number.isFinite(n)){
+      rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':'';
+    } else {
+      const up=String(r).toUpperCase();
+      rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':'';
+    }
+    return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
+  }
+
+  function renderCardImg(card) {
+    const img = document.createElement('img');
+    img.className = 'cardimg';
+    const url = cardURL(card);
+    if (url) {
+      img.src = url;
+      img.alt = url.split('/').pop() || 'card';
+    } else {
+      img.src = '/static/card_svgs/card_back.png';
+      img.alt = 'card';
+    }
+    return img;
+  }
+
+  function getShowdownHandsArray(hand) {
+    const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
+    return Array.isArray(raw) ? raw : [];
+  }
+
   const pollState = (() => {
     let timer=null;
     async function tick(){
@@ -841,12 +898,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return { start, stop, now, soon };
   })();
 
-  function getShowdownHandsArray(hand) {
-    const raw = hand?.showDownHands ?? hand?.ShowDownHands ?? null;
-    return Array.isArray(raw) ? raw : [];
-  }
+  let prevActionMessage = '';
 
-  let prevActionMessage='';
   function renderState(st){
     if (!st || (Object.keys(st).length===0)){
       potEl.textContent='—';
@@ -859,6 +912,10 @@ document.addEventListener('DOMContentLoaded', () => {
       lastBoardLen = 0;
       if (timebankDisplayEl) timebankDisplayEl.textContent = '';
       updateEmoteCooldownUI(null, Date.now());
+      if (showHandBtn && hideHandBtn) {
+        showHandBtn.disabled = false;
+        hideHandBtn.disabled = true;
+      }
       return;
     }
 
@@ -882,17 +939,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     lastBoardLen = currentBoardLen;
 
-    const rawPlayers = Array.isArray(st.players || st.Players) ? (st.players || st.Players).slice() : [];
+    const rawPlayers = Array.isArray(st.players || st.Players)
+      ? (st.players || st.Players).slice()
+      : [];
+
+    // HERO SEAT DETECTION
+    const heroIdFromState = st.heroID || st.heroId || st.HeroID || null;
     let heroIdx = -1;
-    if (myName) heroIdx = rawPlayers.findIndex(p => (String(p.name ?? p.Name ?? '').trim() === myName));
-    if (heroIdx < 0) heroIdx = rawPlayers.findIndex(p => Array.isArray(p.hand ?? p.Hand));
+
+    if (heroIdFromState) {
+      const heroIdNorm = String(heroIdFromState).trim();
+      heroIdx = rawPlayers.findIndex(p =>
+        String(p.id ?? p.ID ?? '').trim() === heroIdNorm
+      );
+    }
+
+    if (heroIdx < 0 && myName) {
+      const myLower = myName.trim().toLowerCase();
+      heroIdx = rawPlayers.findIndex(p =>
+        String(p.name ?? p.Name ?? '').trim().toLowerCase() === myLower
+      );
+    }
+
+    if (heroIdx < 0) {
+      heroIdx = rawPlayers.findIndex(p => {
+        const h = p.hand ?? p.Hand;
+        return Array.isArray(h) && h.length > 0;
+      });
+    }
+
     if (heroIdx < 0) heroIdx = 0;
 
     const hero = rawPlayers[heroIdx] || null;
-    const others = rawPlayers.length ? [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)] : [];
-    const heroTheta = heroPolar(); const othersTheta = otherPolars(others.length);
+    const others = rawPlayers.length
+      ? [...rawPlayers.slice(heroIdx+1), ...rawPlayers.slice(0, heroIdx)]
+      : [];
+
+    const heroTheta = heroPolar();
+    const othersTheta = otherPolars(others.length);
     const players = hero ? [hero, ...others] : others.slice();
     const angles  = hero ? [heroTheta, ...othersTheta] : othersTheta.slice();
+
+    // Hero show-hand buttons enabled state
+    if (showHandBtn && hideHandBtn) {
+      const heroShowing = !!(hero && (hero.showingHand ?? hero.ShowingHand));
+      showHandBtn.disabled = heroShowing;
+      hideHandBtn.disabled = !heroShowing;
+    }
 
     // Update hero timebank under Emote button
     if (timebankDisplayEl) {
@@ -905,16 +998,98 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // Seats
     seatsLayer.innerHTML='';
     players.forEach((p,i)=>{
       const pos = ellipseXY(angles[i], SEAT_RX, SEAT_RY);
-      const name = String(p.name ?? p.Name ?? '').trim();
+      const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
       const isActing = !!(actorName && name === actorName);
       const isSB = (name === sbName);
       const tbMs = Number(p.timeBankUnixMs ?? p.TimeBankUnixMs ?? 0) || 0;
-      const seatEl = renderSeat(p, pos, isActing, i===0, isSB, tbMs);
-      seatsLayer.appendChild(seatEl);
+      const isHeroSeat = (i === 0 && !!hero);
 
+      const seat=document.createElement('div');
+      seat.className='seat'+(isHeroSeat?' hero':'')+(isActing?' acting':'')+((p.sittingOut ?? p.SittingOut)?' sittingout':'')+((p.folded ?? p.Folded)?' folded':'');
+      seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
+
+      const nameWrap = document.createElement('div');
+      const nameSpan = document.createElement('strong'); nameSpan.textContent = name;
+      nameWrap.appendChild(nameSpan);
+
+      if (isSB) {
+        const sbSpan = document.createElement('span');
+        sbSpan.className = 'sb-indicator';
+        sbSpan.textContent = 'SB';
+        nameWrap.appendChild(sbSpan);
+      }
+
+      if (isActing) {
+        const baseTimer = document.createElement('span');
+        baseTimer.className = 'act-timer-seat timer-ok base-timer';
+        const clock = document.createTextNode('⏱ ');
+        const tval = document.createElement('span');
+        tval.className = 'tval';
+        tval.textContent = '0.0s';
+        baseTimer.appendChild(clock); baseTimer.appendChild(tval);
+        nameWrap.appendChild(baseTimer);
+
+        if (tbMs > 0) {
+          const tbTimer = document.createElement('span');
+          tbTimer.className = 'act-timer-seat timer-ok tb-timer';
+          tbTimer.style.display = 'none';
+          const icon = document.createTextNode('⏳ ');
+          const tbVal = document.createElement('span');
+          tbVal.className = 'tval';
+          tbVal.textContent = (tbMs/1000).toFixed(1)+'s';
+          tbTimer.appendChild(icon);
+          tbTimer.appendChild(tbVal);
+          nameWrap.appendChild(tbTimer);
+        }
+      }
+
+      const chips=document.createElement('div'); chips.className='chips';
+      const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
+      const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(p.stack ?? p.Stack ?? '');
+      chips.appendChild(chipImg); chips.appendChild(chipsText);
+
+      seat.appendChild(nameWrap);
+      seat.appendChild(chips);
+
+      // hole cards:
+      // - Hero seat: faces only if showingHand == true (table view)
+      // - Others: faces only if showingHand == true
+      const sittingOut = !!(p.sittingOut ?? p.SittingOut);
+      const folded = !!(p.folded ?? p.Folded);
+      const handArr = Array.isArray(p.hand ?? p.Hand) ? (p.hand ?? p.Hand) : [];
+      const showing = !!(p.showingHand ?? p.ShowingHand);
+
+      if (!sittingOut && !folded) {
+        const holes = document.createElement('div');
+        holes.className = 'seat-holes';
+
+        if (showing && handArr.length) {
+          handArr.slice(0,2).forEach((c) => {
+            const img = document.createElement('img');
+            const url = cardURL(c);
+            img.src = url || '/static/card_svgs/card_back.png';
+            img.alt = url ? url.split('/').pop() : 'card';
+            holes.appendChild(img);
+          });
+        } else {
+          const card1 = document.createElement('img');
+          card1.src = '/static/card_svgs/card_back.png';
+          card1.alt = 'card back';
+          const card2 = document.createElement('img');
+          card2.src = '/static/card_svgs/card_back.png';
+          card2.alt = 'card back';
+          holes.appendChild(card1);
+          holes.appendChild(card2);
+        }
+
+        seat.appendChild(holes);
+      }
+
+      // emotes
       const emTextRaw = String(p.emoteText ?? p.EmoteText ?? '').trim();
       const emText    = emTextRaw;
       const emAudio   = String(p.emoteAudio ?? p.EmoteAudio ?? '').trim();
@@ -937,33 +1112,40 @@ document.addEventListener('DOMContentLoaded', () => {
         lastEmoteKeyByName.set(holdKey, emKey);
       }
 
-      let bubble = seatEl.querySelector('.emote-bubble');
+      let bubble = seat.querySelector('.emote-bubble');
       if (shouldShow) {
         if (!bubble) {
           bubble = document.createElement('div');
           bubble.className = 'emote-bubble sticky';
-          seatEl.appendChild(bubble);
+          seat.appendChild(bubble);
         }
         bubble.textContent = emText;
       } else if (bubble) {
         bubble.remove();
       }
+
+      seatsLayer.appendChild(seat);
     });
 
     renderBets(players, angles);
 
+    // Hero cards at bottom: ALWAYS show hero's actual hole cards (if sent by server)
     myHandEl.innerHTML='';
     const myCards = players[0] ? (players[0].hand ?? players[0].Hand ?? []) : [];
-    if (Array.isArray(myCards) && myCards.length) myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
+    if (Array.isArray(myCards) && myCards.length) {
+      myCards.forEach(c=>myHandEl.appendChild(renderCardImg(c)));
+    }
 
+    // 6-7 sound
     if (Array.isArray(myCards) && myCards.length === 2) {
       const r1 = parseInt(myCards[0].rank ?? myCards[0].Rank ?? 0, 10);
       const r2 = parseInt(myCards[1].rank ?? myCards[1].Rank ?? 0, 10);
-      const is67 = ( (r1 === 6 && r2 === 7) || (r1 === 7 && r2 === 6) );
+      const is67 = ((r1 === 6 && r2 === 7) || (r1 === 7 && r2 === 6));
       if (is67 && !lastHeroWas67) { safePlay67(); lastHeroWas67 = true; }
       else if (!is67) { lastHeroWas67 = false; }
     } else { lastHeroWas67 = false; }
 
+    // Action message and sounds
     const actionMsg = String(hand.currentActionMessage ?? hand.CurrentActionMessage ?? '').trim();
     if (actionMsg){
       actionMsgEl.textContent=actionMsg;
@@ -982,7 +1164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else { actionMsgEl.style.display='none'; actionMsgEl.textContent=''; }
     prevActionMessage = actionMsg;
 
-    // Dual timer: base + timebank (for acting player)
+    // Timers
     const deadlineMs = Number(hand.actionDeadlineUnixMs ?? hand.ActionDeadlineUnixMs ?? 0) || 0;
     let actorTimebankMs = 0;
     if (actorName) {
@@ -994,6 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (deadlineMs > 0) startCountdown(deadlineMs, serverNowMs, actorTimebankMs);
     else stopCountdown();
 
+    // Showdown display
     const sdMsg = String(hand.showDownMessage ?? hand.ShowDownMessage ?? '').trim();
     const sdHands = getShowdownHandsArray(hand);
     const street = String(hand.street ?? hand.Street ?? '').toLowerCase();
@@ -1027,6 +1210,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showdownList.style.display = 'none';
     }
 
+    // Betting controls
     const avail = new Set(hand.avaliableActions || hand.availableActions || []);
     const myBet   = Number((players[0] && (players[0].currentBet ?? players[0].CurrentBet)) ?? 0) || 0;
     const tableBet = Number(hand.currentBet ?? hand.CurrentBet ?? 0) || 0;
@@ -1054,125 +1238,32 @@ document.addEventListener('DOMContentLoaded', () => {
     currentRaiseMin = sliderMin;
     currentRaiseMax = sliderMax;
 
-    const ctx = makeBettingCtx({ street, tableBet, myBet, minAdd: minAdd, actorName: actorName });
-    const contextChanged = (ctx !== lastSliderCtx);
+    const ctx = [
+      String(street||'').toLowerCase(),
+      Number(tableBet||0).toFixed(2),
+      Number(myBet||0).toFixed(2),
+      Number(minAdd||0).toFixed(2),
+      String(actorName||'')
+    ].join('|');
 
     const currentInputVal = Number(raiseAmt.value || NaN);
     const outOfBounds = !Number.isFinite(currentInputVal) ||
                         currentInputVal < sliderMin - 1e-9 ||
                         currentInputVal > sliderMax + 1e-9;
 
-    if ((!isAdjusting && contextChanged) || outOfBounds) {
+    if (ctx !== window._lastSliderCtx || outOfBounds) {
       raiseAmt.value = sliderMin.toFixed(2);
       raiseAmtLabel.textContent = sliderMin.toFixed(2);
       raiseSlider.value = amountToSlider(sliderMin);
-    } else {
-      const kept = Math.min(sliderMax, Math.max(sliderMin, currentInputVal));
-      raiseAmt.value = kept.toFixed(2);
-      raiseAmtLabel.textContent = kept.toFixed(2);
-      raiseSlider.value = amountToSlider(kept);
     }
+    window._lastSliderCtx = ctx;
 
     if (avail.has('check')) { foldBtn.disabled = true; } else { foldBtn.disabled = false; }
     checkBtn.disabled = !avail.has('check');
     callBtn.disabled  = !avail.has('call') || callAmt <= 0.0001;
     raiseBtn.disabled = !avail.has('raise');
 
-    lastSliderCtx = ctx;
-
     updateEmoteCooldownUI(players[0] || null, serverNowMs);
-  }
-
-  function fmtMoney(v){ const n=Number(v); return Number.isFinite(n)?n.toFixed(2):(v??''); }
-  function cardURL(card){
-    const s = (card.suit||card.Suit||'').toString().toUpperCase();
-    const r = (card.rank||card.Rank||'');
-    const suit = s==='S'?'SPADE':s==='H'?'HEART':s==='D'?'DIAMOND':s==='C'?'CLUB':'';
-    let rt = ''; const n=Number(r);
-    if(Number.isFinite(n)){
-      rt = (n>=2&&n<=10)?String(n): n===11?'11-JACK':n===12?'12-QUEEN':n===13?'13-KING':(n===14||n===1)?'1-ACE':'';
-    } else {
-      const up=String(r).toUpperCase();
-      rt = up==='A'?'1-ACE':up==='K'?'13-KING':up==='Q'?'12-QUEEN':up==='J'?'11-JACK':'';
-    }
-    return (suit && rt) ? `/static/card_svgs/${suit}-${rt}.svg` : null;
-  }
-  function renderCardImg(card){
-    const img=document.createElement('img'); img.className='cardimg'; const url=cardURL(card);
-    if(url){ img.src=url; img.alt=url.split('/').pop(); } else { img.alt='??'; img.title=JSON.stringify(card); }
-    return img;
-  }
-
-  function renderSeat(p, pos, isActing, isHero, isSB, tbMs){
-    const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
-    const stack = p.stack ?? p.Stack ?? '';
-    const sittingOut = !!(p.sittingOut ?? p.SittingOut);
-    const folded = !!(p.folded ?? p.Folded);
-
-    const seat=document.createElement('div');
-    seat.className='seat'+(isHero?' hero':'')+(isActing?' acting':'')+(sittingOut?' sittingout':'')+(folded?' folded':'');
-    seat.style.left=pos.x+'%'; seat.style.top=pos.y+'%';
-
-    const nameWrap = document.createElement('div');
-    const nameSpan = document.createElement('strong'); nameSpan.textContent = name;
-    nameWrap.appendChild(nameSpan);
-
-    if (isSB) {
-      const sbSpan = document.createElement('span');
-      sbSpan.className = 'sb-indicator';
-      sbSpan.textContent = 'SB';
-      nameWrap.appendChild(sbSpan);
-    }
-
-    if (isActing) {
-      // Base timer pill (always visible while base time running)
-      const baseTimer = document.createElement('span');
-      baseTimer.className = 'act-timer-seat timer-ok base-timer';
-      const clock = document.createTextNode('⏱ ');
-      const tval = document.createElement('span');
-      tval.className = 'tval';
-      tval.textContent = '0.0s';
-      baseTimer.appendChild(clock); baseTimer.appendChild(tval);
-      nameWrap.appendChild(baseTimer);
-
-      // Timebank pill (appears after base expires if tbMs > 0)
-      if (tbMs > 0) {
-        const tbTimer = document.createElement('span');
-        tbTimer.className = 'act-timer-seat timer-ok tb-timer';
-        tbTimer.style.display = 'none';
-        const icon = document.createTextNode('⏳ ');
-        const tbVal = document.createElement('span');
-        tbVal.className = 'tval';
-        tbVal.textContent = (tbMs/1000).toFixed(1)+'s';
-        tbTimer.appendChild(icon);
-        tbTimer.appendChild(tbVal);
-        nameWrap.appendChild(tbTimer);
-      }
-    }
-
-    const chips=document.createElement('div'); chips.className='chips';
-    const chipImg=document.createElement('img'); chipImg.src='/static/chips/chips.png'; chipImg.alt='';
-    const chipsText=document.createElement('span'); chipsText.textContent=fmtMoney(stack);
-    chips.appendChild(chipImg); chips.appendChild(chipsText);
-
-    seat.appendChild(nameWrap);
-    seat.appendChild(chips);
-
-    if (!sittingOut && !folded) {
-      const holes = document.createElement('div');
-      holes.className = 'seat-holes';
-      const card1 = document.createElement('img');
-      card1.src = '/static/card_svgs/card_back.png';
-      card1.alt = 'card back';
-      const card2 = document.createElement('img');
-      card2.src = '/static/card_svgs/card_back.png';
-      card2.alt = 'card back';
-      holes.appendChild(card1);
-      holes.appendChild(card2);
-      seat.appendChild(holes);
-    }
-
-    return seat;
   }
 
   function renderBets(players, angles){
@@ -1210,7 +1301,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.ok) renderState(JSON.parse(await res.text()));
     } catch {}
   })();
-
 });
 </script>
 </body>
