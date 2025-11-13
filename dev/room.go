@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -108,7 +109,12 @@ func FindPlayerIndexInRoom(r *Room, id string) int {
 	return -1
 }
 
+var ledgerMu sync.Mutex
+
 func updateLedger(playerName string, playerID string, currentStack float64, buyIn float64) {
+	// make sure no other goroutine is writing
+	ledgerMu.Lock()
+	defer ledgerMu.Unlock()
 	// pick a path that exists
 	path := "./static/ledger.json"
 	fmt.Println("updateLedger: writing to", path)
