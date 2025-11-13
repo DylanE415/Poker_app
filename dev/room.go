@@ -111,6 +111,7 @@ func FindPlayerIndexInRoom(r *Room, id string) int {
 func updateLedger(playerName string, playerID string, currentStack float64, buyIn float64) {
 	// pick a path that exists
 	path := "./static/ledger.json"
+	fmt.Println("updateLedger: writing to", path)
 	if _, err := os.Stat(path); err != nil {
 		if _, err2 := os.Stat("../static/ledger.json"); err2 == nil {
 			path = "../static/ledger.json"
@@ -150,7 +151,7 @@ func updateLedger(playerName string, playerID string, currentStack float64, buyI
 		doc.Ledger = append(doc.Ledger, entry{
 			ID:        playerID,
 			Name:      playerName,
-			NetProfit: 0,
+			NetProfit: currentStack - buyIn,
 		})
 	}
 
@@ -561,8 +562,8 @@ func (r *Room) run() {
 			if r.currentHand == nil && !r.timeSinceLastHand.IsZero() &&
 				now.Sub(r.timeSinceLastHand) > 30*time.Minute {
 
-				for len(r.players) > 0 {
-					r.players[0].sittingOut = true
+				for _, p := range r.players {
+					p.sittingOut = true
 				}
 			}
 
