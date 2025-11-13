@@ -119,7 +119,7 @@ func getSuitFrequencies(h *Hand, p *Player) ([]SuitFrequency, map[string]int) {
 // isFlush returns true if the hand is a flush and returns the rank of the highest card
 func isFlush(freqs []SuitFrequency, highestRanks map[string]int) (bool, int, string) {
 	for _, s := range freqs {
-		if s.Count == 5 {
+		if s.Count >= 5 {
 			return true, highestRanks[s.Suit], s.Suit
 		}
 	}

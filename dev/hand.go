@@ -238,6 +238,7 @@ func handleAction(H *Hand, action Action) bool {
 	case "check":
 		H.Players[H.actionPlayerIndex].canAct = false
 		H.currentActionMessage = H.Players[H.actionPlayerIndex].Name + " checked"
+		println(H.Players[H.actionPlayerIndex].Name, "checked")
 		time.Sleep(200 * time.Millisecond)
 		return true
 	case "raise":
@@ -259,6 +260,7 @@ func handleAction(H *Hand, action Action) bool {
 
 			p.canAct = false
 			H.currentActionMessage = p.Name + " called all in for " + strconv.FormatFloat(contrib, 'f', -1, 64)
+			println(p.Name, "called all in for", contrib)
 			time.Sleep(200 * time.Millisecond)
 			return true
 		}
@@ -281,6 +283,8 @@ func handleAction(H *Hand, action Action) bool {
 
 			p.canAct = false
 			H.currentActionMessage = p.Name + " went all in for " + strconv.FormatFloat(totalPut, 'f', -1, 64)
+			println(p.Name, "went all in for", totalPut)
+
 			// NOTE: we do NOT change:
 			//   H.currentBet
 			//   H.raiseAmount
@@ -311,6 +315,7 @@ func handleAction(H *Hand, action Action) bool {
 		p.canAct = false
 
 		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(desiredRaise, 'f', -1, 64)
+		println(p.Name, " raised the current bet by", desiredRaise)
 		time.Sleep(200 * time.Millisecond)
 		return true
 
@@ -328,6 +333,7 @@ func handleAction(H *Hand, action Action) bool {
 		H.Players[H.actionPlayerIndex].canAct = false
 
 		H.currentActionMessage = H.Players[H.actionPlayerIndex].Name + " called"
+		println(H.Players[H.actionPlayerIndex].Name, " called")
 		time.Sleep(200 * time.Millisecond)
 		return true
 
@@ -337,6 +343,7 @@ func handleAction(H *Hand, action Action) bool {
 		for i, p := range H.Players {
 			if p.ID == action.PlayerID {
 				H.currentActionMessage = p.Name + " folded"
+				println(p.Name, "folded")
 				p.folded = true
 				removePlayerAt(H, i)
 				found = true
@@ -646,22 +653,22 @@ func (h *Hand) run() {
 				println("chopping")
 				showdownmessage += "chopping with " + strconv.Itoa(len(winningHands)) + " players \n"
 				for i := range winningHands {
-					println(winningHands[i].playerId, " wins with ", winningHands[i].hand.Type)
 					tmpIndex := FindPlayerIndex(h, winningHands[i].playerId)
 					//can win the amount they committed divided by the number of players(but they are chopping)
 					amountCanWin := currentPot.Amount / float64(len(winningHands))
 					h.Players[tmpIndex].Stack += amountCanWin
 					h.pot -= amountCanWin
 					showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.FormatFloat(amountCanWin, 'f', -1, 64) + " with " + string(winningHands[i].hand.Type)
+					println(showdownmessage)
 
 				}
 			} else {
-				println(winningHands[0].playerId, " wins with ", winningHands[0].hand.Type)
 				tmpIndex := FindPlayerIndex(h, winningHands[0].playerId)
 				amountCanWin := currentPot.Amount
 				h.Players[tmpIndex].Stack += amountCanWin
 				h.pot -= amountCanWin
 				showdownmessage += h.Players[tmpIndex].Name + " wins " + strconv.FormatFloat(amountCanWin, 'f', -1, 64) + " with " + string(winningHands[0].hand.Type)
+				println(showdownmessage)
 				if isSevenTwoOff(h.Players[tmpIndex]) {
 					h.collectSevenTwoBounty(h.Room, h.Players[tmpIndex])
 					showdownmessage += h.Players[tmpIndex].Name + " collected 7 2 bounty"
