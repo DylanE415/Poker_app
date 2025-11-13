@@ -40,7 +40,7 @@ type Hand struct {
 }
 
 const (
-	timeLimitPerAction = 45 //seconds
+	timeLimitPerAction = 30 //seconds
 
 )
 

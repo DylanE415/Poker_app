@@ -61,11 +61,24 @@
       "display_name": "joe"
     },
     {
-            "id": "11",
+      "id": "11",
       "username": "ryan",
       "password_hash": "$2a$10$mpc41x8SZjM.hZLi0qWKUOpHARWZcN/OOarHVmn5RBaTdlnvlB5h6",
       "display_name": "ryan"
+    },
+    {
+      "id": "12",
+      "username": "chase",
+      "password_hash": "$2a$10$FcMTb8rFJCViVqlUOn2mB.a4uI8zNJv4g8zMWKr7S42cWG4MvwgQK",
+      "display_name": "chase"
+    },
+    {
+      "id": "13",
+      "username": "kai",
+      "password_hash": "$2a$10$txN9vWno0oJ80rCGW.AEh.huuBp.IyBlZj.ySLgxHZFxBf4VCC5Mq",
+      "display_name": "kai"
     }
+
     
   ]
 }
