@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>Poker — Table</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="/static/favicon.png" type="image/png" />
   <style>
 /* hide scrollbar in the action panel */
 .controls-right {
@@ -60,6 +61,14 @@ button[disabled] { opacity:.45; cursor:not-allowed; filter: grayscale(60%); }
 
 .sb-indicator {
   display:inline-block; background:#3a2a0f; color:#ffcc00;
+  font-size:.7rem; padding:0 0.25rem; border-radius:4px; margin-left:.26rem; font-weight:bold;
+}
+.bb-indicator {
+  display:inline-block; background:#3a2a0f; color:#ffcc00;
+  font-size:.7rem; padding:0 0.25rem; border-radius:4px; margin-left:.26rem; font-weight:bold;
+}
+.dealer-indicator {
+  display:inline-block; background:#3a2a0f; color:#e8e1c8;
   font-size:.7rem; padding:0 0.25rem; border-radius:4px; margin-left:.26rem; font-weight:bold;
 }
 
@@ -926,6 +935,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const actorName = String(hand.actionPlayerName ?? hand.ActionPlayerName ?? '').trim();
     const sbName = String(hand.smallBlindName   ?? hand.SmallBlindName   ?? '').trim();
+    const bbName = String(hand.bigBlindName     ?? hand.BigBlindName     ?? '').trim();
+    const dealerName = String(hand.dealerName    ?? hand.DealerName    ?? '').trim();
 
     potEl.textContent = fmtMoney(hand.pot ?? hand.Pot ?? '');
 
@@ -1006,6 +1017,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = String(p.name ?? p.Name ?? '').trim() || '(player)';
       const isActing = !!(actorName && name === actorName);
       const isSB = (name === sbName);
+      const isBB = (name === bbName);
+      const isDealer = (name === dealerName);
       const tbMs = Number(p.timeBankUnixMs ?? p.TimeBankUnixMs ?? 0) || 0;
       const isHeroSeat = (i === 0 && !!hero);
 
@@ -1022,6 +1035,20 @@ document.addEventListener('DOMContentLoaded', () => {
         sbSpan.className = 'sb-indicator';
         sbSpan.textContent = 'SB';
         nameWrap.appendChild(sbSpan);
+      }
+
+      if (isBB) {
+        const bbSpan = document.createElement('span');
+        bbSpan.className = 'bb-indicator';
+        bbSpan.textContent = 'BB';
+        nameWrap.appendChild(bbSpan);
+      }
+
+      if (isDealer) {
+        const dealerSpan = document.createElement('span');
+        dealerSpan.className = 'dealer-indicator';
+        dealerSpan.textContent = 'D';
+        nameWrap.appendChild(dealerSpan);
       }
 
       if (isActing) {

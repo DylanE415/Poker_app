@@ -64,6 +64,8 @@ type handState struct {
 	ShowDownHands           []showDownHand `json:"showDownHands"`
 	CurrentActionMessage    string         `json:"currentActionMessage"`
 	SmallBlindName          string         `json:"smallBlindName"`
+	BigBlindName            string         `json:"bigBlindName"`
+	DealerName              string         `json:"dealerName"`
 	ActionDeadlineUnixMs    int64          `json:"actionDeadlineUnixMs"`
 	ServerCurrentTimeUnixMs int64          `json:"serverCurrentTimeUnixMs"`
 }
@@ -517,6 +519,8 @@ func (r *Room) run() {
 						ShowDownHands:           h.showDownHands,
 						CurrentActionMessage:    h.currentActionMessage,
 						SmallBlindName:          h.smallBlindName,
+						BigBlindName:            h.bigBlindName,
+						DealerName:              h.dealerName,
 						ActionDeadlineUnixMs:    h.actionPlayerDeadline.UnixMilli(),
 						ServerCurrentTimeUnixMs: time.Now().UnixMilli(),
 					}

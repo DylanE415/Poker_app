@@ -77,6 +77,12 @@
       "username": "kai",
       "password_hash": "$2a$10$txN9vWno0oJ80rCGW.AEh.huuBp.IyBlZj.ySLgxHZFxBf4VCC5Mq",
       "display_name": "kai"
+    },
+    {
+      "id": "14",
+      "username": "alex",
+      "password_hash": "$2a$10$8n/SRJw4orhRlWvnK1dwZOx8Q4GpEJAhObMgIkWuAwWUPFoF5ay0C",
+      "display_name": "alex"    
     }
 
     

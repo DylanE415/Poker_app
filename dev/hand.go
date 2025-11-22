@@ -30,6 +30,7 @@ type Hand struct {
 	smallBlindSize       float64
 	smallBlindName       string
 	bigBlindName         string
+	dealerName           string
 	skipToShowdown       bool
 	showDownHands        []showDownHand
 	showDownMessage      string
@@ -316,7 +317,7 @@ func handleAction(H *Hand, action Action) bool {
 
 		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(desiredRaise, 'f', -1, 64)
 		println(p.Name, " raised the current bet by", desiredRaise)
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(150 * time.Millisecond)
 		return true
 
 	case "call":
@@ -374,6 +375,11 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64, 
 		}
 	}
 	shuffleDeck(deck)
+	dealerName := ""
+	if len(players) > 2 {
+		//dealer is the player right before the small blind
+		dealerName = players[((smallBlindPosition + len(players) - 1) % len(players))].Name
+	}
 
 	return &Hand{
 		Players:           players,
@@ -381,6 +387,7 @@ func newHand(players []*Player, smallBlindPosition int, smallBlindSize float64, 
 		smallBlindIndex:   smallBlindPosition,
 		smallBlindName:    players[smallBlindPosition].Name,
 		bigBlindName:      players[(smallBlindPosition+1)%len(players)].Name,
+		dealerName:        dealerName,
 		deck:              deck,
 		currentState:      "pre-flop",
 		pot:               0,

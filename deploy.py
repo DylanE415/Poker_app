@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-EC2_HOST = "ec2-user@54.183.19.220"
+EC2_HOST = "ec2-user@52.53.139.200"
 SSH_KEY = Path("~/.ssh/poker_key.pem").expanduser()
 IMAGE_NAME = "poker:latest"
 CONTAINER_NAME = "poker"
