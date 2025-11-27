@@ -741,7 +741,7 @@ func (h *Hand) run() {
 	h.currentActionMessage = ""
 	h.showDownHands = showdownhands
 	h.showDownMessage = showdownmessage
-	time.Sleep(5 * time.Second)
+	time.Sleep(7 * time.Second)
 	h.showDownMessage = ""
 
 	//make all players with 0 stack sitting out
