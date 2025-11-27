@@ -83,6 +83,18 @@
       "username": "alex",
       "password_hash": "$2a$10$8n/SRJw4orhRlWvnK1dwZOx8Q4GpEJAhObMgIkWuAwWUPFoF5ay0C",
       "display_name": "alex"    
+    },
+    {
+      "id": "15",
+      "username": "fritz",
+      "password_hash": "$2a$10$hjk0f7Dz089SoxG.e.8.9OK08AL0N8HpRzjXIt2CTWVFE5z3ZVJ/i",
+      "display_name": "fritz"
+    },
+    {
+      "id": "16",
+      "username": "karyn",
+      "password_hash": "$2a$10$9WXaDqEuPIHYgGgxg/6PFezRzGODzaKIkPF2JYeEuOo6x62McLMBm",
+      "display_name": "karyn"
     }
 
     

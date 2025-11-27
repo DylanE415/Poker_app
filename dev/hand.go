@@ -42,7 +42,7 @@ type Hand struct {
 
 const (
 	timeLimitPerAction = 30 //seconds
-
+	actionDelayMS      = 200
 )
 
 // 7 2 off bounty
@@ -251,7 +251,8 @@ func handleAction(H *Hand, action Action) bool {
 			toCall = 0
 		}
 
-		//  if can't even call, this is just an all-in call, line does NOT move
+		// If I can't even cover the call, this is an all-in CALL, not a raise.
+		// Line does NOT move in this case.
 		if p.Stack <= toCall {
 			contrib := p.Stack
 			p.Stack = 0
@@ -262,39 +263,41 @@ func handleAction(H *Hand, action Action) bool {
 			p.canAct = false
 			H.currentActionMessage = p.Name + " called all in for " + strconv.FormatFloat(contrib, 'f', -1, 64)
 			println(p.Name, "called all in for", contrib)
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(actionDelayMS * time.Millisecond)
 			return true
 		}
 
-		// player is asking to "raise BY" this amount
+		// Player is asking to "raise BY" this amount
 		desiredRaise := action.Amount
+		if desiredRaise < 0 {
+			desiredRaise = 0
+		}
 
-		// how many chips I have LEFT AFTER calling
+		// How many chips I have LEFT AFTER calling
 		canRaiseWith := p.Stack - toCall
 
-		// if I can't afford the raise I'm asking for -> short all-in
-		//    in real NLHE this does NOT change currentBet or reopen
+		// If I can't afford the raise I'm asking for -> short all-in.
+		// We now treat this as "raise all-in" and MOVE the line (reopen action).
 		if desiredRaise > canRaiseWith {
-			// just put everything in, but do NOT move table line
-			totalPut := p.Stack
-			p.potCommitment += totalPut
-			p.Stack = 0
-			p.currentBet += totalPut
-			H.pot += totalPut
+			desiredRaise = canRaiseWith
+		}
+
+		// If, after capping, there's no raise left, just treat as a call.
+		if desiredRaise == 0 {
+			totalToPut := toCall
+			p.Stack -= totalToPut
+			p.currentBet += totalToPut
+			p.potCommitment += totalToPut
+			H.pot += totalToPut
 
 			p.canAct = false
-			H.currentActionMessage = p.Name + " went all in for " + strconv.FormatFloat(totalPut, 'f', -1, 64)
-			println(p.Name, "went all in for", totalPut)
-
-			// NOTE: we do NOT change:
-			//   H.currentBet
-			//   H.raiseAmount
-			//   other players' canAct flags
-			time.Sleep(200 * time.Millisecond)
+			H.currentActionMessage = p.Name + " called"
+			println(p.Name, "called")
+			time.Sleep(actionDelayMS * time.Millisecond)
 			return true
 		}
 
-		// normal full raise
+		// Normal (or short all-in) raise
 		totalToPut := toCall + desiredRaise
 		finalPlayerBet := p.currentBet + totalToPut
 
@@ -303,11 +306,12 @@ func handleAction(H *Hand, action Action) bool {
 		p.potCommitment += totalToPut
 		H.pot += totalToPut
 
-		// move the table line to this bet
+		// Move the table line to this bet (always, including short all-in)
+		prevLine := H.currentBet
 		H.currentBet = finalPlayerBet
-		H.raiseAmount = desiredRaise
+		H.raiseAmount = finalPlayerBet - prevLine
 
-		// everyone can act again, except the raiser
+		// Everyone can act again, except the raiser
 		H.avaliableActions = []string{"call", "fold", "raise", "clear"}
 		for i := range H.Players {
 			H.Players[i].canAct = true
@@ -315,11 +319,19 @@ func handleAction(H *Hand, action Action) bool {
 		}
 		p.canAct = false
 
-		H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(desiredRaise, 'f', -1, 64)
-		println(p.Name, " raised the current bet by", desiredRaise)
-		time.Sleep(150 * time.Millisecond)
-		return true
+		// Message: distinguish between “all in” vs normal raise
+		if desiredRaise == canRaiseWith {
+			// short (or exact) all-in raise that moved the line
+			H.currentActionMessage = p.Name + " went all in for " + strconv.FormatFloat(totalToPut, 'f', 2, 64)
+			p.Stack = 0
+			println(p.Name, "went all in for", totalToPut)
+		} else {
+			H.currentActionMessage = p.Name + " raised the current bet by " + strconv.FormatFloat(desiredRaise, 'f', -1, 64)
+			println(p.Name, "raised the current bet by", desiredRaise)
+		}
 
+		time.Sleep(actionDelayMS * time.Millisecond)
+		return true
 	case "call":
 		// amount needed to call is what the most recent raiser bet(current bet in hand) - what the player has in front of them
 		amountToCall := H.currentBet - H.Players[H.actionPlayerIndex].currentBet
@@ -514,6 +526,7 @@ func (h *Hand) run() {
 		h.Players[i].timebank = time.Second * 60
 		h.Players[i].ShowCards = false
 		playerCount++
+		drainPendingActions(h.Players[i].pendingAction)
 
 	}
 	h.board = []Card{}
