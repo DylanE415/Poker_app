@@ -9,7 +9,7 @@ import (
 
 type Action struct {
 	PlayerID  string  `json:"playerId"`
-	Action    string  `json:"action"` // "raise", "call", "fold", "check", "clear", "emote"
+	Action    string  `json:"action"` // "raise", "call", "fold", "check", "clear", "emote", "small_blind", "big_blind"
 	EmoteType string  `json:"emoteType"`
 	Amount    float64 `json:"amount"`
 }
