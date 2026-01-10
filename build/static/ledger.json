@@ -8,7 +8,7 @@
     {
       "id": "02",
       "name": "Dylan",
-      "net_profit": 0
+      "net_profit": -0.75
     },
     {
       "id": "03",
@@ -80,6 +80,5 @@
       "name": "karyn",
       "net_profit": 0
     }
-
   ]
 }
