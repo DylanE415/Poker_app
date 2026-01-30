@@ -67,7 +67,8 @@ def main():
 
     env = os.environ.copy()
     env["GOOS"] = "linux"
-    env["GOARCH"] = "amd64"
+    # amd64 for ec2 and arm64 for raspberry pi
+    env["GOARCH"] = "arm64"
     env["CGO_ENABLED"] = "0"
 
     # build the code that lives in dev/

@@ -72,3 +72,12 @@ Licensed under: LGPL 3.0 - https://www.gnu.org/licenses/lgpl-3.0.html
 
 
 
+
+For hosting on pi: 
+  - sudo apt install fail2ban # blocks ip addresses that guess password too many times
+  - sudo apt install ufw #uncomiplicated firewall to close all ports besides 80(traffic to app) and 22(ssh)
+  - sudo ufw allow 22
+  - sudo ufw allow 80
+  - sudo ufw enable
+
+
