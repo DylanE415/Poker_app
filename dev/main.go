@@ -8,6 +8,7 @@ import (
 func (s *Server) handleRoutes() http.Handler {
 	mux := http.NewServeMux()
 
+	// the API handlers
 	mux.Handle("/join", s.requireAuth(http.HandlerFunc(s.joinHandler)))
 	mux.Handle("/leave", s.requireAuth(http.HandlerFunc(s.leaveHandler)))
 	mux.Handle("/players", s.requireAuth(http.HandlerFunc(s.playersHandler)))
@@ -17,13 +18,24 @@ func (s *Server) handleRoutes() http.Handler {
 	mux.Handle("/emote", s.requireAuth(http.HandlerFunc(s.setEmoteHandler)))
 	mux.Handle("/showHand", s.requireAuth(http.HandlerFunc(s.showHandHandler)))
 
-	///the static pages
+	// the static pages handlers
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			http.ServeFile(w, r, "./static/login.html")
 		case http.MethodPost:
 			s.loginHandler(w, r)
+		default:
+			http.Error(w, "use GET or POST", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			http.ServeFile(w, r, "./static/signup.html")
+		case http.MethodPost:
+			s.signupHandler(w, r)
 		default:
 			http.Error(w, "use GET or POST", http.StatusMethodNotAllowed)
 		}
@@ -74,7 +86,8 @@ func main() {
 		usersByUsername: uByName,
 		usersByID:       uByID, // <-- you use this in handlers; make sure it’s populated
 		sessions:        make(map[string]Session),
-		loginAttempts:   make(map[string]loginState),
+		ipLoginState:    make(map[string]ipLoginState), //maps ip to login state(failures, lockUntil, lastTouch)
+		ipSignupState:   make(map[string]ipSignupState),
 	}
 	s.initSessions()
 

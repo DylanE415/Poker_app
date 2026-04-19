@@ -1,0 +1,89 @@
+{
+  "users": [
+    {
+      "id": "01",
+      "username": "Nick",
+      "password_hash": "$2a$10$pnxKDgvDBm6iGb7lM9KDfukMiEA8vHPXq0ig6on9cRNWMIBWrpWei"
+    },
+    {
+      "id": "02",
+      "username": "Dylan",
+      "password_hash": "$2a$10$Vv72cEkciRVe.Jg58LgxRenC0HFascdN0XOYq49kFh063uMnFI4oi"
+    },
+    {
+      "id": "03",
+      "username": "alec",
+      "password_hash": "$2a$10$XEtwWCYKLKaYZnkKZs5KmOpDBYUqLOAWVYhVzi7OgHs1tEgc3xHti"
+    },
+    {
+      "id": "04",
+      "username": "max",
+      "password_hash": "$2a$10$AdG/7J7AbXUxCJFsYL6GweWDu47NsTg3JTVO4kfmoyEV52RillY/."
+    },
+    {
+      "id": "05",
+      "username": "greg",
+      "password_hash": "$2a$10$9IZuYZo6jOtax2ajHYGimeUmoJXP2YPl7CYa46IEVYTLNeN8vsCe6"
+    },
+    {
+      "id": "06",
+      "username": "zio",
+      "password_hash": "$2a$10$csljmiAax7kf.Vi6CFPvbuM5rCY5aBtIkeiO7v/9VRRW983mpcT2u"
+    },
+    {
+      "id": "07",
+      "username": "owen",
+      "password_hash": "$2a$10$nQP.ml/Mwzq3eqxuqV1C4OiyfH4sP2fR3TDCCaihBDyft/yHdM2U2"
+    },
+    {
+      "id": "08",
+      "username": "zernell",
+      "password_hash": "$2a$10$bhxfn.RNnGMeKCJbfrEBdOu4iVojB9iwNBXad6kwg40TUmgXJWVdm"
+    },
+    {
+      "id": "09",
+      "username": "josh",
+      "password_hash": "$2a$10$QQo.2kBSLPcvpXh05t/wmuyagf62wXRygk0qIv.nTvtd/C/D6H5Du"
+    },
+    {
+      "id": "10",
+      "username": "joe",
+      "password_hash": "$2a$10$uCI2R3Q9i0RW7A9hZXFSl.A4qhjpPUjwJ0V0GZr9LDTLbe5Rk4Pp6"
+    },
+    {
+      "id": "11",
+      "username": "ryan",
+      "password_hash": "$2a$10$mpc41x8SZjM.hZLi0qWKUOpHARWZcN/OOarHVmn5RBaTdlnvlB5h6"
+    },
+    {
+      "id": "12",
+      "username": "chase",
+      "password_hash": "$2a$10$FcMTb8rFJCViVqlUOn2mB.a4uI8zNJv4g8zMWKr7S42cWG4MvwgQK"
+    },
+    {
+      "id": "13",
+      "username": "kai",
+      "password_hash": "$2a$10$txN9vWno0oJ80rCGW.AEh.huuBp.IyBlZj.ySLgxHZFxBf4VCC5Mq"
+    },
+    {
+      "id": "14",
+      "username": "alex",
+      "password_hash": "$2a$10$8n/SRJw4orhRlWvnK1dwZOx8Q4GpEJAhObMgIkWuAwWUPFoF5ay0C"
+    },
+    {
+      "id": "15",
+      "username": "fritz",
+      "password_hash": "$2a$10$hjk0f7Dz089SoxG.e.8.9OK08AL0N8HpRzjXIt2CTWVFE5z3ZVJ/i"
+    },
+    {
+      "id": "16",
+      "username": "karyn",
+      "password_hash": "$2a$10$9WXaDqEuPIHYgGgxg/6PFezRzGODzaKIkPF2JYeEuOo6x62McLMBm"
+    },
+    {
+      "id": "17",
+      "username": "a",
+      "password_hash": "$2a$10$6fMMUgtwjV2K6rreJlycU.1CsmpdWPxQbX0vJPP72pEiPMYOCVWk."
+    }
+  ]
+}

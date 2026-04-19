@@ -72,6 +72,72 @@ func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
+signup handler
+post req with the following body:
+
+{
+	"username": "username",
+	"password": "password"
+}
+*/
+
+func (s *Server) signupHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "use POST", http.StatusMethodNotAllowed)
+		return
+	}
+	// when func returns, close body http req .body is a stream
+	defer r.Body.Close()
+	ip := s.getIpAddress(r)
+	ok, wait := s.canAttemptSignup(ip)
+	if !ok {
+		w.Header().Set("Retry-After", strconv.Itoa(int(wait.Seconds())+1))
+		http.Error(w, "too many signup attempts, try again in "+wait.String(), http.StatusTooManyRequests)
+		return
+	}
+
+	var req loginReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.recordSignupAttempt(ip)
+		http.Error(w, "bad json", http.StatusBadRequest)
+		return
+	}
+
+	uname := strings.ToLower(strings.TrimSpace(req.Username))
+	if _, ok := s.usersByUsername[uname]; ok {
+		s.recordSignupAttempt(ip)
+		http.Error(w, "username taken", http.StatusConflict)
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		s.recordSignupAttempt(ip)
+		http.Error(w, "could not hash password", http.StatusInternalServerError)
+		return
+	}
+
+	s.recordSignupAttempt(ip)
+
+	// create user
+	u := User{
+		ID:           generateNewUserID(s, len(s.usersByID)), // generateNewID(),
+		Username:     uname,
+		PasswordHash: string(hash),
+	}
+	err = s.registerNewUser(u)
+	if err != nil {
+		http.Error(w, "could not register user", http.StatusInternalServerError)
+		return
+	}
+	println("created user", u.ID, u.Username)
+
+	// success (no body needed)
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
+/*
 for users to join a room, if valid sends a command to the command channel of that room
 
 	request would have the form, and cookie with id and session token

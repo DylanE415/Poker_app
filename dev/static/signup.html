@@ -77,7 +77,7 @@
 </head>
 <body>
   <div class="card">
-    <h1>Login</h1>
+    <h1>Sign Up</h1>
     <div id="msg" class="msg" role="status" aria-live="polite"></div>
 
     <form id="f" novalidate>
@@ -89,8 +89,8 @@
         Password
         <input name="password" type="password" autocomplete="current-password" required />
       </label>
-      <button id="submit" type="submit">Sign in</button>
-      <p>Don't have an account? <a href="/signup">Sign up</a></p>
+      <button id="submit" type="submit">Create Account</button>
+      <p>Already have an account? <a href="/login">Sign in</a></p>
     </form>
   </div>
 
@@ -115,7 +115,7 @@
       };
 
       try {
-        const res = await fetch('/login', {
+        const res = await fetch('/signup', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(payload),
@@ -123,11 +123,10 @@
         });
 
         if (res.ok) {
-          show('ok', 'Logged in! Redirecting…');
-          window.location.href = '/play';
+          show('ok', 'Signed up! Proceed to login.');
         } else {
           const text = await res.text();
-          show('error', text || 'Invalid credentials');
+          show('error', text || 'username or password already taken');
         }
       } catch {
         show('error', 'Network error');

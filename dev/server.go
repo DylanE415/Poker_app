@@ -20,16 +20,26 @@ type Server struct {
 	sessionsMu      sync.RWMutex
 	sessions        map[string]Session // sessionID -> session data
 	loginMu         sync.Mutex
-	loginAttempts   map[string]loginState //ip address -> login attempts
+	ipLoginState    map[string]ipLoginState //ip address -> login attempts
+	singupMu        sync.Mutex
+	ipSignupState   map[string]ipSignupState
+	usersLock       sync.RWMutex
 }
 
 const (
-	maxFailures   = 5
-	lockoutPeriod = 2 * time.Minute
+	maxLoginFailures  = 10
+	maxSingupAttempts = 3
+	lockoutPeriod     = 2 * time.Minute
 )
 
-type loginState struct {
+type ipLoginState struct {
 	failures  int
+	lockUntil time.Time
+	lastTouch time.Time
+}
+
+type ipSignupState struct {
+	attempts  int
 	lockUntil time.Time
 	lastTouch time.Time
 }
@@ -142,12 +152,18 @@ func (s *Server) getIpAddress(request *http.Request) string {
 
 }
 
+/*
+------------------ Login ----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+*/
+
 func (s *Server) canAttemptLogin(ip string) (ok bool, wait time.Duration) {
-	//locks the loginAttempts map and unlocks when func returns
+	//locks the ipLoginState map and unlocks when func returns
 	s.loginMu.Lock()
 	defer s.loginMu.Unlock()
 
-	state := s.loginAttempts[ip]
+	state := s.ipLoginState[ip]
 	now := time.Now()
 	if now.Before(state.lockUntil) {
 		return false, time.Until(state.lockUntil)
@@ -161,20 +177,56 @@ func (s *Server) recordLoginFail(ip string) {
 	defer s.loginMu.Unlock()
 
 	now := time.Now()
-	state := s.loginAttempts[ip]
+	state := s.ipLoginState[ip]
 
 	// If their lock expired earlier, we keep counting from current failures;
 	// you can optionally reset st.failures=0 if st.lockUntil.Before(now).
 	state.failures++
 	state.lastTouch = now
-	if state.failures >= maxFailures {
+	if state.failures >= maxLoginFailures {
 		state.lockUntil = now.Add(lockoutPeriod)
 	}
-	s.loginAttempts[ip] = state
+	s.ipLoginState[ip] = state
 }
 
 func (s *Server) recordLoginSuccess(ip string) {
 	s.loginMu.Lock()
 	defer s.loginMu.Unlock()
-	delete(s.loginAttempts, ip)
+	delete(s.ipLoginState, ip)
+}
+
+/*
+------------------ SIGNUP ----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+*/
+func (s *Server) canAttemptSignup(ip string) (ok bool, wait time.Duration) {
+	//locks the ipLoginState map and unlocks when func returns
+	s.singupMu.Lock()
+	defer s.singupMu.Unlock()
+
+	state := s.ipSignupState[ip]
+	now := time.Now()
+	if now.Before(state.lockUntil) {
+		return false, time.Until(state.lockUntil)
+	}
+	// If the lock expired, let them try again; failures remain until success (or you can reset here).
+	return true, 0
+}
+
+func (s *Server) recordSignupAttempt(ip string) {
+	s.singupMu.Lock()
+	defer s.singupMu.Unlock()
+
+	now := time.Now()
+	state := s.ipSignupState[ip]
+
+	// If their lock expired earlier, we keep counting from current failures;
+	// you can optionally reset st.failures=0 if st.lockUntil.Before(now).
+	state.attempts++
+	state.lastTouch = now
+	if state.attempts > maxSingupAttempts {
+		state.lockUntil = now.Add(lockoutPeriod)
+	}
+	s.ipSignupState[ip] = state
 }

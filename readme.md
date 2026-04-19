@@ -1,5 +1,5 @@
 compile and run the server with:
-- cd server
+- cd dev
 - go run -race . (use -race for testing to detect data races)
 - go to http://localhost:8080/login
 

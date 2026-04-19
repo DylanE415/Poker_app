@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -26,6 +27,7 @@ type usersFile struct {
 // - byUsername (lowercased username -> User)
 // - byID (id -> User)
 func loadUsersJSON(path string) (map[string]User, map[string]User, error) {
+
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open %s: %w", path, err)
@@ -63,4 +65,68 @@ func loadUsersJSON(path string) (map[string]User, map[string]User, error) {
 	}
 
 	return byUsername, byID, nil
+}
+
+func (s *Server) registerNewUser(user User) error {
+	s.usersLock.Lock()
+	defer s.usersLock.Unlock()
+	// load users
+	// try to read from either users/users.json or ../users/users.json
+	f, err := os.ReadFile("users/users.json")
+	if err != nil {
+		log.Println("users/users.json not found, trying ../users/users.json")
+		f, err = os.ReadFile("../users/users.json")
+		if err != nil {
+			return fmt.Errorf("read users.json: %w", err)
+		}
+	}
+
+	var uf usersFile
+	if err := json.Unmarshal(f, &uf); err != nil {
+		return fmt.Errorf("decode users.json: %w", err)
+	}
+
+	// append the new user
+	uf.Users = append(uf.Users, user)
+
+	// write back to file
+	out, err := json.MarshalIndent(uf, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode users.json: %w", err)
+	}
+	if err := os.WriteFile("users.json", out, 0644); err != nil {
+		return fmt.Errorf("write users.json: %w", err)
+	}
+
+	// update the in-memory maps
+	key := strings.ToLower(strings.TrimSpace(user.Username))
+	s.usersByUsername[key] = user
+	s.usersByID[user.ID] = user
+
+	return nil
+}
+
+func refreshUsers(s *Server) {
+	uByName, uByID, err := loadUsersJSON("users/users.json")
+	if err != nil {
+		log.Println("users/users.json not found, trying ../users/users.json")
+		uByName, uByID, err = loadUsersJSON("../users/users.json")
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+	}
+	s.usersByID = uByID
+	s.usersByUsername = uByName
+	return
+}
+
+func generateNewUserID(s *Server, id int) string {
+	newID := fmt.Sprintf("%d", id+1)
+	for _, u := range s.usersByID {
+		if u.ID == newID {
+			return generateNewUserID(s, id+1)
+		}
+	}
+	return newID
 }

@@ -4,7 +4,8 @@
       "id": "01",
       "username": "Nick",
       "password_hash": "$2a$10$pnxKDgvDBm6iGb7lM9KDfukMiEA8vHPXq0ig6on9cRNWMIBWrpWei",
-      "display_name": "Nick"
+      "display_name": "Nick",
+      "walletAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
     },
     {
       "id": "02",
